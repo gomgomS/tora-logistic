@@ -1,0 +1,52 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import plus, search %}
+{% from "_ui.html" import status_badge, empty_state, status_label %}
+{% block title %}Order — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Order{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<form class="cp" method="get" action="{{ url_for('orders_blueprint.index') }}">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('orders_blueprint.new') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Order</span>
+        {% if data.orders|length %}
+        <span class="list-count">{{ data.orders|length }}</span>
+        {% endif %}
+    </div>
+    <div class="cp-search">
+        <span class="list-search-icon">{{ search("w-4 h-4") }}</span>
+        <input class="list-search-input" type="search" name="q" value="{{ data.filters.q or '' }}" placeholder="Cari AWB atau nama">
+    </div>
+    <div class="cp-side cp-side-end cp-filters">
+        <select class="cp-filter" name="status" onchange="this.form.submit()">
+            <option value="">Semua status</option>
+            {% for st in data.statuses %}
+            <option value="{{ st }}" {% if data.filters.status == st %}selected{% endif %}>{{ status_label(st) }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn-accent btn-sm">Saring</button>
+    </div>
+</form>
+
+{% if data.orders|length == 0 %}
+    {{ empty_state("Belum ada order", "Buat rute dulu kalau belum ada, lalu input order pertama.", url_for('orders_blueprint.new'), "Baru") }}
+{% else %}
+<table class="tbl odoo-tbl">
+    <thead>
+        <tr><th>Nomor AWB</th><th>Pengirim → Penerima</th><th>Rute</th><th>Status</th><th>Dibuat</th></tr>
+    </thead>
+    <tbody>
+        {% for s in data.orders %}
+        <tr>
+            <td><a class="row-link font-mono" href="{{ url_for('orders_blueprint.detail', tracking_code=s.tracking_code) }}">{{ s.tracking_code }}</a></td>
+            <td>{{ s.sender_name }} → {{ s.receiver_name }}</td>
+            <td>{{ s.origin }} → {{ s.destination }}</td>
+            <td>{{ status_badge(s.status) }}</td>
+            <td class="mute">{{ s.rec_timestamp_str }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

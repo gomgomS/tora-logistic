@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{{ data.item.title }} — {{ data.site_name }}{% endblock %}
+
+{% block content %}
+<article>
+    <p class="mb-2 font-mono text-xs uppercase tracking-widest text-mute">
+        <a href="{{ url_for('sample_blueprint.index') }}" class="hover:text-black">&larr; All items</a>
+    </p>
+    <h1 class="text-3xl font-extrabold tracking-tight">{{ data.item.title }}</h1>
+    <p class="mt-2 font-mono text-xs text-mute">
+        slug: {{ data.item.slug }} &middot; status: {{ data.item.status }} &middot;
+        created: {{ data.item.rec_timestamp_str }}
+    </p>
+    {% if data.item.body %}
+    <div class="mt-6 text-sm leading-relaxed">{{ data.item.body }}</div>
+    {% endif %}
+    <form method="post" action="{{ url_for('sample_blueprint.delete', slug=data.item.slug) }}" class="mt-8">
+        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+        <button type="submit" class="btn-primary">Delete this item</button>
+    </form>
+</article>
+{% endblock %}

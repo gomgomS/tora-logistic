@@ -1,0 +1,62 @@
+{% extends "erp_base.html" %}
+{% from "_ui.html" import empty_state %}
+{% block title %}Input Order — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Input Order{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('orders_blueprint.index') }}">Order</a>
+        <span>/</span>
+        <strong>Baru</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('orders_blueprint.index') }}">Buang</a>
+        {% if data.routes|length %}
+        <button class="btn-accent btn-sm" type="submit" form="order-form">Simpan</button>
+        {% endif %}
+    </div>
+</div>
+
+{% if data.routes|length == 0 %}
+    {{ empty_state("Belum ada rute", "Buat rute beserta hub-nya dulu, baru input order.", url_for('routes_blueprint.new'), "Rute baru") }}
+{% else %}
+<form id="order-form" class="contact-sheet" method="post" action="{{ url_for('orders_blueprint.create') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <div class="grid-form-2col">
+        <div class="form-field">
+            <label class="lbl" for="sender_name">Pengirim <span class="req">*</span></label>
+            <input class="fld" type="text" id="sender_name" name="sender_name" required autocomplete="off">
+        </div>
+        <div class="form-field">
+            <label class="lbl" for="sender_phone">Telepon pengirim</label>
+            <input class="fld" type="text" id="sender_phone" name="sender_phone" autocomplete="off">
+        </div>
+        <div class="form-field">
+            <label class="lbl" for="receiver_name">Penerima <span class="req">*</span></label>
+            <input class="fld" type="text" id="receiver_name" name="receiver_name" required autocomplete="off">
+        </div>
+        <div class="form-field">
+            <label class="lbl" for="receiver_phone">Telepon penerima</label>
+            <input class="fld" type="text" id="receiver_phone" name="receiver_phone" autocomplete="off">
+        </div>
+    </div>
+    <div class="form-field">
+        <label class="lbl" for="receiver_address">Alamat penerima</label>
+        <input class="fld" type="text" id="receiver_address" name="receiver_address" autocomplete="off">
+    </div>
+    <div class="form-field">
+        <label class="lbl" for="route_id">Rute <span class="req">*</span></label>
+        <select class="fld" id="route_id" name="route_id" required>
+            <option value="">Pilih rute</option>
+            {% for route in data.routes %}
+            <option value="{{ route.id }}">{{ route.name }} — {{ route.hub_names|join(' → ') }}</option>
+            {% endfor %}
+        </select>
+        <p class="hint">Hub di rute ini jadi papan perjalanan order. Di detail masih bisa sisip hub di tengah.</p>
+    </div>
+</form>
+{% endif %}
+</div>
+{% endblock %}

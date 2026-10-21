@@ -1,0 +1,41 @@
+{# Shared UI macros for the simple ERP. #}
+
+{% macro status_label(status) -%}
+    {%- set labels = {
+        "DELIVERED": "Terkirim",
+        "IN_TRANSIT": "Dalam Perjalanan",
+        "ARRIVED": "Tiba",
+        "REGISTERED": "Terdaftar",
+        "ENABLE": "Aktif"
+    } -%}
+    {{ labels.get(status, status) }}
+{%- endmacro %}
+
+{% macro role_label(role) -%}
+    {%- set labels = {"superadmin": "Superadmin", "admin": "Admin"} -%}
+    {{ labels.get(role, role) }}
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+    {%- set cls = {
+        "DELIVERED": "badge-green",
+        "IN_TRANSIT": "badge-blue",
+        "ARRIVED": "badge-amber",
+        "REGISTERED": "badge-gray",
+        "ENABLE": "badge-green"
+    }.get(status, "badge-gray") -%}
+    <span class="badge {{ cls }}">{{ status_label(status) }}</span>
+{%- endmacro %}
+
+{% macro empty_state(title, desc, cta_url="", cta_label="") -%}
+    <div class="empty">
+        <span class="empty-icon">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.4 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.8 1.1Z"/></svg>
+        </span>
+        <div class="empty-title">{{ title }}</div>
+        <div class="empty-desc">{{ desc }}</div>
+        {% if cta_url and cta_label %}
+        <a class="btn-primary btn-sm mt-4" href="{{ cta_url }}">{{ cta_label }}</a>
+        {% endif %}
+    </div>
+{%- endmacro %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_icons.html" import box, arrow_right, logout, menu, search %}
+{% from "_ui.html" import role_label %}
+
+{% block shell %}
+<div class="erp-layout">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-mark">T</span>
+            <span>
+                <span class="brand-name">Tora Expedition</span>
+                <span class="brand-sub">ERP Sederhana</span>
+            </span>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="side-section">Operasional</div>
+            <a class="side-link {% if request.path.startswith('/orders') %}side-link-active{% endif %}" href="{{ url_for('orders_blueprint.index') }}">
+                {{ box("w-[18px] h-[18px]") }} <span>Order</span>
+                {% if data.sidebar_counts.orders_active %}<span class="side-count">{{ data.sidebar_counts.orders_active }}</span>{% endif %}
+            </a>
+            <a class="side-link {% if request.path.startswith('/routes') %}side-link-active{% endif %}" href="{{ url_for('routes_blueprint.index') }}">
+                {{ arrow_right("w-[18px] h-[18px]") }} <span>Rute</span>
+            </a>
+        </nav>
+    </aside>
+    <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Tutup menu"></button>
+
+    <div class="erp-main">
+        <header class="topbar">
+            <button type="button" class="hamburger" onclick="toggleSidebar()" aria-label="Buka menu">
+                {{ menu("w-5 h-5") }}
+            </button>
+            <span class="topbar-title">{% block topbar_title %}{% endblock %}</span>
+            <div class="topbar-right">
+                <div class="user-chip">
+                    <span class="avatar">{{ data.current_user.username[:2]|upper }}</span>
+                    <span class="user-chip-names">
+                        <span class="user-chip-name">{{ data.current_user.username }}</span><br>
+                        <span class="user-chip-role">{{ role_label(data.current_user.role) }}</span>
+                    </span>
+                </div>
+                <form method="post" action="{{ url_for('auth_blueprint.logout') }}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <button type="submit" class="icon-btn" title="Keluar">{{ logout("w-[18px] h-[18px]") }}</button>
+                </form>
+            </div>
+        </header>
+        <main class="erp-content">
+            {% if data.form_error %}
+            <div class="alert-error">{{ data.form_error }}</div>
+            {% endif %}
+            {% if data.form_success %}
+            <div class="alert-success">{{ data.form_success }}</div>
+            {% endif %}
+            {% block erp_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("sidebar-open");
+    document.getElementById("sidebarBackdrop").classList.toggle("show");
+}
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("sidebarBackdrop").addEventListener("click", toggleSidebar);
+});
+</script>
+{% endblock %}

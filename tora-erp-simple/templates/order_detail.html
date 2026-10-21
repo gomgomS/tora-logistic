@@ -1,0 +1,182 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import truck, arrow_right, refresh %}
+{% from "_ui.html" import status_badge %}
+{% block title %}{{ data.order.tracking_code }} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Order {{ data.order.tracking_code }}{% endblock %}
+{% block erp_content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title font-mono" style="display:flex;align-items:center;gap:12px;">
+            {{ data.order.tracking_code }}
+            {{ status_badge(data.order.status) }}
+        </h1>
+        <p class="page-sub">{{ data.order.origin }} → <strong>{{ data.order.destination }}</strong> &middot; {{ data.order.sender_name }} ke {{ data.order.receiver_name }}</p>
+    </div>
+    <div class="page-actions">
+        {% if data.order.status == 'REGISTERED' %}
+        <form method="post" action="{{ url_for('orders_blueprint.delete', tracking_code=data.order.tracking_code) }}" onsubmit="return confirm('Hapus order ini?');">
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <button class="btn-outline btn-sm" type="submit">Hapus</button>
+        </form>
+        {% endif %}
+        <a class="btn-outline btn-sm" href="{{ url_for('orders_blueprint.index') }}">Kembali ke daftar</a>
+    </div>
+</div>
+
+<div class="card journey">
+    <div class="card-head">
+        <div>
+            <h2 class="card-title">Perjalanan truk</h2>
+            <p class="card-sub">Satu klik menggeser truk. Sisip hub di jalur, atau catat kegiatan di hub tempat truk berhenti.</p>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="journey-now">
+            <span class="journey-badge">{{ truck("w-5 h-5") }}</span>
+            <div>
+                <div class="journey-kicker">Posisi truk</div>
+                <div class="journey-where">{{ data.journey.where }}</div>
+            </div>
+        </div>
+        <form method="post" action="{{ url_for('orders_blueprint.advance', tracking_code=data.order.tracking_code) }}">
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <div class="journey-line">
+                {% for stop in data.journey.stops %}
+                <div class="j-stop {{ stop.cls }}">
+                    {% if stop.back %}
+                    <button class="j-hit" type="submit" name="step" value="back" aria-label="Kembali ke {{ stop.name }}">
+                    {% elif stop.clickable %}
+                    <button class="j-hit" type="submit" name="step" value="forward" aria-label="Tiba di {{ stop.name }}">
+                    {% else %}
+                    <div class="j-hit">
+                    {% endif %}
+                        <span class="j-node">
+                            {% if stop.show_truck %}
+                            {{ truck("w-5 h-5") }}
+                            {% elif stop.cls == 'is-done' %}
+                            <span class="j-check">✓</span>
+                            {% else %}
+                            <span class="j-dot"></span>
+                            {% endif %}
+                        </span>
+                        <span class="j-name">{{ stop.name }}</span>
+                        <span class="j-meta">{{ stop.meta }}</span>
+                    {% if stop.back or stop.clickable %}
+                    </button>
+                    {% else %}
+                    </div>
+                    {% endif %}
+                    {% if stop.can_event %}
+                    <div class="j-acts">
+                        <div class="j-insert">
+                            <input type="text" name="event_note" form="event-{{ stop.index }}" list="event-samples" placeholder="cth: Bongkar muat" autocomplete="off">
+                            <button type="submit" form="event-{{ stop.index }}" class="btn-ghost btn-sm">Catat</button>
+                        </div>
+                        <p class="j-act-hint">Contoh: Bongkar muat, Istirahat, Tunggu muatan</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if not loop.last %}
+                {% set leg = data.journey.legs[loop.index0] %}
+                <div class="j-gap">
+                    {% if leg.clickable %}
+                    <button class="j-leg {{ leg.cls }}" type="submit" name="step" value="forward" aria-label="Berangkat menuju {{ leg.target }}">
+                        <span class="j-road"></span>
+                        <span class="j-go">{{ arrow_right("w-4 h-4") }} Berangkat</span>
+                    </button>
+                    {% elif leg.back %}
+                    <button class="j-leg {{ leg.cls }}" type="submit" name="step" value="back" aria-label="Kembali ke jalur menuju {{ leg.target }}">
+                        <span class="j-road"></span>
+                        <span class="j-go is-back"><span class="j-back-icon">{{ arrow_right("w-4 h-4") }}</span> Kembali</span>
+                    </button>
+                    {% else %}
+                    <div class="j-leg {{ leg.cls }}">
+                        <span class="j-road"></span>
+                        {% if leg.here %}
+                        <span class="j-go is-live">{{ truck("w-5 h-5") }}</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% if not data.journey.done %}
+                    <div class="j-insert">
+                        <input type="text" name="hub_name" form="insert-{{ loop.index0 }}" placeholder="Sisip hub" autocomplete="off">
+                        <button type="submit" form="insert-{{ loop.index0 }}" class="btn-ghost btn-sm">Sisip</button>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% if data.journey.can_finish %}
+            <div class="journey-finish">
+                <button class="btn-accent" type="submit" name="step" value="forward">Selesaikan perjalanan</button>
+                <p class="journey-hint">Klik selesai setelah barang diserahkan. Klik jalur di belakang truk untuk kembali.</p>
+            </div>
+            {% elif data.journey.done %}
+            <div class="journey-finish">
+                <button class="btn-outline" type="submit" name="step" value="back">Kembali</button>
+                <p class="journey-hint">Perjalanan selesai. Kembali menempatkan truk lagi di hub ini.</p>
+            </div>
+            {% else %}
+            <p class="journey-hint">Klik jalur atau hub di depan truk untuk maju. Klik yang di belakang untuk kembali. Sisip hub di kolom di bawah jalur. Di hub truk berhenti, ketik kegiatan lalu Catat.</p>
+            {% endif %}
+        </form>
+        {% if not data.journey.done %}
+        {% for leg in data.journey.legs %}
+        <form id="insert-{{ loop.index0 }}" method="post" action="{{ url_for('orders_blueprint.insert_hub', tracking_code=data.order.tracking_code) }}" hidden>
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <input type="hidden" name="after_index" value="{{ leg.after_index }}">
+        </form>
+        {% endfor %}
+        {% for stop in data.journey.stops %}
+        {% if stop.can_event %}
+        <form id="event-{{ stop.index }}" method="post" action="{{ url_for('orders_blueprint.stop_event', tracking_code=data.order.tracking_code) }}" hidden>
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <input type="hidden" name="stop_index" value="{{ stop.index }}">
+        </form>
+        {% endif %}
+        {% endfor %}
+        <datalist id="event-samples">
+            {% for ev in data.stop_events %}
+            <option value="{{ ev.label }}"></option>
+            {% endfor %}
+        </datalist>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid-2col">
+    <div class="card">
+        <div class="card-head"><h2 class="card-title">Kiriman</h2></div>
+        <div class="card-body">
+            <table class="tbl keyval">
+                <tr><th>Pengirim</th><td>{{ data.order.sender_name }}{% if data.order.sender_phone %}<div class="mute text-xs">{{ data.order.sender_phone }}</div>{% endif %}</td></tr>
+                <tr><th>Penerima</th><td>{{ data.order.receiver_name }}{% if data.order.receiver_phone %}<div class="mute text-xs">{{ data.order.receiver_phone }}</div>{% endif %}</td></tr>
+                <tr><th>Alamat</th><td>{{ data.order.receiver_address or '—' }}</td></tr>
+                <tr><th>Lokasi sekarang</th><td>{{ data.order.current_location }}</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-head">
+            <div>
+                <h2 class="card-title">Riwayat</h2>
+                <p class="card-sub">Sesuaikan catatan dengan rute dan posisi truk sekarang.</p>
+            </div>
+            <form method="post" action="{{ url_for('orders_blueprint.refresh_riwayat', tracking_code=data.order.tracking_code) }}">
+                <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                <button class="btn-outline btn-sm" type="submit">{{ refresh("w-4 h-4") }} Segarkan</button>
+            </form>
+        </div>
+        <div class="card-body">
+            {% for log in data.order.tracking_logs|reverse %}
+            <div class="log-row">
+                <div class="font-mono text-xs">{{ log.timestamp }}</div>
+                <div>{{ log.notes or log.milestone_status }}</div>
+                <div class="mute text-xs">{{ log.location }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

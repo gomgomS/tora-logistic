@@ -1,0 +1,70 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import plus %}
+{% block title %}{% if data.route %}Ubah Rute{% else %}Rute Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.route %}Ubah Rute{% else %}Rute Baru{% endif %}{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('routes_blueprint.index') }}">Rute</a>
+        <span>/</span>
+        <strong>{% if data.route %}Ubah{% else %}Baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('routes_blueprint.index') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="route-form">Simpan</button>
+    </div>
+</div>
+
+<form id="route-form" class="contact-sheet" method="post" action="{% if data.route %}{{ url_for('routes_blueprint.update', route_id=data.route.id) }}{% else %}{{ url_for('routes_blueprint.create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <div class="form-field">
+        <label class="lbl" for="route-name">Nama rute <span class="req">*</span></label>
+        <input class="fld" type="text" id="route-name" name="name" value="{{ data.route.name if data.route else '' }}" placeholder="Misalnya Surabaya ke Malang" required maxlength="80" autocomplete="off">
+    </div>
+    <h2 class="section-title">Hub</h2>
+    <p class="hint">Ketik nama hub berurutan. Hub yang belum ada dibuat otomatis saat simpan.</p>
+    <div class="hub-stack" id="hub-stack">
+        {% for stop in data.stops %}
+        <div class="hub-line">
+            <span class="hub-num">{{ loop.index }}</span>
+            <input class="fld" type="text" name="hub_names" value="{{ stop }}" placeholder="Nama hub" required autocomplete="off">
+            <button type="button" class="btn-ghost btn-sm hub-drop" {% if data.stops|length <= 2 %}hidden{% endif %}>Hapus</button>
+        </div>
+        {% endfor %}
+    </div>
+    <button type="button" class="btn-outline btn-sm" id="hub-add">{{ plus("w-4 h-4") }} Tambah hub</button>
+</form>
+</div>
+<script>
+(function () {
+    var stack = document.getElementById("hub-stack");
+    function lines() { return stack.querySelectorAll(".hub-line"); }
+    function refresh() {
+        var nodes = lines();
+        nodes.forEach(function (row, i) {
+            row.querySelector(".hub-num").textContent = String(i + 1);
+            var drop = row.querySelector(".hub-drop");
+            drop.hidden = nodes.length <= 2;
+        });
+    }
+    stack.addEventListener("click", function (ev) {
+        var btn = ev.target.closest(".hub-drop");
+        if (!btn) return;
+        if (lines().length <= 2) return;
+        btn.closest(".hub-line").remove();
+        refresh();
+    });
+    document.getElementById("hub-add").addEventListener("click", function () {
+        var row = document.createElement("div");
+        row.className = "hub-line";
+        row.innerHTML = '<span class="hub-num"></span><input class="fld" type="text" name="hub_names" placeholder="Nama hub" required autocomplete="off"><button type="button" class="btn-ghost btn-sm hub-drop">Hapus</button>';
+        stack.appendChild(row);
+        refresh();
+        row.querySelector("input").focus();
+    });
+    refresh();
+})();
+</script>
+{% endblock %}

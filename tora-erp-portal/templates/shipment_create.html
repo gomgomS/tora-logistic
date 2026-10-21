@@ -120,14 +120,14 @@
                     <div class="sheet-field">
                         <label class="lbl">Alamat detail <span class="req">*</span></label>
                         <input class="fld" data-place="address" type="text" name="destination_address" value="{{ ship.destination_address if ship else '' }}" placeholder="Jalan, nomor, RT/RW, patokan" required autocomplete="street-address">
-                    </div>
+                </div>
                 </section>
                 <p class="hint" id="place-error" hidden></p>
                 <div class="form-field">
                     <label class="lbl" for="po_number">Nomor PO <span id="po-hint" class="muted">(opsional — referensi klien B2B, bisa dilacak publik)</span></label>
                     <input class="fld" type="text" id="po_number" name="po_number" value="{{ data.shipment.po_number if data.shipment else '' }}" placeholder="PO-2026-0001">
                 </div>
-</form>
+            </form>
 {% if data.shipment %}
 <div id="order-preset" hidden data-sender-id="{{ data.shipment.sender_id }}" data-sender-name="{{ data.shipment.sender_name }}" data-receiver-id="{{ data.shipment.receiver_id }}" data-receiver-name="{{ data.shipment.receiver_name }}"></div>
 {% endif %}
@@ -145,14 +145,14 @@
             <button type="button" class="icon-btn" id="contactModalClose" aria-label="Tutup">×</button>
         </div>
         <form class="card-body" id="contactModalForm">
-            <div class="form-field">
+                <div class="form-field">
                 <label class="lbl" for="modal_name">Nama <span class="req">*</span></label>
                 <input class="fld" type="text" id="modal_name" required>
-            </div>
-            <div class="form-field">
+                    </div>
+                    <div class="form-field">
                 <label class="lbl" for="modal_company">Nama perusahaan</label>
                 <input class="fld" type="text" id="modal_company">
-            </div>
+                    </div>
             <div class="grid-form-2col">
                 <div class="form-field">
                     <label class="lbl" for="modal_phone">Telepon</label>
@@ -173,7 +173,7 @@
             </div>
             <p class="alert-error" id="contactModalError" hidden></p>
             <button type="submit" class="btn-accent">Simpan kontak</button>
-        </form>
+            </form>
     </div>
 </div>
 
