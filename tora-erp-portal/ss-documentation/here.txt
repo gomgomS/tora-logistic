@@ -1,0 +1,229 @@
+Gambar: 01-login.png s.d. 19-track.png di folder yang sama.
+
+
+3.1 ERP Sederhana
+
+ERP Sederhana sudah dijelaskan terpisah. Intinya: staf hanya mengerjakan Order dan Rute. Kiriman adalah truknya sendiri — digeser hub ke hub di papan perjalanan order, kegiatan diketik di hub, riwayat mengikuti posisi truk.
+
+Bagian berikut adalah pilihan kedua: ERP yang lebih lengkap, ketika perusahaan sudah perlu menggabungkan banyak kiriman ke satu truk, memilah di hub, dan mengantar ke penerima.
+
+
+3.2 ERP Semi-Lengkap
+
+ERP Semi-Lengkap dipakai staf harian yang menangani banyak kiriman sekaligus. Order, manifest, hub, rute, kontak, armada, dan pelacakan pelanggan dikerjakan di modul masing-masing, tetapi jejak ke pelanggan tetap satu jalur.
+
+Kasus yang dipakai di seluruh subbagian ini:
+- AWB-20261018-0005, LTL, Vino Wibowo ke Surya Kurniawan, Jakarta → Surabaya, status Tiba di Hub (Surabaya Hub).
+- AWB-20261018-0010, LTL, Lukman Wijaya ke Jihan Nugroho, Jakarta → Malang, status Dalam pengantaran.
+- Manifest MAN-20261018-0002 (Gudang Jakarta → Surabaya Hub, 10 kiriman) dan MAN-20261018-0003 (Surabaya Hub → Malang Hub, 5 kiriman), truk B 2314 77 Fuso, sopir jaka.
+
+
+3.2.1 Masuk ke sistem
+Gambar: 01-login.png
+
+Sistem ini khusus staf. Halaman masuk menyatakan niat kerja: operasional logistik hibrida dalam satu portal — order LTL dan FTL, konsolidasi manifest, sorting di hub transit, dan pelacakan yang selalu sinkron.
+
+Tombol Lacak Kiriman di pojok tetap ada untuk pelanggan, tanpa harus login. Staf mengisi nama pengguna dan kata sandi, lalu masuk ke dasbor.
+
+Data master (kontak, armada, hub, rute) dan operasional (order, manifest, antar) baru bisa dikelola setelah masuk. Pelacakan publik dijelaskan di 3.2.10.
+
+
+3.2.2 Dasbor
+Gambar: 02-dashboard.png
+
+Setelah masuk, staf melihat ringkasan operasional.
+
+Pada data saat ini:
+- 8 order aktif, 11 total sepanjang waktu.
+- 0 manifest terbuka — semua perjalanan truk sudah selesai.
+- 3 kiriman terkirim sampai tujuan.
+- 1 kendaraan / 1 sopir, 39 kontak di data master.
+
+Tabel Order Terbaru menampilkan kasus nyata, antara lain:
+- AWB-20261018-0010, LTL, Lukman Wijaya, Jakarta → Malang, Dalam pengantaran.
+- AWB-20261018-0009, FTL, Dimas Halim, Jakarta → Malang, Terkirim.
+- AWB-20261018-0005, LTL, Vino Wibowo, Jakarta → Surabaya, Tiba di Hub.
+
+Panel Status Kiriman menunjukkan sebaran di sepanjang alur: 7 tiba di hub, 1 dalam pengantaran, 3 terkirim. Catatan di bawah panel penting: perubahan status manifest otomatis menambahkan milestone ke setiap kiriman yang terpasang. Staf tidak mengisi riwayat satu per satu untuk sepuluh koli yang naik truk yang sama.
+
+Tiga kartu cepat mengarahkan kerja berikutnya: Order Baru, Buat Manifest, dan Sorting Hub Transit. Alurnya berantai: kontak, hub, rute, dan armada disiapkan dulu (3.2.6–3.2.8), lalu order dibuat (3.2.3), lalu digabung ke manifest (3.2.4), lalu dipecah lagi di hub (3.2.5).
+
+
+3.2.3 Order
+Gambar: 03-orders.png, 04-order-create.png, 05-order-detail.png, 06-order-antar.png
+
+Daftar order adalah papan semua kiriman. Ada 11 order. Staf bisa cari, saring status, dan saring LTL/FTL atau tujuan.
+
+Contoh baris:
+- AWB-20261018-0010, LTL, Lukman Wijaya → Jihan Nugroho, Jakarta → Malang, Dalam pengantaran, 18 Oktober 2026 16:05:11.
+- AWB-20261018-0009, FTL, Dimas Halim → Putri Lestari, Jakarta → Malang, Terkirim.
+- AWB-20261018-0005, LTL, Vino Wibowo → Surya Kurniawan, Jakarta → Surabaya, Tiba di Hub, 16:03:48.
+
+Berbeda dari 3.1 ERP Sederhana: di sini satu order belum menggeser truk sendiri. Order adalah kiriman pelanggan. Pergerakan truk ada di modul Manifest (3.2.4). Order yang tiba di hub menunggu sorting di Hub Transit (3.2.5) — antar ke penerima, atau feeder ke kota lain.
+
+Pengirim dan penerima diambil dari Kontak (3.2.7). Kota asal/tujuan mengikuti alamat yang diisi saat order dibuat.
+
+Tombol Baru membuka form input. Staf memilih LTL (konsolidasi, banyak kiriman satu truk) atau FTL (charter, satu klien satu truk). Pengirim dan penerima diketik dua huruf, lalu dipilih dari Kontak. Kalau nama belum ada, kontak baru bisa dibuat di panel samping tanpa pindah modul.
+
+Alamat pengirim dan penerima diisi berjenjang: provinsi, kabupaten/kota, kecamatan, kelurahan/desa, kode pos, lalu alamat detail. Nomor PO opsional untuk referensi klien B2B, dan bisa dilacak publik.
+
+Setelah disimpan, nomor AWB terbit otomatis. Order baru berstatus Terdaftar, siap dimasukkan ke manifest. Rute truk tidak dipilih di form ini — rute dipilih saat membuat manifest, memakai daftar di 3.2.6.
+
+Detail AWB-20261018-0005 (Tiba di Hub) menampilkan pita status Terdaftar → Sudah Manifest → Dalam Perjalanan → Tiba di Hub → Dalam Pengantaran → Terkirim. Yang oranye adalah posisi sekarang.
+
+Pengirim Vino Wibowo, penerima Surya Kurniawan. Alamat pengirim di Tebet, Jakarta 12820. Alamat penerima di Genting Kalianak, Surabaya 60183. Lokasi saat ini: Surabaya Hub.
+
+Riwayat 7 milestone mengikuti manifest, bukan klik truk di halaman order:
+1. Order diterima di Jakarta — Gudang Asal, 16:03:48.
+2. Dikonsolidasi ke MAN-20261018-0002 (Gudang Jakarta → Surabaya Hub), 16:48:40.
+3. Berangkat menuju Semarang Gudang via manifest itu, 16:48:53.
+4. Truk tiba di Semarang Gudang, 16:51:13.
+5. Berangkat dari Semarang Gudang menuju Surabaya Hub, 16:51:24.
+6. Tiba di Surabaya Hub — kargo diterima untuk sorting, 16:52:10.
+7. Manifest selesai — kargo ditahan di Surabaya Hub, menunggu feeder atau antar, 16:53:16.
+
+Form Tambah Milestone hanya untuk catatan manual. Tombol Tampilkan publik membuka bahasa pelanggan (3.2.10). Langkah berikutnya untuk kiriman ini ada di Hub Surabaya (3.2.5): antar ke Surya Kurniawan, karena tujuan kotanya sudah Surabaya.
+
+Detail AWB-20261018-0010 (Dalam pengantaran) menunjukkan kenapa Order dan Manifest dipisah. Kiriman Lukman Wijaya ke Jihan Nugroho, Sawojajar, Malang, menempuh dua batang:
+- Batang pertama: MAN-20261018-0002, Gudang Jakarta → Semarang → Surabaya Hub (sama dengan AWB-0005).
+- Batang kedua: setelah sorting di Surabaya, naik MAN-20261018-0003 (Surabaya Hub → Malang Hub) lewat Hub Pasuruan dan Hub Purwodadi.
+- Last mile: kurir berangkat dari Malang Hub menuju penerima, 18:51:06.
+
+Satu order bisa pindah truk (trunk lalu feeder), dan tiap pindah tercatat di riwayat yang sama. Di 3.1, order itulah truknya. Di 3.2, order adalah barang; truknya adalah manifest. Penyerahan Diterima/Gagal dikerjakan di meja hub, bukan di halaman order — lihat surat jalan ANT-20261018-0001 pada 3.2.5.
+
+
+3.2.4 Manifest
+Gambar: 07-manifests.png, 08-manifest-create.png, 09-manifest-detail.png
+
+Manifest adalah keberangkatan truk: beberapa kiriman, satu kendaraan, satu sopir, satu rute.
+
+Dua data yang ada, keduanya Selesai:
+- MAN-20261018-0003, Surabaya Hub → Malang Hub, B 2314 77 (Fuso), sopir jaka, 5 kiriman, lokasi terakhir Malang Hub, 18:52:06.
+- MAN-20261018-0002, Gudang Jakarta → Surabaya Hub, kendaraan dan sopir yang sama, 10 kiriman, lokasi terakhir Surabaya Hub, 16:53:18.
+
+Satu armada dipakai dua kali dalam sehari: dulu trunk Jakarta–Surabaya, lalu feeder Surabaya–Malang. Kendaraan dan sopir berasal dari Armada (3.2.8). Rute berasal dari 3.2.6.
+
+Saat membuat manifest, staf memilih rute, kendaraan, dan sopir. Untuk FTL bisa diisi klien charter. Di kanan, sistem menampilkan kiriman kandidat: order berstatus Terdaftar, atau kargo yang sudah sorting di hub (Tiba di Hub) dan akan feeder ke kota lain.
+
+Pada tangkapan form, daftar kanan kosong karena order aktif sudah tiba di hub tujuan atau sedang diantar — sesuai dasbor: 0 manifest terbuka. Kalau ada kandidat, staf mencentang AWB yang sejalan, lalu Simpan. Nomor manifest terbit otomatis. Sejak itu, menggeser truk di detail manifest mengisi riwayat semua kiriman yang terpasang.
+
+Detail MAN-20261018-0002 memakai papan visual yang sama ide dengan 3.1, tetapi untuk satu truk berisi banyak AWB:
+- Gudang Jakarta — sudah lewat
+- Semarang Gudang — sudah lewat
+- Surabaya Hub — selesai, truk di sini
+
+Penugasan: Fuso B 2314 77, sopir jaka, lokasi terakhir Surabaya Hub pukul 16:53:18.
+
+Kiriman Terpasang menampilkan nasib masing-masing setelah truk tiba:
+- AWB-20261018-0005, 0006, 0007 tujuan Surabaya: Tiba di Hub, siap antar di Surabaya.
+- AWB-20261018-0008 dan 0009 tujuan Malang: Terkirim.
+- AWB-20261018-0010 tujuan Malang: Dalam pengantaran.
+
+Satu klik di papan ini dulu menggerakkan sepuluh kiriman sekaligus. Setelah selesai, Sorting di hub terakhir membawa staf ke meja Surabaya Hub (3.2.5).
+
+
+3.2.5 Hub Transit
+Gambar: 10-hubs.png, 11-hub-surabaya.png, 12-hub-malang.png
+
+Sembilan hub tercatat, lengkap alamat. Contoh:
+- Gudang Jakarta, Kalideres, Jakarta Barat 11840.
+- Semarang Gudang, Pandanaran, Semarang 50241.
+- Surabaya Hub, Gubeng, Surabaya 60281, Jalan Gubeng Kartajaya No. 10.
+- Malang Hub, Blimbing, Malang 65126, Jalan Basuki Rahmat No. 5.
+- Plus Hub Pasuruan, Purwodadi, Jember, Banyuwangi, Denpasar.
+
+Klik nama hub membuka meja kerja. Hub inilah yang disusun menjadi rute (3.2.6). Tanpa hub, manifest tidak punya papan perjalanan.
+
+Meja Surabaya Hub: 5 siap antar, 0 feeder, 0 sedang diantar. Bagian Antar ke penerima memuat kiriman yang sudah sampai di Surabaya dan tujuan kotanya Surabaya, antara lain:
+- AWB-20261018-0005, penerima Surya Kurniawan, Genting Kalianak 177, pengirim Vino Wibowo, asal Jakarta.
+- AWB-20261018-0006, Johan Saputra, Sidosermo.
+- AWB-20261018-0007, Farah Lestari, Sememi.
+
+Staf mencentang kiriman, pilih kendaraan dan sopir, lalu Kirim antar. Yang tujuannya bukan Surabaya masuk Feeder (manifest lanjutan), bukan antar. Order 0005 yang di 3.2.3 “menunggu feeder atau antar” di sini sudah jelas: antar, karena penerimanya di Surabaya.
+
+Meja Malang Hub: 2 siap antar, 0 feeder, 1 sedang diantar. Surat jalan ANT-20261018-0001, sopir jaka, Fuso B 2314 77, membawa AWB-20261018-0010 ke Jihan Nugroho di Sawojajar. Staf menekan Diterima jika paket sampai, atau Gagal plus alasan jika tidak. Antrean bawah: AWB-20261016-0002 ke Handoyo, dan AWB-20261016-0004 ke hermadi.
+
+Ini ujung operasional. Setelah trunk dan feeder, hub tujuan kota penerima yang menyerahkan barang dan menutup status Terkirim. Riwayat Dalam pengantaran pada AWB-0010 berasal dari tombol Kirim antar di meja ini.
+
+
+3.2.6 Rute
+Gambar: 13-routes.png, 14-route-new.png
+
+Empat rute siap pakai, masing-masing rangkaian hub plus armada default:
+- Jakarta To Surabaya: Gudang Jakarta → Semarang Gudang → Surabaya Hub. Dipakai MAN-20261018-0002.
+- Surabaya to Malang: Surabaya Hub → Hub Pasuruan → Hub Purwodadi → Malang Hub. Dipakai MAN-20261018-0003.
+- Malang to Jakarta: kebalikan trunk.
+- Surabaya to Bali (PICKUP MOBIL): Surabaya Hub → Hub Jember → Hub Banyuwangi → Hub Denpasar.
+
+Kendaraan default di kartu: B 2314 77 Fuso, sopir jaka. Saat manifest dibuat, rute ini yang dipilih; kendaraan masih bisa diganti. Hub di dalam rute harus sudah ada di 3.2.5.
+
+Rute baru disusun dengan menamai rute, lalu menyeret kartu hub dari kolom kiri ke kolom kanan. Minimal dua hub. Di bawah, armada default dipilih dari 3.2.8.
+
+Contoh pemakaian: rute Jakarta To Surabaya disusun di sini, dipilih saat buat manifest (3.2.4), lalu dijalankan di papan truk. Order tidak perlu tahu urutan hub; yang perlu tahu adalah manifest.
+
+
+3.2.7 Kontak
+Gambar: 15-contacts.png, 16-contact-new.png
+
+39 kontak: klien, penerima, dan pihak lain. Nama-nama di order berasal dari sini.
+
+Contoh yang muncul di kiriman:
+- Lukman Wijaya, klien, Jakarta — pengirim AWB-0010.
+- Jihan Nugroho, penerima, Malang.
+- Vino Wibowo / Surya Kurniawan — pasangan AWB-0005.
+- Farah Lestari, penerima, Surabaya; Irfan Mahardika, klien, Jakarta — AWB-0007.
+- PT Toba Sample / PT Sinar Toba Uji untuk skenario perusahaan.
+
+Tanpa kontak, form order (3.2.3) tidak punya pengirim/penerima yang bisa dilacak ulang. Kategori membedakan Klien, Penerima, Sopir, Vendor.
+
+Form tambah singkat: nama, perusahaan, email, telepon, alamat, kota, dan kategori. Sopir yang dibuat di sini dapat dihubungkan ke Armada. Klien dan penerima langsung muncul saat ketik dua huruf di form order.
+
+
+3.2.8 Armada
+Gambar: 17-fleet.png
+
+Satu kendaraan: B 2314 77, jenis Fuso, kepemilikan Internal.
+Satu sopir: jaka, SIM tercatat, tipe Internal.
+
+Inilah truk dan sopir di MAN-20261018-0002, MAN-20261018-0003, dan surat jalan ANT-20261018-0001. Rute menaruhnya sebagai default; manifest dan antar hub yang menugaskan saat berangkat.
+
+Kalau perusahaan punya vendor luar, kepemilikan bisa Vendor, bukan Internal.
+
+
+3.2.9 Pengguna
+Gambar: 18-users.png
+
+Saat ini satu akun: superadmin, peran Superadmin, status Aktif, dibuat 16 Oktober 2026. Modul ini hanya tampil untuk superadmin. Dari sini perusahaan menambah staf operasional agar login tidak berbagi satu akun, dengan peran sesuai kerja (admin gudang, admin hub, dan seterusnya).
+
+
+3.2.10 Lacak kiriman
+Gambar: 19-track.png
+
+Pencarian AWB-20261018-0005. Bahasa Indonesia (bisa diganti English). Status yang dibaca orang awam: Tiba di gudang — bukan kode internal ARRIVED_HUB.
+
+Ringkasan: Jakarta → Surabaya, layanan Reguler, pengirim Vino Wibowo, penerima Surya Kurniawan.
+
+Riwayat 7 pembaruan, terbaru di atas, dalam kalimat biasa:
+- Tiba di gudang Surabaya Hub
+- Dalam perjalanan ke Surabaya Hub
+- Tiba di gudang Semarang Gudang
+- Barang diproses di gudang Gudang Jakarta
+- Barang diterima di Jakarta — Gudang Asal
+
+Isinya sama dengan detail order di 3.2.3, tetapi tanpa kode manifest dan tanpa istilah staf. Pelanggan tidak perlu masuk ERP. Staf yang menggeser truk di manifest dan sorting di hub otomatis mengisi halaman ini.
+
+Landing page perusahaan memakai jejak yang sama. Portal ini adalah sumber datanya.
+
+
+Alur yang tersambung (AWB-0005 dan AWB-0010)
+
+1. Kontak Vino, Surya, Lukman, Jihan disimpan (3.2.7).
+2. Hub Jakarta, Semarang, Surabaya, Pasuruan, Purwodadi, Malang disimpan (3.2.5).
+3. Rute Jakarta–Surabaya dan Surabaya–Malang disusun (3.2.6), armada Fuso B 2314 77 + jaka (3.2.8).
+4. Order AWB-0005 (ke Surabaya) dan AWB-0010 (ke Malang) diinput (3.2.3).
+5. Keduanya naik MAN-20261018-0002, truk digeser Jakarta → Semarang → Surabaya (3.2.4). Riwayat order ikut.
+6. Di Surabaya Hub, AWB-0005 masuk Antar ke penerima. AWB-0010 masuk feeder, naik MAN-20261018-0003 ke Malang (3.2.5).
+7. Di Malang Hub, AWB-0010 dikirim antar (ANT-20261018-0001).
+8. Pelanggan memantau AWB-0005 di Lacak Kiriman (3.2.10) tanpa menelepon kantor.
+
+Itu beda pokok 3.2 dibanding 3.1: order, truk, hub, dan antar dikerjakan di tempatnya masing-masing, tetapi riwayat pelanggan tetap satu jalur.

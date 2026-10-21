@@ -1,0 +1,72 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import plus, search %}
+{% from "_ui.html" import status_badge, service_badge, empty_state, status_label %}
+{% block title %}Order — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Order{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<form class="cp" method="get" action="{{ url_for('shipments_blueprint.index') }}">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('shipments_blueprint.create') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Order</span>
+        {% if data.shipments|length %}
+        <span class="list-count">{{ data.shipments|length }}</span>
+        {% endif %}
+    </div>
+    <div class="cp-search">
+        <span class="list-search-icon">{{ search("w-4 h-4") }}</span>
+        <input class="list-search-input" type="search" name="q" value="{{ data.filters.q or '' }}" placeholder="Cari...">
+    </div>
+    <div class="cp-side cp-side-end cp-filters">
+        <select class="cp-filter" name="status" onchange="this.form.submit()">
+            <option value="">Semua status</option>
+            {% for st in data.statuses %}
+            <option value="{{ st }}" {% if data.filters.status == st %}selected{% endif %}>{{ status_label(st) }}</option>
+            {% endfor %}
+        </select>
+        <select class="cp-filter" name="service_type" onchange="this.form.submit()">
+            <option value="">LTL + FTL</option>
+            {% for st in data.service_types %}
+            <option value="{{ st }}" {% if data.filters.service_type == st %}selected{% endif %}>{{ st }}</option>
+            {% endfor %}
+        </select>
+        <input class="cp-mini" type="text" name="destination_city" value="{{ data.filters.destination_city or '' }}" placeholder="Tujuan">
+    </div>
+</form>
+
+{% if data.shipments|length == 0 %}
+    {{ empty_state("Tidak ada kiriman", "Ubah filter, atau buat order pertama.", url_for('shipments_blueprint.create'), "Baru") }}
+{% else %}
+<table class="tbl odoo-tbl">
+    <thead>
+        <tr><th>Nomor AWB</th><th>PO</th><th>Layanan</th><th>Pengirim → Penerima</th><th>Rute</th><th>Status</th><th>Manifest</th><th>Dibuat</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for s in data.shipments %}
+        <tr>
+            <td><a class="row-link font-mono" href="{{ url_for('shipments_blueprint.detail', tracking_code=s.tracking_code) }}">{{ s.tracking_code }}</a></td>
+            <td class="font-mono text-xs">{{ s.po_number }}</td>
+            <td>{{ service_badge(s.service_type) }}</td>
+            <td>{{ s.sender_name }} → {{ s.receiver_name }}</td>
+            <td>{{ s.origin_city }} → {{ s.destination_city }}</td>
+            <td>{{ status_badge(s.status_utama) }}</td>
+            <td class="font-mono text-xs">{{ s.active_manifest_code }}</td>
+            <td class="mute">{{ s.rec_timestamp_str }}</td>
+            <td>
+                {% if s.status_utama == 'REGISTERED' %}
+                <div class="row-actions">
+                    <a class="btn-outline btn-sm" href="{{ url_for('shipments_blueprint.edit', tracking_code=s.tracking_code) }}">Ubah</a>
+                    <form method="post" action="{{ url_for('shipments_blueprint.delete', tracking_code=s.tracking_code) }}" onsubmit="return confirm('Hapus order ini?');">
+                        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                        <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                    </form>
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,275 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import search, layers, truck, users, pin, warehouse %}
+{% from "_ui.html" import service_badge, empty_state %}
+{% block title %}{{ data.hub }} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{{ data.hub }}{% endblock %}
+{% block erp_content %}
+{% macro place_line(s) -%}
+{%- if s.receiver_address %}{{ s.receiver_address }}{% endif -%}
+{%- if s.destination_village %}{% if s.receiver_address %}, {% endif %}{{ s.destination_village }}{% endif -%}
+{%- if s.destination_district %}{% if s.receiver_address or s.destination_village %}, {% endif %}{{ s.destination_district }}{% endif -%}
+{%- if s.destination_city %}{% if s.receiver_address or s.destination_village or s.destination_district %}, {% endif %}{{ s.destination_city }}{% endif -%}
+{%- if s.destination_postal_code %} {{ s.destination_postal_code }}{% endif -%}
+{%- endmacro %}
+{% macro cargo_card(s, checked) %}
+<label class="cargo-card">
+    <input type="checkbox" name="shipment_ids" value="{{ s.id }}" class="chk" {% if checked %}checked{% endif %}>
+    <div>
+        <div class="cargo-top">
+            <span class="font-mono">{{ s.tracking_code }}</span>
+            {{ service_badge(s.service_type) }}
+        </div>
+        <div class="cargo-grid">
+            <div>
+                <span class="cargo-k">Penerima</span>
+                <span class="cargo-v">{{ s.receiver_name or "—" }}</span>
+                {% if s.receiver_phone %}<span class="cargo-sub">{{ s.receiver_phone }}</span>{% endif %}
+            </div>
+            <div>
+                <span class="cargo-k">Alamat antar</span>
+                <span class="cargo-v">{{ place_line(s) or s.destination_city }}</span>
+            </div>
+            <div>
+                <span class="cargo-k">Pengirim</span>
+                <span class="cargo-v">{{ s.sender_name or "—" }}</span>
+                {% if s.sender_phone %}<span class="cargo-sub">{{ s.sender_phone }}</span>{% endif %}
+            </div>
+            <div>
+                <span class="cargo-k">Asal</span>
+                <span class="cargo-v">{{ s.origin_city }}</span>
+            </div>
+        </div>
+    </div>
+</label>
+{% endmacro %}
+{% macro assign_panel(vehicle_id, driver_id, submit_label, icon) %}
+<aside class="desk-assign">
+    <div>
+        <div class="assign-title">Penugasan</div>
+        <p class="assign-note">Pilih kendaraan dan sopir untuk kiriman yang dicentang.</p>
+    </div>
+    <div class="assign-field">
+        <label class="assign-label" for="{{ vehicle_id }}">{{ truck("w-4 h-4") }} Kendaraan <span class="req">*</span></label>
+        <select class="fld select2-vehicle" id="{{ vehicle_id }}" name="vehicle_id" required>
+            <option value=""></option>
+        </select>
+    </div>
+    <div class="assign-field">
+        <label class="assign-label" for="{{ driver_id }}">{{ users("w-4 h-4") }} Sopir <span class="req">*</span></label>
+        <select class="fld select2-driver" id="{{ driver_id }}" name="driver_id" required>
+            <option value=""></option>
+        </select>
+    </div>
+    <button type="submit" class="btn-accent">{{ icon }} {{ submit_label }}</button>
+    <div class="pick-count">0 dipilih</div>
+</aside>
+{% endmacro %}
+
+<div class="flat-page desk-page">
+{% set info = data.hub_info %}
+<section class="desk-hub">
+    <div class="desk-hub-top">
+        <div>
+            <p class="hub-kicker"><a href="{{ url_for('manifests_blueprint.hub') }}">Hub</a></p>
+            <h1 class="hub-name">{{ data.hub }}</h1>
+        </div>
+        {% if data.hub_id %}
+        <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.hub_edit', hub_id=data.hub_id) }}">Ubah</a>
+        {% endif %}
+    </div>
+    {% if info %}
+    <div class="hub-facts">
+        {% if info.address %}
+        <div class="hub-fact hub-fact-wide">
+            <span class="hub-fact-k">{{ pin("w-3.5 h-3.5") }} Alamat</span>
+            <span class="hub-fact-v">{{ info.address }}</span>
+        </div>
+        {% endif %}
+        {% if info.village %}
+        <div class="hub-fact">
+            <span class="hub-fact-k">Kelurahan</span>
+            <span class="hub-fact-v">{{ info.village }}</span>
+        </div>
+        {% endif %}
+        {% if info.district %}
+        <div class="hub-fact">
+            <span class="hub-fact-k">Kecamatan</span>
+            <span class="hub-fact-v">{{ info.district }}</span>
+        </div>
+        {% endif %}
+        {% if info.regency %}
+        <div class="hub-fact">
+            <span class="hub-fact-k">Kabupaten / Kota</span>
+            <span class="hub-fact-v">{{ info.regency }}</span>
+        </div>
+        {% endif %}
+        {% if info.province %}
+        <div class="hub-fact">
+            <span class="hub-fact-k">Provinsi</span>
+            <span class="hub-fact-v">{{ info.province }}</span>
+        </div>
+        {% endif %}
+        {% if info.postal_code %}
+        <div class="hub-fact">
+            <span class="hub-fact-k">Kode pos</span>
+            <span class="hub-fact-v">{{ info.postal_code }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="hub-stats">
+        <div class="hub-stat hub-stat-antar"><strong>{{ data.antar|length }}</strong><span>Siap antar</span></div>
+        <div class="hub-stat hub-stat-feeder"><strong>{{ data.feeder|length }}</strong><span>Feeder</span></div>
+        <div class="hub-stat hub-stat-run"><strong>{{ data.moving }}</strong><span>Sedang diantar</span></div>
+    </div>
+    <form class="desk-filter" method="get" action="{{ data.page_url }}">
+        <span class="list-search-icon">{{ search("w-4 h-4") }}</span>
+        <input type="text" name="destination" value="{{ data.destination }}" list="city-list" placeholder="Saring tujuan" autocomplete="off">
+        <button type="submit" class="btn-outline btn-sm">Saring</button>
+    </form>
+    <datalist id="city-list">
+        {% for city in data.service_cities %}<option value="{{ city }}"></option>{% endfor %}
+    </datalist>
+</section>
+
+{% if data.runs|length == 0 and data.antar|length == 0 and data.feeder|length == 0 %}
+{{ empty_state("Tidak ada kargo di hub ini", "Tidak ada kiriman yang parkir di " + data.hub + (" tujuan " if data.destination else "") + (data.destination if data.destination else "") + ".", "", "") }}
+{% endif %}
+
+{% if data.runs|length %}
+<section class="desk-section">
+    <div class="desk-section-head">
+        <h2>Sedang diantar</h2>
+        <span class="list-count">{{ data.moving }} kiriman</span>
+    </div>
+    {% for run in data.runs %}
+    <article class="run-card">
+        <div class="run-head">
+            <span class="font-mono">{{ run.delivery_code }}</span>
+            <span>{{ run.driver_label }}{% if run.vehicle_label %} · {{ run.vehicle_label }}{% endif %}</span>
+        </div>
+        {% for s in run.shipments %}
+        <div class="run-item">
+            <div class="run-who">
+                <div class="cargo-top">
+                    <span class="font-mono">{{ s.tracking_code }}</span>
+                    {{ service_badge(s.service_type) }}
+                </div>
+                <div class="run-person">{{ s.receiver_name or "—" }}{% if s.receiver_phone %} <span class="cargo-sub">{{ s.receiver_phone }}</span>{% endif %}</div>
+                <div class="run-addr">{{ place_line(s) or s.destination_city }}</div>
+            </div>
+            <div class="run-pod">
+                <form method="post" action="{{ url_for('manifests_blueprint.hub_antar_deliver', code=run.delivery_code) }}">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <input type="hidden" name="hub" value="{{ data.hub }}">
+                    <input type="hidden" name="shipment_id" value="{{ s.id }}">
+                    <label class="pod-field">
+                        <span>Nama penerima</span>
+                        <input class="antar-input" type="text" name="received_by" placeholder="Nama yang menerima" required autocomplete="off">
+                    </label>
+                    <button type="submit" class="btn-accent btn-sm">Diterima</button>
+                </form>
+                <form method="post" action="{{ url_for('manifests_blueprint.hub_antar_fail', code=run.delivery_code) }}">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <input type="hidden" name="hub" value="{{ data.hub }}">
+                    <input type="hidden" name="shipment_id" value="{{ s.id }}">
+                    <label class="pod-field">
+                        <span>Alasan gagal</span>
+                        <input class="antar-input" type="text" name="reason" placeholder="Kenapa tidak sampai" required autocomplete="off">
+                    </label>
+                    <button type="submit" class="btn-outline btn-sm">Gagal</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </article>
+    {% endfor %}
+</section>
+{% endif %}
+
+{% if data.antar|length %}
+<form class="desk-section desk-form" method="post" action="{{ url_for('manifests_blueprint.hub_antar') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="hub" value="{{ data.hub }}">
+    <div class="desk-section-head">
+        <div>
+            <h2>Antar ke penerima</h2>
+            <p class="desk-note">Kiriman yang sudah sampai di {{ data.hub }} dan tujuan kotanya sama.</p>
+        </div>
+        <button type="button" class="btn-ghost btn-sm pick-all">Pilih semua</button>
+    </div>
+    <div class="desk-work">
+        <div class="cargo-list">
+            {% for s in data.antar %}
+            {{ cargo_card(s, false) }}
+            {% endfor %}
+        </div>
+        {{ assign_panel("antar_vehicle_id", "antar_driver_id", "Kirim antar", warehouse("w-4 h-4")) }}
+    </div>
+</form>
+{% endif %}
+
+{% if data.feeder|length %}
+<form class="desk-section desk-form" method="post" action="{{ url_for('manifests_blueprint.create') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="origin" value="{{ data.hub }}">
+    <input type="hidden" name="destination" value="{{ data.destination }}">
+    <div class="desk-section-head">
+        <div>
+            <h2>Feeder ke kota lain</h2>
+            <p class="desk-note">{{ data.feeder|length }} kiriman di {{ data.hub }}{% if data.destination %} tujuan {{ data.destination }}{% endif %}. Yang dicentang dibuatkan manifest baru.</p>
+        </div>
+        <button type="button" class="btn-ghost btn-sm pick-all">Pilih semua</button>
+    </div>
+    <div class="desk-work">
+        <div class="cargo-list">
+            {% for s in data.feeder %}
+            {{ cargo_card(s, true) }}
+            {% endfor %}
+        </div>
+        {{ assign_panel("vehicle_id", "driver_id", "Buat manifest feeder", layers("w-4 h-4")) }}
+    </div>
+</form>
+{% endif %}
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script>
+$(document).ready(function () {
+    $(".select2-vehicle").select2({
+        ajax: { url: "/api/vehicles", dataType: "json", delay: 250,
+                data: function (params) { return { q: params.term || "" }; },
+                processResults: function (resp) { return { results: resp.results }; } },
+        placeholder: "Cari nopol / jenis…", allowClear: true, width: "100%"
+    });
+    $(".select2-driver").select2({
+        ajax: { url: "/api/drivers", dataType: "json", delay: 250,
+                data: function (params) { return { q: params.term || "" }; },
+                processResults: function (resp) { return { results: resp.results }; } },
+        placeholder: "Cari sopir…", allowClear: true, width: "100%"
+    });
+    document.querySelectorAll(".desk-form").forEach(function (form) {
+        var count = form.querySelector(".pick-count");
+        var boxes = function () { return form.querySelectorAll('input[name="shipment_ids"]'); };
+        function sync() {
+            var n = 0;
+            boxes().forEach(function (box) { if (box.checked) n += 1; });
+            if (count) count.textContent = n + " dipilih";
+        }
+        form.addEventListener("change", sync);
+        var toggle = form.querySelector(".pick-all");
+        if (toggle) {
+            toggle.addEventListener("click", function () {
+                var allOn = true;
+                boxes().forEach(function (box) { if (!box.checked) allOn = false; });
+                boxes().forEach(function (box) { box.checked = !allOn; });
+                sync();
+            });
+        }
+        sync();
+    });
+});
+</script>
+{% endblock %}

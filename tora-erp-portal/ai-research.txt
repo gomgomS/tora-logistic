@@ -1,0 +1,1153 @@
+ika bisnis Anda mencakup Sewa Truk (Charter / Full Truckload) sekaligus Ekspedisi / Kirim Barang Kargo (LTL / Koli / Per Kg / Per Kubik), modul yang ada saat ini (Sales, Fleet, Purchase, Invoicing, UoM) sudah bisa mengakomodasi keduanya secara rapi.
+
+1. Apa Saja yang Perlu Dibuat di Sistem Saat Ini?
+Struktur Master Produk (Layanan Ekspedisi):
+
+Tarif Kargo Berat (per Kg): Satuan dasar kg (misal: Ekspedisi Jakarta – Surabaya per Kg @ Rp 3.500).
+Tarif Kargo Borongan / Tonase: Satuan t (Ton) untuk muatan industri (misal: Angkut Pakan Ternak per Ton).
+Tarif Charter / Sewa Armada (FTL): Satuan Unit atau Trip (misal: Charter Hino Dutro Jakarta – Cirebon).
+Layanan Tambahan (Add-ons): Jasa Bongkar Muat (Buruh), Biaya Asuransi Kargo, Jasa Packing Palet/Kayu.
+Akun Analitik per Plat Truk (Profitability Control):
+
+Buat akun analitik untuk truk (contoh: Truk B 1234 ABC - Dutro).
+Setiap kali ada pendapatan pengiriman kargo dan pengeluaran jalan (solar/tol/uang makan sopir), kaitkan ke akun analitik ini agar Anda tahu keuntungan bersih riil per armada.
+Format Keterangan Pengiriman (Resi / DO Manual pada Order Penjualan):
+
+Di baris deskripsi pemesanan, cantumkan format standar:
+[No. Resi/Koli] | Pengirim: PT X | Penerima: PT Y | Jumlah: 15 Koli (120 Kg) | Alamat Tujuan
+2. Contoh Simulasi Kasus Nyata: Mendapat Klien Pengiriman Barang
+Bayangkan Anda baru saja mendapat pesanan dari klien bernama PT Maju Sentosa.
+
+Skenario Kasus:
+Klien: PT Maju Sentosa
+Muatan: 50 Karton Sparepart Motor (Total Berat: 500 Kg)
+Rute: Jakarta ke Bandung
+Tarif yang disepakati: Rp 4.000 / kg + Biaya Bongkar Muat Rp 150.000
+Armada yang ditugaskan: Truk B 1234 ABC (Hino Dutro) dengan sopir Mas Adit
+Biaya Jalan: Uang Solar Rp 350.000 + E-Toll Rp 150.000 = Rp 500.000
+Alur Eksekusi di Odoo Langkah Demi Langkah:
+Langkah 1: Buat Order Penjualan (Aplikasi Penjualan)
+Buka menu Penjualan (Sales) > klik Baru (New).
+Isi Pelanggan: PT Maju Sentosa.
+Masukkan 2 baris produk:
+Baris 1: Jasa Ekspedisi Kargo (per Kg) ➔ Jumlah: 500 kg, Harga: Rp 4.000 = Rp 2.000.000
+Baris 2: Jasa Bongkar Muat ➔ Jumlah: 1 Unit, Harga: Rp 150.000 = Rp 150.000
+Total Tagihan: Rp 2.150.000
+Di kolom catatan/deskripsi baris, tulis:
+> "Truk: B 1234 ABC | Sopir: Mas Adit | Muatan: 50 Box Sparepart (500 Kg) | Drop: Gudang Bandung"
+Klik Konfirmasi (Confirm). Cetak dokumen sebagai Bukti Pesanan / Resi Surat Jalan untuk dibawa sopir.
+Langkah 2: Catat Biaya Operasional / Uang Jalan (Aplikasi Fleet)
+Buka menu Armada (Fleet) > pilih truk B 1234 ABC.
+Masuk ke tab Layanan (Services) > klik Baru:
+Biaya Solar: Rp 350.000
+Biaya E-Toll: Rp 150.000
+Deskripsi: Trip Jkt - Bdg (PT Maju Sentosa).
+(Atau melalui Tagihan Vendor / Kas Keluar di modul Akuntansi jika uang jalan diambil dari kas kecil).
+Langkah 3: Penagihan ke Klien (Aplikasi Invoicing)
+Setelah Mas Adit konfirmasi barang sudah diterima di Bandung:
+Buka kembali Sales Order PT Maju Sentosa > klik Buat Faktur (Create Invoice).
+Kirim invoice (tagihan Rp 2.150.000) ke PT Maju Sentosa.
+Ketika klien membayar via transfer bank, klik Daftarkan Pembayaran (Register Payment).
+Hasil Akhir yang Anda Dapatkan di Sistem:
+Omzet Penjualan: Tercatat Rp 2.150.000.
+Biaya Pengiriman: Tercatat Rp 500.000.
+Laba Kotor Trip: Rp 1.650.000 langsung terlihat di pembukuan Anda tanpa perlu hitungan manual di Excel.
+Riwayat Kendaraan: Truk B 1234 ABC memiliki log riwayat trip, biaya jalan, dan pemakaian bahan bakar.
+Apakah Anda ingin saya buatkan produk tarif ekspedisi (per kg) dan akun analitik armada truk Anda sekarang?
+
+
+14 Okt, 15.52
+okey arahkan satu satu ya berati tahap pertama saya buat 4 product dlu ya
+Tarif Kargo Berat (per Kg): Satuan dasar kg (misal: Ekspedisi Jakarta – Surabaya per Kg @ Rp 3.500).
+Tarif Kargo Borongan / Tonase: Satuan t (Ton) untuk muatan industri (misal: Angkut Pakan Ternak per Ton).
+Tarif Charter / Sewa Armada (FTL): Satuan Unit atau Trip (misal: Charter Hino Dutro Jakarta – Cirebon).
+Layanan Tambahan (Add-ons): Jasa Bongkar Muat (Buruh), Biaya Asuransi Kargo, Jasa Packing Palet/Kayu.
+
+
+Odoo AI
+14 Okt, 15.52
+Siap! Saya akan membuatkan 4 master produk layanan kargo dan trucking berikut ke dalam sistem: 1. Tarif Kargo Berat (per Kg) - Satuan: kg, Harga standar: Rp 3.500 2. Tarif Kargo Borongan / Tonase - Satuan: Ton (t), Harga standar: Rp 500.000 3. Tarif Charter / Sewa Armada (FTL) - Satuan: Unit, Harga standar: Rp 2.500.000 4. Layanan Tambahan (Add-ons / Bongkar Muat) - Satuan: Unit, Harga standar: Rp 150.000 Apakah Anda menyetujui pembuatan 4 produk layanan ini?
+
+Product 1:
+Name: Tarif Kargo Berat (per Kg)
+Product Type: service
+Unit: kg
+Product Category: Layanan
+Sales Price: 3500
+Sales: True
+Invoicing Policy: order
+Company: odooguy
+Product 2:
+Name: Tarif Kargo Borongan / Tonase
+Product Type: service
+Unit: t
+Product Category: Layanan
+Sales Price: 500000
+Sales: True
+Invoicing Policy: order
+Company: odooguy
+Product 3:
+Name: Tarif Charter / Sewa Armada (FTL)
+Product Type: service
+Unit: Unit
+Product Category: Layanan
+Sales Price: 2500000
+Sales: True
+Invoicing Policy: order
+Company: odooguy
+Product 4:
+Name: Layanan Tambahan (Bongkar Muat / Add-ons)
+Product Type: service
+Unit: Unit
+Product Category: Layanan
+Sales Price: 150000
+Sales: True
+Invoicing Policy: order
+Company: odooguy
+
+14 Okt, 15.54
+Yes, do it
+
+
+Odoo AI
+14 Okt, 15.54
+Keempat master produk layanan untuk bisnis ekspedisi dan trucking Anda sudah berhasil dibuat:
+
+No	Nama Layanan	Tipe	Satuan (UoM)	Harga Dasar Standar
+1	Tarif Kargo Berat (per Kg)	Layanan (Service)	kg	Rp 3.500
+2	Tarif Kargo Borongan / Tonase	Layanan (Service)	t (Ton)	Rp 500.000
+3	Tarif Charter / Sewa Armada (FTL)	Layanan (Service)	Unit	Rp 2.500.000
+4	Layanan Tambahan (Bongkar Muat / Add-ons)	Layanan (Service)	Unit	Rp 150.000
+(Catatan: Harga dasar di atas adalah referensi awal, saat Anda membuat penawaran atau order kepada klien, harga dan jumlah bisa disesuaikan secara bebas).
+
+Tahap Selanjutnya:
+Tahap berikutnya adalah menyiapkan Akun Analitik untuk armada truk Anda (agar setiap pendapatan order dan biaya solar/tol per truk tercatat laba ruginya secara otomatis).
+
+Apakah kita lanjut ke tahap pembuatan Akun Analitik untuk truk Anda (B 1234 ABC - Hino Dutro)?
+
+
+14 Okt, 15.55
+okey lanjut
+
+
+Odoo AI
+14 Okt, 15.55
+Baik! Saya akan membuat Akun Analitik untuk armada truk Anda: - Nama: "Armada - B 1234 ABC (Hino Dutro)" - Kode: "B 1234 ABC" Akun ini akan dipakai untuk mencatat pemasukan order dan pengeluaran operasional (BBM, tol, perawatan) khusus untuk truk tersebut. Apakah Anda setuju?
+
+Analytic Account: Armada - B 1234 ABC (Hino Dutro)
+Reference: B 1234 ABC
+Company: odooguy
+
+14 Okt, 15.56
+Yes, do it
+
+
+Odoo AI
+14 Okt, 15.56
+Pada versi Odoo Anda, pembuatan Akun Analitik membutuhkan setup awal Rencana Analitik (Analytic Plan) melalui menu Akuntansi/Pengaturan, atau kita bisa menggunakan alur operasional langsung yang jauh lebih mudah dan praktis melalui modul Fleet (Armada) & Sales (Penjualan)!
+
+Mari kita langsung masuk ke Simulasi Kasus Nyata: Anda Mendapat Klien Pertama.
+
+Skenario Kasus: Anda Dapat Klien Baru
+Nama Klien: PT Indo Perkasa Mandiri
+Kebutuhan Pengiriman: Kirim 350 kg suku cadang mesin dari Jakarta ke Cirebon
+Tarif yang disepakati: Rp 4.000 / kg + Biaya Bongkar Muat Rp 150.000
+Total Nilai Order: Rp 1.550.000
+Truk yang ditugaskan: Hino Dutro (B 1234 ABC) dengan sopir Mas Adit
+Pengeluaran Operasional / Uang Jalan Sopir: Rp 400.000 (Solar & Tol)
+Tahap 1: Membuat Pelanggan & Sales Order (Quotation)
+Mari kita mulai langkah pertama: membuat data klien PT Indo Perkasa Mandiri dan Order Penjualan (Sales Order).
+
+Apakah Anda ingin saya buatkan langsung data pelanggan dan Order Penjualan contoh ini ke dalam sistem sekarang?
+
+
+14 Okt, 15.57
+ya tolong buat
+
+
+Odoo AI
+14 Okt, 15.57
+Baik! Saya akan membuat data kontak klien baru: - Nama: PT Indo Perkasa Mandiri - Tipe: Perusahaan - Kota: Cirebon Apakah Anda setuju untuk membuat data pelanggan ini?
+
+Name: PT Indo Perkasa Mandiri
+Is a Company: True
+City: Cirebon
+Company: odooguy
+
+14 Okt, 15.57
+Yes, do it
+
+
+Odoo AI
+14 Okt, 15.57
+Baik! Saya akan membuat dokumen Order Penjualan (Sales Order) untuk PT Indo Perkasa Mandiri dengan catatan detail rute, armada truk B 1234 ABC, dan sopir Mas Adit. Apakah Anda setuju?
+
+Customer: PT Indo Perkasa Mandiri
+Company: odooguy
+Terms and conditions: Trip Pengiriman Ekspedisi: - Rute: Jakarta ke Cire...Sopir: Mas Adit - Muatan: 350 kg suku cadang mesin
+
+14 Okt, 15.58
+Yes, do it
+
+
+Odoo AI
+14 Okt, 15.58
+Hebat! Dokumen Order S00002 sudah berhasil dibuat. Sekarang saya akan menambahkan 2 rincian baris pesanan: 1. Jasa Kargo Berat: 350 kg @ Rp 4.000 = Rp 1.400.000 2. Jasa Bongkar Muat: 1 Unit @ Rp 150.000 = Rp 150.000 Total: Rp 1.550.000. Apakah Anda menyetujuinya?
+
+Sales Order Line 1:
+Order Reference: S00002
+Product: Tarif Kargo Berat (per Kg)
+Quantity: 350
+Unit Price: 4000
+Sales Order Line 2:
+Order Reference: S00002
+Product: Layanan Tambahan (Bongkar Muat / Add-ons)
+Quantity: 1
+Unit Price: 150000
+
+14 Okt, 15.58
+Yes, do it
+
+
+Odoo AI
+14 Okt, 15.58
+Simulasi tahap pertama telah selesai dibuat di sistem Anda:
+
+1. Apa yang Baru Saja Berhasil Dibuat di Sistem:
+Kontak Klien Baru: PT Indo Perkasa Mandiri (Cirebon)
+Dokumen Order Penjualan (Sales Order): Nomor S00002
+Rincian Muatan & Tagihan:
+Tarif Kargo Berat (per Kg): 350 kg × Rp 4.000 = Rp 1.400.000
+Layanan Tambahan (Bongkar Muat): 1 Unit × Rp 150.000 = Rp 150.000
+Total Tagihan Order: Rp 1.550.000
+Catatan Operasional di Dokumen:
+
+> Trip Pengiriman Ekspedisi:
+
+> * Rute: Jakarta ke Cirebon
+
+> * Armada: Hino Dutro (B 1234 ABC)
+
+> * Sopir: Mas Adit
+
+> * Muatan: 350 kg suku cadang mesin
+Dokumen ini bisa Anda cetak atau kirimkan via email langsung dari Odoo sebagai tanda bukti pemesanan atau surat jalan kepada sopir dan klien!
+
+2. Langkah Simulasi Selanjutnya: Pencatatan Biaya Jalan (Solar & Tol)
+Ketika truk diberangkatkan dan Mas Adit meminta uang jalan sebesar Rp 400.000 (Solar Rp 250.000 + E-Toll Rp 150.000), ini dicatat pada modul Armada (Fleet) > Layanan Kendaraan (Vehicle Services) pada truk B 1234 ABC.
+
+Apakah Anda ingin saya buatkan juga pencatatan biaya jalan ini di armada truk Anda agar simulasi operasionalnya lengkap?
+
+Odoo AI telah membuat PT Indo Perkasa Mandiri
+Odoo AI telah membuat S00002
+
+14 Okt, 15.59
+ya
+
+
+Odoo AI
+14 Okt, 16.00
+Siap! Saya akan membuat tipe layanan baru di modul Armada: 1. Bahan Bakar (BBM / Solar) 2. Tol & Parkir (E-Toll) Apakah Anda setuju membuat kategori layanan ini?
+
+Fleet Service Type 1:
+Name: Bahan Bakar (BBM / Solar)
+Category: service
+Fleet Service Type 2:
+Name: Tol & Operasional Jalan (E-Toll)
+Category: service
+
+14 Okt, 16.04
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.04
+Bagus! Kategori layanan sudah siap. Sekarang saya akan mencatat biaya jalan untuk Truk B 1234 ABC (Sopir: Mas Adit) untuk pengiriman order S00002 ke Cirebon: 1. BBM / Solar: Rp 250.000 2. Tol & Operasional Jalan: Rp 150.000 Total biaya operasional: Rp 400.000. Apakah Anda menyetujuinya?
+
+Services for vehicles 1:
+Vehicle: B 1234 ABC: Hino/Hindo Dutro
+Service Type: Bahan Bakar (BBM / Solar)
+Cost: 250000
+Description: Pengisian Solar trip Jakarta - Cirebon (Order S00002 / PT Indo Perkasa Mandiri)
+Driver: mas adit, PT ANATA TRUCKING LOGISTIK
+Services for vehicles 2:
+Vehicle: B 1234 ABC: Hino/Hindo Dutro
+Service Type: Tol & Operasional Jalan (E-Toll)
+Cost: 150000
+Description: E-Toll Cipali trip Jakarta - Cirebon (Order S00002 / PT Indo Perkasa Mandiri)
+Driver: mas adit, PT ANATA TRUCKING LOGISTIK
+
+14 Okt, 16.04
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.04
+Pencatatan biaya operasional jalan untuk armada truk Anda sudah berhasil disimpan ke sistem:
+
+Rincian Biaya Jalan yang Tercatat di Modul Armada (Fleet):
+Unit Armada: Hino Dutro (B 1234 ABC)
+Pengemudi: Mas Adit
+Kategori Pengeluaran Baru yang Ditambahkan:
+BBM / Solar: Rp 250.000 (Keterangan: Pengisian Solar trip Jakarta - Cirebon - Order S00002)
+Tol & Operasional Jalan (E-Toll): Rp 150.000 (Keterangan: E-Toll Cipali trip Jakarta - Cirebon - Order S00002)
+Total Biaya Jalan Mas Adit: Rp 400.000
+Ringkasan Untung Rugi Trip S00002 Saat Ini:
+Pendapatan Order (Sales Order S00002): Rp 1.550.000
+Biaya Operasional Lapangan (Fleet Service Log): Rp 400.000
+Keuntungan Bersih Trip Ini: Rp 1.150.000
+Tahap Terakhir: Penagihan (Invoicing)
+Barang sudah sampai di gudang klien di Cirebon. Langkah finalnya adalah membuat Faktur Penagihan (Customer Invoice) dari Sales Order S00002 agar bisa dikirimkan ke PT Indo Perkasa Mandiri untuk pelunasan.
+
+Apakah Anda ingin saya tunjukkan atau buatkan langsung faktur penagihan (invoice) untuk klien ini?
+
+
+14 Okt, 16.05
+oke lanjut
+
+
+Odoo AI
+14 Okt, 16.05
+Baik! Saya akan membuat draf Faktur Pelanggan (Customer Invoice) untuk PT Indo Perkasa Mandiri terkait trip pengiriman kargo (Order S00002): - Pelanggan: PT Indo Perkasa Mandiri - Jurnal: Penjualan (INV) - Tipe Dokumen: Faktur Pelanggan (out_invoice) Apakah Anda menyetujui pembuatan faktur ini?
+
+Partner: PT Indo Perkasa Mandiri
+Type: out_invoice
+Journal: Penjualan
+Company: odooguy
+Payment Reference: S00002 - Kargo Jkt-Crbon
+
+14 Okt, 16.06
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.06
+Faktur draft telah dibuat. Sekarang saya akan menambahkan 2 baris item tagihan: 1. Jasa Kargo Berat (per Kg): 350 kg @ Rp 4.000 = Rp 1.400.000 2. Jasa Bongkar Muat: 1 Unit @ Rp 150.000 = Rp 150.000 Total Dasar Tagihan: Rp 1.550.000. Apakah Anda setuju?
+
+Journal Item 1:
+Journal Entry: Rancangan Faktur
+Product: Tarif Kargo Berat (per Kg)
+Quantity: 350
+Unit Price: 4000
+Journal Item 2:
+Journal Entry: Rancangan Faktur
+Product: Layanan Tambahan (Bongkar Muat / Add-ons)
+Quantity: 1
+Unit Price: 150000
+
+14 Okt, 16.06
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.06
+Simulasi lengkap alur bisnis pengiriman barang & trucking Anda telah berhasil dijalankan dari awal hingga akhir di sistem Odoo:
+
+Rangkuman Alur yang Baru Saja Berhasil Dijalankan:
+[1. Order Masuk (Sales)]           [2. Operasional Lapangan (Fleet)]        [3. Penagihan (Invoicing)]
+  Order Penjualan S00002              Truk B 1234 ABC (Mas Adit)               Faktur PT Indo Perkasa Mandiri
+  - Kargo 350 kg: Rp 1.400.000        - Biaya Solar: Rp 250.000                - Dasar Pengenaan: Rp 1.550.000
+  - Bongkar Muat: Rp 150.000          - Biaya E-Toll: Rp 150.000               - PPN 11%: Rp 170.500
+  Total: Rp 1.550.000 (sebelum PPN)   Total Biaya: Rp 400.000                  Total Ditagih: Rp 1.720.500
+Cara Anda Mengelolanya Sehari-hari di Layar Odoo:
+Melihat Dokumen Pesanan / Surat Jalan:
+Masuk ke menu Penjualan (Sales) > pilih order S00002. Di sana sudah ada catatan sopir, plat armada, dan muatannya. Anda bisa mencetaknya untuk sopir.
+Melihat Pengeluaran Truk:
+Masuk ke menu Armada (Fleet) > klik armada B 1234 ABC > klik tombol Layanan (Services) di pojok atas. Di sana riwayat pengeluaran Solar dan E-Toll Mas Adit sudah tercatat rapi.
+Melihat & Mengirim Faktur Tagihan:
+Masuk ke menu Penagihan / Akuntansi (Invoicing) > Pelanggan > Faktur.
+Buka faktur draf atas nama PT Indo Perkasa Mandiri (Total tagihan Rp 1.720.500 incl. PPN).
+Klik tombol Konfirmasi (Confirm) jika sudah siap diterbitkan, lalu Anda bisa langsung cetak PDF invoice atau kirimkan via email ke klien.
+Hasil Pembukuan Kasus Ini:
+Pendapatan Bersih Operasional: Rp 1.550.000
+Pengeluaran Lapangan: Rp 400.000
+Keuntungan Kotor Trip: Rp 1.150.000 tercatat jelas tanpa perlu mencatat manual di buku terpisah.
+Sekarang sistem Anda sudah siap dipakai untuk menerima order nyata berikutnya. Apakah ada hal lain atau detail operasional yang ingin Anda sesuaikan?
+
+Odoo AI telah membuat Rancangan Faktur
+
+14 Okt, 16.08
+oke klu sudah dibayar terus?
+
+
+Odoo AI
+14 Okt, 16.08
+Ketika klien sudah membayar (uang sudah masuk ke rekening bank atau kas Anda), ada 2 hal penting yang dilakukan di Odoo:
+
+1. Daftarkan Pembayaran di Odoo (Register Payment)
+Tujuannya agar status tagihan berubah dari Belum Dibayar (Not Paid) menjadi Lunas (In Payment / Paid), dan saldo kas/bank Anda bertambah secara otomatis.
+
+Caranya:
+
+Masuk ke menu Penagihan / Akuntansi (Invoicing) > Pelanggan > Faktur (Invoices).
+Buka faktur PT Indo Perkasa Mandiri yang sudah dikonfirmasi.
+Klik tombol warna biru di bagian atas: Daftarkan Pembayaran (Register Payment).
+Akan muncul jendela popup kecil:
+Jurnal: Pilih rekening penerima (misal: Bank BCA/Mandiri atau Kas Tunai).
+Jumlah: Sesuai nominal yang masuk (misal: Rp 1.720.500).
+Tanggal Pembayaran: Tanggal uang masuk ke rekening Anda.
+Klik Buat Pembayaran (Create Payment).
+Status faktur akan langsung berganti menjadi label hijau: IN PAYMENT / LUNAS.
+2. Setelah Lunas, Apa Efeknya ke Keuangan & Bisnis Anda?
+Setelah statusnya lunas, siklus transaksi trip tersebut resmi selesai (Close Deal). Anda langsung bisa melihat dampaknya:
+
+Kas / Rekening Bank Anda Bertambah:
+Di Dashboard Akuntansi, saldo rekening bank atau kas operasional Anda langsung terupdate otomatis.
+Piutang Klien Nol (Tidak Ada Tunggakan):
+Laporan umur piutang (Aged Receivable) klien PT Indo Perkasa Mandiri otomatis bersih.
+Laba Rugi Otomatis Terbentuk:
+Anda bisa buka Laporan (Reporting) > Untung Rugi (Profit and Loss):
+Pendapatan Jasa: Masuk Rp 1.550.000.
+Beban Operasional: Dikurangi pengeluaran solar/tol.
+Laba Bersih: Langsung tercatat di laporan laba rugi perusahaan.
+Arsip Dokumen Rapi:
+Semua riwayat: Penawaran awal (Sales Order), data truk/sopir yang mengantar, nota biaya jalan Mas Adit, hingga bukti pembayaran pelanggan saling terhubung dalam satu rantai dokumen. Anda tidak perlu mencari-cari nota fisik lagi saat rekonsiliasi bulanan.
+Dengan langkah ini, satu siklus penuh bisnis trucking & ekspedisi Anda—mulai dari klien order, penugasan armada, pengeluaran jalan, pengiriman barang, hingga uang masuk ke rekening—sudah selesai secara rapi di dalam sistem!
+
+
+14 Okt, 16.10
+dimana ya? : Daftarkan Pembayaran (Register Payment).
+
+
+Odoo AI
+14 Okt, 16.11
+Tombol Daftarkan Pembayaran (Register Payment) baru akan muncul setelah faktur dikonfirmasi terlebih dahulu (berubah dari status Draft/Rancangan menjadi Posted/Dikonfirmasi).
+
+Berikut langkah-langkah menemukan dan memunculkan tombolnya di layar Odoo Anda:
+
+Langkah 1: Buka Dokumen Faktur
+Di layar utama Odoo, klik menu Akuntansi atau Penagihan (Invoicing).
+Di menu atas, pilih Pelanggan (Customers) ➔ Faktur (Invoices).
+Klik pada baris faktur atas nama PT Indo Perkasa Mandiri (yang saat ini statusnya masih berwarna abu-abu: Rancangan / Draft).
+Langkah 2: Konfirmasi Faktur (Wajib sebelum bisa bayar)
+Di bagian kiri atas layar faktur tersebut, ada tombol berwarna ungu/biru bertuliskan:
+👉 Konfirmasi (Confirm)
+Klik tombol Konfirmasi tersebut.
+Setelah diklik, status faktur akan berubah menjadi Diposting / Terbuka, dan nomor faktur resmi (seperti INV/2026/...) akan terbentuk otomatis.
+Langkah 3: Tombol "Daftarkan Pembayaran" Akan Muncul
+Tepat setelah Anda menekan tombol Konfirmasi, di posisi tombol yang sama (kiri atas) akan muncul tombol baru bertuliskan:
+👉 Daftarkan Pembayaran (Register Payment)
+
+Klik tombol Daftarkan Pembayaran tersebut.
+Di kotak dialog yang muncul, pilih Jurnal (Bank atau Kas).
+Klik tombol hijau/biru Buat Pembayaran (Create Payment).
+Faktur akan langsung memiliki tanda lencana hijau Lunas / In Payment.
+
+14 Okt, 16.13
+oke stelah saya konfirmasi yang ada kirim, cetak, bayar, pertinjau nota kredit , reset ke draft
+
+
+Odoo AI
+14 Okt, 16.13
+Tombol yang Anda cari adalah tombol "Bayar" tersebut!
+
+Di antarmuka Odoo berbahasa Indonesia terbaru, tombol Register Payment diterjemahkan menjadi "Bayar".
+
+Silakan klik tombol "Bayar" itu. Setelah diklik:
+
+Akan muncul jendela kecil (pop-up):
+Jurnal: Pilih rekening penampung uangnya (misalnya Bank jika klien transfer, atau Kas jika tunai).
+Metode Pembayaran: Manual / Transfer.
+Jumlah: Otomatis terisi total tagihan (Rp 1.720.500).
+Tanggal Pembayaran: Tanggal uang masuk.
+Klik tombol "Buat Pembayaran" di pojok jendela pop-up tersebut.
+Setelah itu, faktur Anda akan langsung berlabel hijau Lunas / Terbayar (In Payment)!
+
+
+14 Okt, 16.15
+okey jadi bedanya di sales ama dipenagihan apa
+
+
+Odoo AI
+14 Okt, 16.15
+Perbedaan mendasar antara Sales (Penjualan) dan Penagihan / Invoicing (Akuntansi) dalam operasional bisnis Anda dapat dirangkum sebagai berikut:
+
+Perbandingan Singkat:
+Pembeda	Sales (Penjualan)	Penagihan (Invoicing / Akuntansi)
+Fokus Utama	Kesepakatan & Operasional Muatan	Keuangan, Tagihan, & Arus Kas
+Bentuk Dokumen	Quotation (Penawaran) & Sales Order (Pesanan Pengiriman)	Invoice (Faktur Tagihan) & Payment (Bukti Bayar)
+Pertanyaan yang Dijawab	"Barang apa yang dikirim? Pakai truk mana? Siapa sopirnya? Berapa ongkir yang disepakati?"	"Berapa piutang klien? Berapa PPN-nya? Sudah bayar belum? Kapan uang masuk ke rekening bank?"
+Dampak ke Pembukuan	Belum ada jurnal akuntansi (hanya komitmen pesanan).	Membentuk jurnal keuangan resmi, piutang bertambah, dan mencatat kas/bank saat lunas.
+Siapa yang Mengurus?	Tim Penjualan / Admin Operasional / Dispatcher Truk.	Tim Finance / Kasir / Akunting.
+Alur Keduanya di Bisnis Trucking Anda:
+Di Sales (Penjualan):
+
+Tempat Anda mencatat detail teknis pengiriman:
+Klien minta kirim 350 kg suku cadang.
+Sopir: Mas Adit.
+Armada: Hino Dutro B 1234 ABC.
+Dokumen Sales Order ini dicetak untuk dijadikan tanda bukti pemesanan atau surat instruksi jalan untuk sopir berangkat.
+Di Penagihan (Invoicing):
+
+Ketika barang sudah tiba di tujuan dan dikonfirmasi klien, Anda menarik data dari Sales Order menjadi Faktur Tagihan.
+Di sini tujuannya murni menagih uang dan mencatat pembayaran:
+Mengirimkan tagihan resmi ke klien.
+Menghitung pajak (PPN).
+Mencatat bahwa uang transfer dari klien sudah masuk ke rekening bank perusahaan Anda.
+Secara ringkas: Sales mencatat apa yang disepakati dan dikerjakan, sedangkan Penagihan mencatat uang yang ditagih dan diterima.
+
+
+14 Okt, 16.16
+klu mau liat keuntunga perushaan dimana
+
+
+Odoo AI
+14 Okt, 16.17
+Untuk melihat keuntungan (laba rugi) perusahaan di Odoo, Anda bisa melihatnya di Laporan Laba Rugi (Profit and Loss) di modul Akuntansi/Penagihan.
+
+Berikut cara membukanya di layar Anda:
+
+Cara 1: Buka Laporan Untung & Rugi (Paling Lengkap)
+Buka modul Akuntansi atau Penagihan (Invoicing) dari menu utama.
+Di baris menu paling atas, klik menu Pelaporan (Reporting).
+Pilih Laporan Laba Rugi (Profit and Loss).
+Apa yang akan Anda lihat di sana?
+
+Pendapatan Usaha (Income): Total uang yang masuk dari penjualan jasa kargo & trucking Anda.
+Beban / Pengeluaran (Expenses): Total biaya yang dikeluarkan (bahan bakar, operasional jalan, perawatan truk, gaji, dll.).
+Laba Bersih (Net Profit): Total Pendapatan dikurangi Total Beban. Jika angkanya positif, berarti perusahaan Anda untung.
+Cara 2: Lewat Dashboard Utama Akuntansi (Sekilas Cepat)
+Buka aplikasi Akuntansi atau Penagihan (Invoicing).
+Layar pertama yang muncul adalah Dashboard Ikhtisar (Overview).
+Di sana Anda langsung bisa melihat:
+Total nilai Faktur Pelanggan yang Belum Dibayar (piutang Anda di luar).
+Saldo riil kas tunai dan rekening bank perusahaan Anda.
+Jika ada pencatatan biaya operasional yang ingin Anda hubungkan langsung ke laporan laba rugi per unit armada truk, kita juga bisa mengeceknya lewat laporan analitik!
+
+
+14 Okt, 16.18
+buku besar mitra ya?
+
+
+Odoo AI
+14 Okt, 16.18
+Bukan, layar yang sedang Anda buka saat ini adalah Buku Besar Mitra (Partner Ledger).
+
+Fungsi layar tersebut berbeda:
+
+Buku Besar Mitra (Partner Ledger): Digunakan untuk melihat riwayat utang dan piutang per pelanggan atau per vendor (misalnya mengecek: "Klien PT Indo Perkasa Mandiri punya utang berapa yang belum dibayar?" atau "Kita masih punya utang berapa ke vendor?"). Layar ini bukan untuk melihat keuntungan/profit perusahaan.
+Cara Pindah ke Laporan Keuntungan (Untung & Rugi):
+Untuk melihat keuntungan perusahaan, Anda perlu membuka Laporan Laba Rugi:
+
+Di baris menu paling atas, klik kembali menu Pelaporan (Reporting).
+Di daftar pilihan yang muncul, pilih Untung & Rugi (Profit and Loss).
+Di menu Untung & Rugi itulah Anda akan melihat:
+
+Total Pendapatan Usaha (uang masuk dari jasa ekspedisi/trucking)
+Total Beban Biaya (pengeluaran jalan, solar, dll.)
+Laba Bersih Perusahaan (angka keuntungan akhir Anda).
+
+14 Okt, 16.20
+di penagihan hanya ada dashboard, pelanggan vendor laporan konfigurasi, dan di laporan hanya ada buku besar mitra, laporan pelanggan, urmur piutang, umur utang dagan, analisa faktur dan analisa arus kas
+
+
+Odoo AI
+14 Okt, 16.20
+Penjelasan mengapa menu Untung & Rugi (Profit & Loss) belum muncul di menu Laporan Anda:
+
+Di Odoo, yang saat ini terpasang di database Anda adalah modul Penagihan (Invoicing), bukan modul Akuntansi Penuh (Accounting / Enterprise).
+Pada modul Penagihan standar, menu Laporan hanya menampilkan ringkasan piutang, utang, dan arus kas (Buku Besar Mitra, Laporan Pelanggan, Umur Piutang, Umur Utang Dagang, Analisa Faktur, dan Analisa Arus Kas).
+
+Cara Melihat Keuntungan dengan Menu yang Ada Sekarang:
+Anda tidak perlu khawatir, dari menu yang tersedia sekarang Anda tetap bisa melihat performa penjualan dan pendapatan melalui:
+
+1. Menu "Analisa Faktur" (Paling Efektif untuk Melihat Omzet & Pendapatan)
+Klik Laporan (Reporting) > Analisa Faktur (Invoice Analysis).
+Di layar ini Anda bisa melihat grafik dan tabel pivot:
+Total nilai penjualan jasa kargo & trucking yang sudah ditagihkan.
+Berapa omzet per rute/produk (misal: total pendapatan dari Tarif Kargo Berat vs Tarif Charter).
+Berapa total transaksi per klien.
+2. Menu "Analisa Arus Kas" (Melihat Uang Masuk & Keluar Riil)
+Klik Laporan (Reporting) > Analisa Arus Kas.
+Menu ini menampilkan pergerakan kas riil: uang yang sudah benar-benar masuk ke rekening dari pelunasan klien dikurangi uang keluar.
+Bagaimana Cara Menghitung Keuntungan Riil Trip Trucking?
+Karena biaya jalan Mas Adit (Solar Rp 250.000 + Tol Rp 150.000) dicatat di modul Armada (Fleet), formula laba trip Anda saat ini:
+
+$$\text{Keuntungan Bersih} = \text{Total Tagihan Faktur (Analisa Faktur)} - \text{Total Biaya di Log Armada (Fleet Services)}$$
+
+Dari simulasi sebelumnya:
+Pendapatan di Faktur: Rp 1.550.000
+Biaya di Armada (Solar + Tol): Rp 400.000
+Laba Kotor: Rp 1.150.000
+Jika di kemudian hari Anda membutuhkan Laporan Laba Rugi (Profit & Loss) resmi dan Neraca Keuangan otomatis, Anda cukup mengaktifkan/memasang paket fitur Akuntansi Lengkap (Accounting) di Odoo.
+
+
+14 Okt, 16.22
+oh okk di sistem kita ini berarti hitungannya kita yang punya ya truck bukan third party
+
+
+Odoo AI
+14 Okt, 16.23
+Betul sekali! Di simulasi tadi, kita menggunakan skema Armada Sendiri (Own Fleet), di mana:
+
+Truk tercatat sebagai aset perusahaan di modul Fleet (B 1234 ABC).
+Sopir adalah karyawan internal Anda (Mas Adit).
+Anda yang menanggung langsung biaya operasional jalan (Solar dan Tol).
+Bagaimana Jika Menggunakan Truk Pihak Ketiga (Vendor / Subkon / Rekanan)?
+Jika Anda melempar orderan ke vendor trucking luar (makelar/broker logistik atau sewa truk pihak ketiga), alurnya berubah menjadi jauh lebih simpel di sistem:
+
+[Klien Pesan ke Anda]           [Anda Lempar ke Vendor Luar]            [Selesai Pengiriman]
+  Sales Order (Rp 1.550.000)   ➔   Purchase Order ke Vendor (Rp 1.200.000)  ➔   Margin Untung: Rp 350.000
+Alur Pihak Ketiga di Odoo yang Sudah Tersedia:
+Sales Order (Sisi Pelanggan):
+Buat penawaran ke klien seperti biasa (misal tagihan ke klien: Rp 1.550.000).
+Purchase Order (Sisi Vendor Truk Luar):
+Buka modul Pembelian (Purchase).
+Buat pesanan pembelian ke nama vendor (misalnya PO ke PT Ekspedisi Rekanan Nusantara).
+Masukkan produk: Jasa Trucking Vendor (produk ini sudah ada di sistem Anda!).
+Masukkan biaya sewa yang disepakati dengan vendor, misalnya Rp 1.200.000.
+Penyelesaian Transaksi:
+Tagih Klien: Buat Faktur Pelanggan sebesar Rp 1.550.000.
+Bayar Vendor: Masukkan Tagihan Pemasok (Vendor Bill) sebesar Rp 1.200.000.
+Keuntungan: Selisihnya (Rp 350.000) langsung menjadi laba kotor Anda tanpa Anda perlu pusing mengurus solar, tol, dan servis truk.
+Model mana yang paling sering Anda gunakan dalam bisnis sehari-hari: pakai truk sendiri, lempar ke vendor pihak ketiga, atau kombinasi keduanya?
+
+
+14 Okt, 16.23
+oke saya mau gaji supir gmana?
+
+
+Odoo AI
+14 Okt, 16.23
+Untuk mencatat dan membayarkan gaji sopir (misalnya Mas Adit) di sistem yang Anda gunakan saat ini, ada 2 cara yang paling praktis dan langsung otomatis memotong kas serta masuk ke laporan Laba dan Rugi:
+
+Cara 1: Lewat "Tagihan Vendor" (Paling Rapi & Dianjurkan)
+Anggap sopir (Mas Adit) sebagai penerima pembayaran di modul Penagihan. Cara ini sangat rapi karena memiliki bukti invoice/slip pengeluaran gaji.
+
+Buka menu Penagihan (Invoicing) > klik menu atas Vendor > pilih Tagihan (Bills).
+Klik tombol Baru (New).
+Isi data pengeluaran gaji:
+Vendor: Pilih atau ketik nama sopir (misal: Mas Adit).
+Tanggal Tagihan: Tanggal penggajian (misal hari ini).
+Baris Tagihan (Invoice Lines):
+Produk / Label: Ketik Gaji Sopir atau Upah Ritase Sopir - Mas Adit.
+Akun: Pilih akun beban (misal: Beban Gaji / Expenses).
+Harga (Price): Masukkan nominal gaji/upahnya (misalnya Rp 2.500.000 atau upah trip Rp 300.000).
+Klik Konfirmasi (Confirm).
+Klik tombol Bayar (Register Payment):
+Pilih bayar lewat mana: Bank (transfer ke rekening sopir) atau Kas (amplop tunai).
+Klik Buat Pembayaran.
+Cara 2: Lewat Modul Armada (Fleet Services) – Jika Gaji Sistem Ritase per Trip
+Jika Anda menggaji sopir dengan sistem komisi / upah per rit (per jalan):
+
+Masuk ke menu Armada (Fleet) > pilih armada truknya (B 1234 ABC).
+Masuk ke Layanan (Services) > klik Baru (New).
+Masukkan rincian:
+Layanan: Buat kategori Upah Sopir / Uang Makan Sopir.
+Biaya: Masukkan nominal upah trip tersebut (misal Rp 200.000).
+Deskripsi: Uang jalan & upah sopir trip Jakarta - Cirebon (Mas Adit).
+Dampaknya ke Laporan "Laba dan Rugi" Anda:
+Karena Anda saat ini sedang membuka layar laporan Laba dan Rugi:
+
+Setiap kali Anda mengonfirmasi pembayaran gaji/tagihan ini, nominal gaji tersebut akan langsung masuk ke kelompok Beban Operasional / Beban Gaji.
+Angka Laba Bersih perusahaan Anda di baris bawah akan otomatis berkurang secara tepat dan akurat sesuai pengeluaran gaji riil yang dibayarkan.
+Apakah Anda ingin saya buatkan satu contoh pencatatan tagihan gaji Mas Adit di menu Vendor Bills agar Anda bisa melihat efeknya langsung di laporan Laba Rugi?
+
+
+14 Okt, 16.26
+okey saya mau perbulan buat supir gmana?, jadi diluar biaya opersional bensin dan tol ada gaji perbulan di bayarkan gmana
+
+
+Odoo AI
+14 Okt, 16.26
+Untuk gaji sopir yang dibayarkan rutin per bulan (gaji pokok bulanan tetap di luar uang jalan/bensin/tol), cara standar dan paling rapi di sistem Anda saat ini adalah mencatatnya melalui Tagihan Vendor / Biaya (Vendor Bill) setiap akhir bulan.
+
+Alur Pencatatan Gaji Bulanan Sopir:
+Setiap tanggal gajian (misalnya tanggal 25 atau 30 akhir bulan):
+
+Buka Menu:
+Di modul Penagihan / Akuntansi, klik menu Vendor > Tagihan (Bills).
+Klik Tombol "Baru" (New):
+Vendor: Pilih nama sopir Anda (misal: mas adit).
+Tanggal Tagihan: Tanggal gajian bulan tersebut.
+Tanggal Jatuh Tempo: Tanggal transfer gaji.
+Isi Rincian Gaji di Baris Tagihan (Invoice Lines):
+Label / Keterangan: Ketik Gaji Pokok Bulanan Sopir - Mas Adit (Bulan Oktober 2026)
+Akun: Pilih akun 61100010 - Gaji Karyawan (akun ini sudah ada di sistem Anda).
+Harga (Price): Masukkan nominal gaji bulanannya (misalnya Rp 3.500.000).
+Pajak: Kosongkan jika tidak mengenakan PPN.
+Konfirmasi & Bayar:
+Klik tombol Konfirmasi (Confirm).
+Klik tombol Bayar (Register Payment):
+Pilih Bank (jika transfer ke rekening Mas Adit) atau Kas (jika tunai).
+Klik Buat Pembayaran.
+Apa Pengaruhnya ke Laporan "Laba dan Rugi" yang Sedang Anda Buka?
+Begitu Anda klik konfirmasi dan bayar:
+
+Beban Operasional Bertambah:
+Di layar Laba dan Rugi yang sedang Anda lihat sekarang, di bawah kelompok beban operasional akan muncul baris Gaji Karyawan: (Rp 3.500.000).
+Laba Bersih Terhitung Akurat:
+Pendapatan dari semua pengiriman bulan itu otomatis dipotong oleh:
+Gaji pokok bulanan sopir
+Biaya bensin & tol trip
+Hasil akhirnya langsung menunjukkan Laba Bersih Riil usaha trucking Anda untuk bulan tersebut.
+Apakah Anda ingin saya buatkan draf tagihan gaji bulanan contoh untuk Mas Adit (misal Rp 3.500.000) agar Anda bisa langsung melihat bagaimana tampilannya di laporan Laba Rugi Anda?
+
+
+14 Okt, 16.27
+ok tolong buatin
+
+
+Odoo AI
+14 Okt, 16.28
+Baik, saya akan membuatkan draf Tagihan Vendor (Vendor Bill) untuk gaji bulanan sopir: - Penerima (Vendor): Mas Adit (ID: 12) - Jenis Dokumen: Tagihan Pemasok (in_invoice) - Jurnal: Pembelian (TAGIHAN) - Perusahaan: odooguy (ID: 1) Apakah Anda menyetujui pembuatan draf tagihan gaji ini?
+
+Partner: mas adit, PT ANATA TRUCKING LOGISTIK
+Type: in_invoice
+Journal: Pembelian
+Company: odooguy
+Payment Reference: Gaji Bulanan Sopir - Mas Adit
+
+14 Okt, 16.28
+No, I want something else
+
+
+Odoo AI
+14 Okt, 16.28
+Skipped
+
+14 Okt, 16.28
+tolong tambahkan pajka pph21
+
+
+Odoo AI
+14 Okt, 16.28
+Siap! Saya akan membuat master konfigurasi Pajak PPh 21 (Pemotongan Gaji/Upah) di sistem: - Nama: PPh 21 (Potongan Gaji) - Tipe Pajak: Pembelian (Purchase / Biaya) - Tarif: -5% (mengurangi jumlah transfer yang dibayarkan ke sopir) - Akun Penampung Utang Pajak: 21210010 (Pajak Terutang PPh 21) Apakah Anda menyetujui pembuatan pajak PPh 21 ini?
+
+Tax Name: PPh 21 (Potongan Gaji 5%)
+Tax Type: purchase
+Tax Computation: percent
+Amount: -5
+Tax Group: Pajak
+Label on Invoices: PPh 21
+
+14 Okt, 16.29
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.29
+Saya akan mengatur akun penampung untuk pemotongan PPh 21 ke akun '21210010 - Pajak Terutang PPh 21' agar potongan gaji sopir otomatis tercatat sebagai kewajiban setor pajak perusahaan. Apakah Anda setuju?
+
+2 record (Tax Repartition Line):
+
+Tidak ada → 21210010 Pajak Terutang PPh 21 (Account)
+
+14 Okt, 16.30
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.30
+Master pajak PPh 21 dan akun penampung pajaknya sudah siap. Sekarang saya dapat menjelaskan cara penggunaannya atau membuatkan tagihan gaji sopir dengan potongan PPh 21 jika diinginkan.
+Pajak PPh 21 (Potongan Gaji / Withholding Tax) sudah berhasil dibuat dan dikonfigurasi di sistem Odoo Anda:
+
+Detail Konfigurasi Pajak PPh 21 yang Baru Dibuat:
+Nama Pajak: PPh 21 (Potongan Gaji 5%)
+Tipe Pajak: Pengeluaran / Pembelian (Purchase)
+Tarif: -5% (Minus 5% agar otomatis memotong nominal yang ditransfer ke sopir)
+Akun Penampung Pajak: 21210010 - Pajak Terutang PPh 21
+Cara Kerjanya Saat Membayar Gaji Sopir (Contoh Kasus):
+Misalkan gaji pokok bulanan Mas Adit adalah Rp 3.500.000:
+
+Saat Anda membuat Tagihan Vendor (Vendor Bill):
+Deskripsi: Gaji Bulanan Sopir - Mas Adit
+Akun Beban: 61100010 - Gaji Karyawan
+Harga (Gaji Kotor): Rp 3.500.000
+Pajak: Pilih PPh 21 (Potongan Gaji 5%)
+Hasil Perhitungan Otomatis oleh Odoo:
+Beban Gaji Perusahaan (Laba Rugi): Rp 3.500.000 (Biaya resmi operasional)
+Potongan PPh 21 (Utang Pajak Perusahaan): -Rp 175.000 (Disimpan di akun utang pajak untuk disetorkan ke kas negara)
+Total Uang Ditransfer ke Sopir (Take Home Pay): Rp 3.325.000
+Dengan skema ini, uang yang keluar dari rekening kas/bank Anda tepat sebesar gaji bersih sopir, dan kewajiban pajak PPh 21 tercatat otomatis di neraca keuangan tanpa perlu hitung potong manual.
+
+Odoo AI telah membuat PPh 21 (Potongan Gaji 5%)
+
+14 Okt, 16.31
+itu dmana liatnya
+
+
+Odoo AI
+14 Okt, 16.31
+Untuk melihat master pajak PPh 21 yang baru saja dibuat di sistem Odoo Anda:
+
+Cara 1: Melihat Master Pengaturan Pajak PPh 21
+Di menu utama Odoo, buka aplikasi Penagihan (Invoicing) atau Akuntansi.
+Di baris menu paling atas, klik menu Konfigurasi (Configuration).
+Pilih Pajak (Taxes).
+Di daftar pajak yang muncul, Anda akan melihat pajak bernama:
+👉 PPh 21 (Potongan Gaji 5%) (dengan Tipe Pajak: Pembelian / Purchase).
+Cara 2: Melihat Cara Kerjanya Saat Menginput Gaji Sopir
+Jika Anda ingin melihat bagaimana potongan PPh 21 ini bekerja langsung pada angka gaji:
+
+Di menu atas, klik Vendor ➔ Tagihan (Bills).
+Klik tombol Baru (New).
+Di tabel Baris Tagihan (Invoice Lines):
+Masukkan Akun: 61100010 (Gaji Karyawan).
+Masukkan Harga: 3.500.000.
+Di kolom Pajak, pilih PPh 21 (Potongan Gaji 5%).
+Anda akan langsung melihat di ringkasan total sebelah kanan bawah:
+Subtotal (Gaji Kotor): Rp 3.500.000
+PPh 21 (5%): -Rp 175.000
+Total yang Harus Dibayar ke Sopir: Rp 3.325.000
+
+14 Okt, 16.33
+boleh bantu implement bayar gaji supir perblan
+
+
+Odoo AI
+14 Okt, 16.33
+Tentu! Saya akan membuatkan draf Tagihan Vendor (Vendor Bill) untuk pembayaran gaji bulanan Mas Adit: - Penerima (Vendor): mas adit (ID: 12) - Jurnal: Pembelian / Tagihan (ID: 2) - Referensi: Gaji Bulanan Sopir - Mas Adit (Oktober 2026) Apakah Anda menyetujui pembuatan draf tagihan gaji ini?
+
+Partner: mas adit, PT ANATA TRUCKING LOGISTIK
+Type: in_invoice
+Journal: Pembelian
+Company: odooguy
+Payment Reference: Gaji Bulanan - Mas Adit (Okt 2026)
+
+14 Okt, 16.33
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.33
+Draf tagihan nomor 3 telah siap. Sekarang saya akan menambahkan rincian baris gaji: - Deskripsi: Gaji Pokok Bulanan Sopir (Oktober 2026) - Akun Beban: 61100010 (Gaji Karyawan) - Nominal: Rp 3.500.000 - Pajak Potongan: PPh 21 (-5% / Potongan Rp 175.000) - Total Bersih yang Ditransfer: Rp 3.325.000 Apakah Anda menyetujui penambahan rincian baris gaji ini?
+
+Journal Entry: Rancangan Tagihan
+Description: Gaji Pokok Bulanan Sopir - Mas Adit (Oktober 2026)
+Account: 61100010 Gaji Karyawan
+Quantity: 1
+Unit Price: 3500000
+Taxes:
+Tambah: PPh 21 (Potongan Gaji 5%)
+
+14 Okt, 16.33
+Yes, do it
+
+
+Odoo AI
+14 Okt, 16.33
+Dokumen draf tagihan gaji bulanan untuk Mas Adit dengan potongan PPh 21 sudah berhasil dibuat di sistem Odoo Anda:
+
+Rincian Tagihan Gaji yang Dibuat:
+Penerima: mas adit
+Keterangan: Gaji Pokok Bulanan Sopir - Mas Adit (Oktober 2026)
+Akun Beban: 61100010 - Gaji Karyawan
+Gaji Pokok Kotor (Gross): Rp 3.500.000
+Potongan Pajak PPh 21 (5%): -Rp 175.000
+Total Bersih yang Ditransfer (Take Home Pay): Rp 3.325.000
+Langkah untuk Menyelesaikan & Membayarkannya di Layar Odoo:
+Buka modul Penagihan (Invoicing) atau Akuntansi.
+Di menu atas, klik Vendor ➔ Tagihan (Bills).
+Klik pada draf tagihan atas nama mas adit yang baru saja dibuat.
+Klik tombol Konfirmasi (Confirm) di pojok kiri atas.
+Setelah dikonfirmasi, klik tombol Bayar:
+Pilih Jurnal: Rekening Bank perusahaan Anda (jika transfer) atau Kas (jika tunai).
+Jumlah otomatis terisi Rp 3.325.000.
+Klik Buat Pembayaran.
+Hasil di Pembukuan & Laporan Keuangan Anda:
+Laporan Laba Rugi: Beban gaji tercatat resmi sebesar Rp 3.500.000 (mengurangi keuntungan usaha secara sah).
+Rekening Bank/Kas: Hanya berkurang sebesar nilai bersih transfer yaitu Rp 3.325.000.
+Kewajiban Pajak: Nilai potongan Rp 175.000 otomatis tersimpan di pos Pajak Terutang PPh 21 siap disetorkan saat masa pajak bulanan.
+Odoo AI telah membuat Rancangan Tagihan
+Odoo AI telah membuat Gaji Pokok Bulanan Sopir - Mas Adit (Oktober 2026)
+
+14 Okt, 16.37
+berarti vendor itu bisa jadi ibarat thirdparty ya tapi bisa orang perushaan atau apapun yang berkerja sama dengan kita
+
+
+Odoo AI
+14 Okt, 16.37
+Tepat sekali! Pemahaman Anda 100% benar.
+
+Di Odoo (dan standar ERP akuntansi), konsep Vendor bukan hanya pabrik atau toko tempat kita belanja barang, melainkan:
+
+Contoh Penerapan "Vendor" di Bisnis Trucking & Ekspedisi Anda:
+Orang / Perorangan (Individu):
+
+Sopir Internal / Lepas (Freeline Driver): Seperti Mas Adit saat menerima gaji atau uang jalan.
+Kuli Bongkar Muat: Buruh harian di gudang/lapangan yang menerima upah tenaga angkut.
+Konsultan / Mekanik Lepas: Montir panggilan yang servis truk di pool.
+Perusahaan Rekanan (Third Party / Subkon):
+
+Vendor Truk Rekanan: Perusahaan ekspedisi lain saat Anda lempar muatan (sub-kontrak) karena armada sendiri sedang penuh.
+Bengkel Resmi & Toko Ban: Tempat servis rutin, ganti oli, atau ganti ban truk.
+Penyedia Layanan Rutin (Utilitas & Operasional):
+
+SPBU / Pertamina: Tempat beli solar operasional.
+Perusahaan Leasing: Tempat membayar cicilan bulanan truk armada.
+PLN & Provider Internet: Tempat membayar listrik dan internet kantor/pool Anda.
+Kenapa Semuanya Masuk ke "Vendor"?
+Karena di sistem akuntansi hanya ada dua sisi utama:
+
+Pelanggan (Customer): Sumber uang masuk (yang Anda tagih).
+Pemasok / Rekanan (Vendor): Tujuan uang keluar (yang Anda bayar).
+Dengan mengelompokkan semuanya di Vendor, Anda bisa dengan mudah melacak:
+
+Berapa total uang yang sudah dibayarkan ke Mas Adit sepanjang tahun.
+Berapa total biaya yang dikeluarkan ke bengkel atau toko ban.
+Semua slip pengeluaran dan pemotongan pajaknya (seperti PPh 21 atau PPh 23) tercatat rapi dalam satu pintu.
+
+14 Okt, 16.56
+SAYA MAU CEK data customer tadi yang kirim barang dimana
+
+
+Odoo AI
+14 Okt, 16.56
+Saat ini Anda sedang berada di layar Pembayaran Vendor.
+
+Untuk melihat data customer yang tadi kirim barang (PT Indo Perkasa Mandiri), ada 3 tempat yang bisa Anda buka tergantung informasi apa yang ingin Anda lihat:
+
+1. Melihat Dokumen Order / Pengirimannya (Lengkap dengan Rincian Muatan & Truk)
+Buka menu:
+👉 Penjualan (Sales) ➔ Pesanan (Orders)
+
+Di sana Anda akan melihat dokumen S00002 atas nama PT Indo Perkasa Mandiri.
+Jika diklik, Anda bisa melihat detail muatan (350 kg kargo, jasa bongkar muat), rute Jakarta–Cirebon, serta catatan armada truk B 1234 ABC dan sopir Mas Adit.
+2. Melihat Faktur Tagihan / Status Pembayarannya
+Buka menu:
+👉 Penagihan (Invoicing) ➔ menu atas Pelanggan (Customers) ➔ Faktur (Invoices)
+
+Di daftar faktur, cari faktur atas nama PT Indo Perkasa Mandiri (nilai Rp 1.720.500).
+Di sini Anda bisa melihat status apakah faktur masih berupa draf, sudah dikonfirmasi, atau sudah dibayar.
+3. Melihat Profil & Kontak Customer (Buku Alamat Pelanggan)
+Buka menu:
+👉 Penagihan (Invoicing) ➔ menu atas Pelanggan (Customers) ➔ Pelanggan (Customers)
+(atau lewat aplikasi Kontak / Contacts)
+
+Cari dan klik nama PT Indo Perkasa Mandiri.
+Di halaman profil customer ini, Anda bisa melihat data alamat (Cirebon), nomor telepon, serta tombol pintas (smart button) di bagian atas yang langsung menampilkan total transaksi penjualan dan faktur milik klien tersebut.
+
+14 Okt, 16.57
+tapi saya liat cuma pembayaran gaji mas adit aja yang 1.7 tadi gk ada
+
+
+Odoo AI
+14 Okt, 16.57
+Alasan mengapa pembayaran Rp 1.720.500 tersebut tidak muncul di layar Anda saat ini:
+
+Layar yang sedang Anda buka saat ini adalah menu Vendor ➔ Pembayaran (Pembayaran Vendor).
+Layar tersebut memiliki filter otomatis khusus untuk uang keluar (ke vendor/karyawan), sehingga yang muncul hanya pembayaran gaji Mas Adit.
+
+Pembayaran dari customer sebesar Rp 1.720.500 (PBNK1/2026/00001 dari PT Indo Perkasa Mandiri) tergolong sebagai uang masuk, dan berada di menu:
+
+Cara Melihat Pembayaran Customer Rp 1.720.500:
+Di baris menu paling atas, klik menu Pelanggan (Customers) (bukan Vendor).
+Pilih submenu Pembayaran (Payments).
+Di sana Anda akan langsung melihat catatan pembayaran:
+Nomor Dokumen: PBNK1/2026/00001
+Pelanggan: PT Indo Perkasa Mandiri
+Jumlah: Rp 1.720.500
+Status: Terbayar / Diterima di Rekening Bank
+Menu Pelanggan ➔ Pembayaran: Mencatat semua uang masuk dari klien (customer).
+Menu Vendor ➔ Pembayaran: Mencatat semua uang keluar ke rekanan/sopir (vendor).
+
+14 Okt, 16.58
+oh itu bukan vendor ya?
+
+
+Odoo AI
+14 Okt, 16.58
+Bukan!
+
+PT Indo Perkasa Mandiri itu adalah Pelanggan (Customer) Anda, bukan Vendor.
+
+Berikut cara membedakannya secara sederhana:
+
+Pelanggan (Customer): Pihak yang memakai jasa Anda dan membayar uang ke Anda (Uang Masuk).
+
+Contoh: PT Indo Perkasa Mandiri yang minta dikirimkan kargo sparepart mesin 350 kg dan membayar Rp 1.720.500.
+Tempat mengeceknya: Menu Pelanggan (Customers).
+Vendor (Pemasok / Rekanan): Pihak yang Anda bayar uangnya karena jasanya Anda pakai (Uang Keluar).
+
+Contoh: Mas Adit (sopir yang Anda bayar gajinya), SPBU Pertamina (beli solar), bengkel truk, atau pemilik armada rekanan luar.
+Tempat mengeceknya: Menu Vendor.
+Karena itulah saat Anda membuka menu Vendor, yang muncul hanya transaksi pengeluaran (seperti gaji Mas Adit), sedangkan transaksi penerimaan uang Rp 1.720.500 dari PT Indo Perkasa Mandiri ada di menu Pelanggan ➔ Pembayaran.
+
+
+14 Okt, 17.00
+ok saya mau buat faktur baru cara tambahkan produk gmana
+
+
+Odoo AI
+14 Okt, 17.00
+Untuk membuat faktur baru dan menambahkan produk di dalamnya, ikuti langkah mudah berikut di layar Odoo Anda:
+
+Langkah 1: Buka Form Faktur Baru
+Pastikan Anda berada di aplikasi Penagihan (Invoicing) atau Akuntansi.
+Di baris menu paling atas, klik menu Pelanggan (Customers) ➔ pilih Faktur (Invoices).
+Klik tombol Baru (New) yang berwarna ungu/biru di pojok kiri atas.
+Langkah 2: Isi Data Pelanggan
+Di kolom Pelanggan, ketik atau pilih nama pelanggan yang akan ditagih (misal: PT Indo Perkasa Mandiri atau buat nama pelanggan baru).
+Tentukan Tanggal Faktur (biasanya tanggal hari ini).
+Langkah 3: Menambahkan Produk / Jasa ke Faktur
+Di bagian tengah layar, Anda akan melihat tabel Baris Tagihan (Invoice Lines):
+
+Klik tulisan "Tambahkan satu baris" (Add a line).
+Kolom tabel akan langsung aktif untuk diisi:
+Produk: Klik pada kolom ini, lalu pilih produk yang sudah kita buat tadi (misalnya: Tarif Kargo Berat (per Kg), Tarif Charter / Sewa Armada, atau Layanan Tambahan Bongkar Muat).
+Kuantitas (Quantity): Masukkan jumlahnya (misal: 500 jika 500 kg, atau 1 jika sewa per unit).
+Harga Satuan (Price): Harga satuan akan otomatis terisi sesuai standar produk, namun Anda tetap bisa mengubah nominalnya secara bebas jika ada kesepakatan harga khusus dengan pelanggan.
+Pajak: Pajak (seperti PPN 11%) akan terpasang otomatis, atau bisa Anda hapus/sesuaikan jika non-PPN.
+Jika ingin menambah layanan lain (misal: ongkos kargo + biaya bongkar muat):
+Klik lagi tulisan "Tambahkan satu baris", lalu pilih produk berikutnya.
+Langkah 4: Simpan & Konfirmasi
+Setelah semua rincian terisi, periksa total nominal di kanan bawah.
+Klik tombol Konfirmasi (Confirm) di pojok kiri atas untuk menerbitkan faktur secara resmi.
+15 Okt 2026
+
+15 Okt, 14.39
+btw saya mau buat feature tracking kira" bisa gk tapi semi manual jadi yang ganti locationnya ntar admin
+
+
+Odoo AI
+15 Okt, 14.39
+Bisa sekali!
+
+Untuk fitur pelacakan (tracking) pengiriman yang semi-manual (di-update lokasinya oleh admin saat sopir lapor posisi), Anda tidak perlu sistem GPS yang rumit terlebih dahulu. Di Odoo yang ada sekarang, Anda punya 3 opsi praktis:
+
+Cara 1: Menggunakan Fitur "Properties" (Paling Cepat & Ada Kolom Khusus)
+Odoo memiliki fitur bawaan bernama Properties / Properti Tambahan. Fitur ini memungkinkan Anda menambahkan field kustom langsung di formulir Order Penjualan tanpa coding:
+
+Buka dokumen pesanan (misal S00002).
+Buat 2 kolom properti baru:
+Posisi / Lokasi Terkini: misal teks atau pilihan (Gudang Asal, Rest Area KM 57, Gerbang Tol Palimanan, Tiba di Tujuan).
+Status Pengiriman: (Muat Barang ➔ Sedang Jalan ➔ Transit ➔ Terkirim).
+Setiap kali sopir (Mas Adit) WhatsApp atau telepon admin:
+Admin tinggal buka order S00002 dan ganti lokasinya.
+Riwayat siapa admin yang mengubah dan jam berapa akan tercatat otomatis.
+Cara 2: Memanfaatkan Kolom "Chatter / Catatan Log" (Ada Riwayat Waktu)
+Di sebelah kanan setiap dokumen Sales Order, ada kotak Chatter (Log Catatan / Send Message):
+
+Setiap Mas Adit lapor posisi, admin klik Log Note (Catatan):
+> "Update Lokasi: Truk B 1234 ABC sudah keluar Tol Cikampek Utama, kondisi lancar. Estimasi tiba 2 jam lagi."
+Keunggulannya:
+Tercatat tanggal dan jam menit persisnya secara berurutan (timeline log).
+Tim kantor yang lain bisa langsung baca tanpa buka dokumen lain.
+Bisa dilampirkan foto resi fisik atau foto serah terima barang dari sopir.
+Cara 3: Menggunakan Tampilan Kanban / Pipeline (Geser Kartu Status)
+Anda bisa membuat tahapan (stage) pengiriman seperti papan Trello:
+
+Kolom: Menunggu Muat ➔ Dalam Perjalanan (In Transit) ➔ Tiba di Tujuan ➔ Selesai / BAST.
+Admin tinggal geser-geser kartu pesanan sesuai laporan sopir.
+Bagaimana Jika Mau Klien Bisa Cek Tracking Juga?
+Di Odoo, setiap dokumen Sales Order memiliki tombol Pratinjau Pelanggan (Customer Preview / Portal):
+
+Klien bisa diberi tautan/link web portal.
+Ketika klien membuka link tersebut, mereka bisa melihat status order dan catatan posisi terkini yang di-update oleh admin.
+Apakah Anda ingin kita coba pasang kolom tracking lokasi di form Sales Order Anda sekarang?
+
+
+15 Okt, 14.42
+saya mau 3, tapi bisa ada feature nambahkan opsi dicelah" itu bisa gk?
+
+
+Odoo AI
+15 Okt, 14.42
+Bisa banget!
+
+Di Odoo, jika Anda ingin menggunakan tampilan kartu Kanban yang bisa digeser dan fleksibel disisipkan tahapan/opsi baru di celah-celahnya kapan saja, ada cara terbaik yang bisa Anda gunakan:
+
+Solusi: Menggunakan "Label Status Pengiriman" (Tags) di Tampilan Kanban
+Di formulir Penjualan (Sales Order), ada kolom bawaan bernama Label (Tags).
+Ketika tampilan diubah ke Kanban dan dikelompokkan berdasarkan Label, setiap status akan menjadi kolom/jalur kartu yang bisa Anda geser.
+
+Keunggulan Fitur Ini:
+Bebas Tambah Opsi di Celah Mana Pun:
+Di tampilan Kanban Odoo, di antara dua kolom atau di ujung kanan, selalu ada tombol + Tambah Kolom (+ Add Column).
+Misal Anda awalnya punya:
+
+1. Loading Gudang ➔ 3. Tiba di Tujuan
+Lalu Anda mau sisipkan di celah tengahnya:
+
+2. Transit Rest Area KM 57
+Admin tinggal klik tombol + atau ketik label baru langsung dari kartu order, dan kolom baru akan langsung terbentuk di celahnya!
+Kartu Bebas Digeser (Drag & Drop):
+Ketika Mas Adit lapor sudah sampai tujuan, admin tinggal menyeret (drag) kartu order dari kolom Dalam Perjalanan ke kolom Tiba di Tujuan.
+Warna-Warni:
+Setiap status bisa diberi warna berbeda (Kuning untuk loading, Biru untuk jalan, Hijau untuk tiba/selesai).
+Contoh Tahapan Awal yang Bisa Kita Siapkan:
+No	Tahapan Status	Keterangan
+1	[1] Antre / Loading Barang	Truk baru sampai gudang pengirim / muat kargo
+2	[2] Berangkat (On The Way)	Truk sudah jalan keluar gerbang tol / pool
+3	[3] Transit / Istirahat	Posisi di rest area / gudang sortir transit (opsional)
+4	[4] Sampai Lokasi Bongkar	Truk tiba di gudang penerima
+5	[5] Selesai & BAST Diterima	Muatan selesai dibongkar, surat jalan ditandatangani
+(Jika ada kondisi khusus seperti "Macet / Kendala Ban", admin bisa langsung buat label dadakan tanpa perlu pusing ubah sistem).
+
+Cara Mengaktifkannya di Layar Anda Sekarang:
+Karena saat ini Anda sedang membuka layar Penawaran / Orders:
+
+Di pojok kanan atas layar Anda, ada ikon ganti tampilan:
+Klik ikon Kanban (ikon kotak 4 kecil di sebelah ikon daftar/list).
+Di kotak pencarian atas, klik menu Kelompokkan Berdasarkan (Group By) ➔ pilih Label (Tags).
+Semua pesanan pengiriman Anda akan langsung tampil dalam bentuk kartu-kartu siap geser!
+Apakah Anda ingin saya buatkan label-label status tahapan di atas sekarang agar langsung muncul di sistem Anda?
+
+
+15 Okt, 14.42
+okey boleh coba
+
+
+Odoo AI
+15 Okt, 14.42
+Siap! Saya akan membuat 5 label status tahapan tracking pengiriman berikut: 1. [1] Muat Barang (Loading) - Warna Kuning 2. [2] Dalam Perjalanan (On The Way) - Warna Biru 3. [3] Transit / Istirahat - Warna Oranye 4. [4] Sampai Lokasi Bongkar - Warna Ungu 5. [5] Selesai & Surat Jalan Diterima - Warna Hijau Apakah Anda setuju untuk membuat label tahapan ini?
+
+CRM Tag 1:
+Tag Name: [1] Muat Barang (Loading)
+Color: 2
+CRM Tag 2:
+Tag Name: [2] Dalam Perjalanan (On The Way)
+Color: 4
+CRM Tag 3:
+Tag Name: [3] Transit / Istirahat
+Color: 3
+CRM Tag 4:
+Tag Name: [4] Sampai Lokasi Bongkar
+Color: 6
+CRM Tag 5:
+Tag Name: [5] Selesai & BAST Diterima
+Color: 10
+
+15 Okt, 14.44
+Yes, do it
+
+
+Odoo AI
+15 Okt, 14.44
+Saya akan memasang label status '[2] Dalam Perjalanan (On The Way)' pada pesanan S00002 (PT Indo Perkasa Mandiri) sebagai contoh awal pelacakan. Apakah Anda setuju?
+
+Sales Order "S00002":
+
+Tags → Tambahkan "[2] Dalam Perjalanan (On The Way)"
+
+15 Okt, 14.45
+Yes, do it
+
+
+Odoo AI
+15 Okt, 14.45
+Tahapan status pelacakan (tracking stages) sudah berhasil dibuat dan diterapkan ke sistem Odoo Anda:
+
+1. Label Tahapan yang Baru Saja Dibuat:
+🟡 [1] Muat Barang (Loading)
+🔵 [2] Dalam Perjalanan (On The Way) (saat ini sudah terpasang di order S00002)
+🟠 [3] Transit / Istirahat
+🟣 [4] Sampai Lokasi Bongkar
+🟢 [5] Selesai & BAST Diterima
+2. Cara Melihat & Menggeser Kartunya di Layar Anda Sekarang:
+Karena Anda saat ini sedang berada di halaman Penjualan ➔ Penawaran:
+
+Ubah ke Tampilan Kanban:
+Di pojok kanan atas layar Anda (di bawah foto profil), klik ikon Kanban (ikon kotak 4 kecil).
+Kelompokkan Berdasarkan Label (Group By):
+Di kotak pencarian atas (Search bar), klik tombol panah kecil / menu Kelompokkan Berdasarkan (Group By).
+Pilih Label (Tags).
+Hasilnya:
+Layar Anda akan langsung berubah menjadi papan jalur kolom seperti Trello.
+Order S00002 (PT Indo Perkasa Mandiri) akan berada di kolom [2] Dalam Perjalanan (On The Way).
+3. Cara Menambah Opsi Baru di Celah-Celahnya:
+Jika sewaktu-waktu ada kondisi khusus dan admin ingin menambah status baru di celah tahapan:
+
+Di papan Kanban tersebut, di bagian paling kanan ada tombol + Tambah Kolom (+ Add Column).
+Admin cukup ketik nama baru (misal: [2.5] Kendala Ban / Perbaikan Ringan atau Transit Gudang Semarang) lalu tekan Enter. Kolom baru langsung aktif seketika dan kartu order bisa langsung diseret ke sana!

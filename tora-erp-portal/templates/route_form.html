@@ -1,0 +1,279 @@
+{% extends "erp_base.html" %}
+{% from "_ui.html" import empty_state %}
+{% block title %}{% if data.route %}Ubah Rute{% else %}Rute Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.route %}Ubah Rute{% else %}Rute Baru{% endif %}{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('manifests_blueprint.routes') }}">Rute</a>
+        <span>/</span>
+        <strong>{% if data.route %}Ubah{% else %}Baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.routes') }}">Buang</a>
+        {% if data.hubs|length >= 2 %}
+        <button class="btn-accent btn-sm" type="submit" form="route-form">Simpan</button>
+        {% endif %}
+    </div>
+</div>
+
+{% if data.hubs|length < 2 %}
+    {{ empty_state("Butuh dua hub", "Daftarkan minimal dua hub dulu, lalu susun rutenya di sini.", url_for('manifests_blueprint.hub_new'), "Hub baru") }}
+{% else %}
+<form id="route-form" method="post" action="{% if data.route %}{{ url_for('manifests_blueprint.route_update', route_id=data.route.id) }}{% else %}{{ url_for('manifests_blueprint.route_create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <div class="form-field">
+        <label class="lbl" for="route-name">Nama rute <span class="req">*</span></label>
+        <input class="fld" type="text" id="route-name" name="name" value="{{ data.route.name if data.route else '' }}" placeholder="Misalnya Jakarta – Surabaya via Semarang" required maxlength="80" autocomplete="off">
+        <p class="hint">Nama ini yang tampil di daftar rute dan saat memilih rute di manifest.</p>
+    </div>
+    <div class="route-builder">
+        <section class="route-panel">
+            <h2 class="route-panel-title">Hub terdaftar</h2>
+            <p class="hint">Seret kartu ke kolom kanan. Yang sudah masuk ditandai.</p>
+            <div class="route-pool" id="route-pool">
+                {% for hub in data.hubs %}
+                <div class="hub-card" role="button" tabindex="0" draggable="true" aria-label="{{ hub.name }}" data-hub-id="{{ hub.id }}" data-hub-name="{{ hub.name }}" data-hub-place="{{ hub.regency }}">
+                    <div>
+                        <strong>{{ hub.name }}</strong>
+                        {% if hub.regency %}<div class="mute text-xs">{{ hub.regency }}</div>{% endif %}
+                    </div>
+                    <span class="hub-card-grip" aria-hidden="true"></span>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="route-panel">
+            <h2 class="route-panel-title">Rute ini</h2>
+            <p class="hint" id="route-summary">Belum ada hub. Seret minimal dua kartu ke sini.</p>
+            <div class="route-lane" id="route-lane" aria-label="Rute">
+                <div class="route-lane-empty" id="route-empty" role="button" tabindex="0" aria-label="Lepas kartu di sini">Lepas kartu di sini</div>
+            </div>
+        </section>
+        <section class="route-panel route-fleet">
+            <h2 class="route-panel-title">Armada default</h2>
+            <p class="hint">Saat rute ini dipilih di manifest, kendaraan dan sopir terisi sendiri. Di manifest masih bisa diganti.</p>
+            <div class="route-fleet-grid">
+                <div class="form-field">
+                    <label class="lbl" for="vehicle_id">Kendaraan <span class="req">*</span></label>
+                    <select class="fld" id="vehicle_id" name="vehicle_id" required>
+                        <option value="">Pilih kendaraan</option>
+                        {% for vehicle in data.vehicles %}
+                        <option value="{{ vehicle.id }}" {% if data.route and vehicle.id == data.route.vehicle_id %}selected{% endif %}>{{ vehicle.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label class="lbl" for="driver_id">Sopir <span class="req">*</span></label>
+                    <select class="fld" id="driver_id" name="driver_id" required>
+                        <option value="">Pilih sopir</option>
+                        {% for driver in data.drivers %}
+                        <option value="{{ driver.id }}" {% if data.route and driver.id == data.route.driver_id %}selected{% endif %}>{{ driver.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </section>
+    </div>
+    <script type="application/json" id="route-initial">{{ data.initial_stops|tojson }}</script>
+</form>
+<script>
+(function () {
+    var pool = document.getElementById("route-pool");
+    var lane = document.getElementById("route-lane");
+    var form = document.getElementById("route-form");
+    var summary = document.getElementById("route-summary");
+    var empty = document.getElementById("route-empty");
+    var dragKind = "";
+    var dragId = "";
+
+    function stops() {
+        return [].slice.call(lane.querySelectorAll(".hub-card"));
+    }
+
+    function refresh() {
+        var nodes = stops();
+        empty.hidden = nodes.length > 0;
+        var names = [];
+        var picked = {};
+        for (var i = 0; i < nodes.length; i++) {
+            var mark = nodes[i].querySelector(".hub-card-num");
+            if (mark) {
+                mark.textContent = String(i + 1);
+            }
+            names.push(nodes[i].getAttribute("data-hub-name"));
+            picked[nodes[i].getAttribute("data-hub-id")] = true;
+        }
+        var sources = pool.querySelectorAll(".hub-card");
+        for (var k = 0; k < sources.length; k++) {
+            var on = !!picked[sources[k].getAttribute("data-hub-id")];
+            sources[k].classList.toggle("is-picked", on);
+            sources[k].setAttribute("draggable", on ? "false" : "true");
+        }
+        if (names.length === 0) {
+            summary.textContent = "Belum ada hub. Seret minimal dua kartu ke sini.";
+        } else if (names.length === 1) {
+            summary.textContent = "Satu hub. Tambah minimal satu lagi.";
+        } else {
+            summary.textContent = names.length + " hub · " + names.join(" → ");
+        }
+    }
+
+    function makeStop(id, name, place) {
+        var el = document.createElement("div");
+        el.className = "hub-card hub-card-stop";
+        el.setAttribute("draggable", "true");
+        el.setAttribute("data-hub-id", id);
+        el.setAttribute("data-hub-name", name);
+        el.innerHTML = '<span class="hub-card-num">1</span><div class="hub-card-copy"><strong></strong><div class="mute text-xs"></div><input type="hidden" name="hub_ids"></div><button type="button" class="hub-card-remove" aria-label="Keluarkan">×</button>';
+        el.querySelector("strong").textContent = name;
+        el.querySelector(".mute").textContent = place || "";
+        if (!place) {
+            el.querySelector(".mute").hidden = true;
+        }
+        el.querySelector("input").value = id;
+        return el;
+    }
+
+    function placeStop(card, before) {
+        if (before && before.parentNode === lane && before !== card) {
+            lane.insertBefore(card, before);
+        } else {
+            lane.appendChild(card);
+        }
+        refresh();
+    }
+
+    pool.addEventListener("dragstart", function (ev) {
+        var node = ev.target.closest(".hub-card");
+        if (!node || node.classList.contains("is-picked")) {
+            ev.preventDefault();
+            return;
+        }
+        dragKind = "pool";
+        dragId = node.getAttribute("data-hub-id");
+        ev.dataTransfer.setData("text/plain", "pool:" + dragId);
+        ev.dataTransfer.effectAllowed = "copy";
+        node.classList.add("is-dragging");
+    });
+
+    lane.addEventListener("dragstart", function (ev) {
+        var node = ev.target.closest(".hub-card");
+        if (!node) {
+            return;
+        }
+        dragKind = "lane";
+        dragId = node.getAttribute("data-hub-id");
+        ev.dataTransfer.setData("text/plain", "lane:" + dragId);
+        ev.dataTransfer.effectAllowed = "move";
+        node.classList.add("is-dragging");
+    });
+
+    document.addEventListener("dragend", function () {
+        dragKind = "";
+        dragId = "";
+        var all = document.querySelectorAll(".hub-card, .route-lane");
+        for (var i = 0; i < all.length; i++) {
+            all[i].classList.remove("is-dragging");
+            all[i].classList.remove("is-drop");
+            all[i].classList.remove("is-over");
+        }
+    });
+
+    lane.addEventListener("dragover", function (ev) {
+        if (dragKind === "") {
+            return;
+        }
+        ev.preventDefault();
+        lane.classList.add("is-over");
+        var node = ev.target.closest(".hub-card");
+        var cards = lane.querySelectorAll(".hub-card");
+        for (var i = 0; i < cards.length; i++) {
+            cards[i].classList.remove("is-drop");
+        }
+        if (node && node.parentNode === lane && node.getAttribute("data-hub-id") !== dragId) {
+            node.classList.add("is-drop");
+        }
+    });
+
+    lane.addEventListener("dragleave", function (ev) {
+        if (!lane.contains(ev.relatedTarget)) {
+            lane.classList.remove("is-over");
+        }
+    });
+
+    lane.addEventListener("drop", function (ev) {
+        ev.preventDefault();
+        lane.classList.remove("is-over");
+        var raw = ev.dataTransfer.getData("text/plain") || "";
+        var before = ev.target.closest(".hub-card");
+        if (!before || before.parentNode !== lane) {
+            before = null;
+        }
+        if (raw.indexOf("pool:") === 0 || dragKind === "pool") {
+            var id = raw.indexOf("pool:") === 0 ? raw.slice(5) : dragId;
+            if (id === "" || lane.querySelector('.hub-card[data-hub-id="' + id + '"]')) {
+                return;
+            }
+            var src = pool.querySelector('.hub-card[data-hub-id="' + id + '"]');
+            if (!src) {
+                return;
+            }
+            placeStop(makeStop(id, src.getAttribute("data-hub-name") || "", src.getAttribute("data-hub-place") || ""), before);
+            return;
+        }
+        if (raw.indexOf("lane:") === 0 || dragKind === "lane") {
+            var lid = raw.indexOf("lane:") === 0 ? raw.slice(5) : dragId;
+            var moving = null;
+            var nodes = stops();
+            for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].getAttribute("data-hub-id") === lid) {
+                    moving = nodes[i];
+                }
+            }
+            if (!moving || moving === before) {
+                return;
+            }
+            placeStop(moving, before);
+        }
+    });
+
+    lane.addEventListener("click", function (ev) {
+        var btn = ev.target.closest(".hub-card-remove");
+        if (!btn) {
+            return;
+        }
+        var card = btn.closest(".hub-card");
+        if (card) {
+            card.remove();
+        }
+        refresh();
+    });
+
+    form.addEventListener("submit", function (ev) {
+        if (stops().length < 2) {
+            ev.preventDefault();
+            summary.textContent = "Masukkan minimal dua hub.";
+        }
+    });
+
+    var raw = document.getElementById("route-initial");
+    if (raw) {
+        var initial = [];
+        try {
+            initial = JSON.parse(raw.textContent || "[]");
+        } catch (err) {
+            initial = [];
+        }
+        for (var n = 0; n < initial.length; n++) {
+            lane.appendChild(makeStop(initial[n].id, initial[n].name || "", initial[n].place || ""));
+        }
+    }
+    refresh();
+})();
+</script>
+{% endif %}
+</div>
+{% endblock %}

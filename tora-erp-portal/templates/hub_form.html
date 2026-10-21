@@ -1,0 +1,259 @@
+{% extends "erp_base.html" %}
+{% block title %}{% if data.hub %}Ubah Hub{% else %}Hub Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.hub %}Ubah Hub{% else %}Hub Baru{% endif %}{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('manifests_blueprint.hub') }}">Hub</a>
+        <span>/</span>
+        <strong>{% if data.hub %}Ubah{% else %}Baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.hub') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="hub-form">Simpan</button>
+    </div>
+</div>
+
+<form id="hub-form" class="contact-sheet" method="post" action="{% if data.hub %}{{ url_for('manifests_blueprint.hub_update', hub_id=data.hub.id) }}{% else %}{{ url_for('manifests_blueprint.hub_create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    {% if data.hub %}<input type="hidden" name="name" value="{{ data.hub.name }}">{% endif %}
+    <input type="hidden" name="province" id="province-name" value="{{ data.hub.province if data.hub else '' }}">
+    <input type="hidden" name="regency" id="regency-name" value="{{ data.hub.regency if data.hub else '' }}">
+    <input type="hidden" name="district" id="district-name" value="{{ data.hub.district if data.hub else '' }}">
+    <input type="hidden" name="village" id="village-name" value="{{ data.hub.village if data.hub else '' }}">
+    <input type="hidden" name="postal_code" id="postal-value" value="{{ data.hub.postal_code if data.hub else '' }}">
+
+    <div class="sheet-field">
+        <label class="lbl" for="hub-name">Nama hub <span class="req">*</span></label>
+        <input class="fld" type="text" id="hub-name" name="{% if data.hub %}new_name{% else %}name{% endif %}" value="{{ data.hub.name if data.hub else '' }}" placeholder="Misalnya Gudang Malang" required autocomplete="off">
+        <p class="hint">Terisi dari kabupaten / kota. Ubah kalau nama gudangnya beda. Nama ini yang dipakai saat menyaring kargo.</p>
+    </div>
+
+    <div class="contact-grid">
+        <div class="sheet-field">
+            <label class="lbl" for="province">Provinsi <span class="req">*</span></label>
+            <select class="fld" id="province">
+                <option value="">Memuat provinsi…</option>
+            </select>
+        </div>
+        <div class="sheet-field">
+            <label class="lbl" for="regency">Kabupaten / Kota <span class="req">*</span></label>
+            <select class="fld" id="regency" disabled>
+                <option value="">Pilih provinsi dulu</option>
+            </select>
+        </div>
+        <div class="sheet-field">
+            <label class="lbl" for="district">Kecamatan <span class="req">*</span></label>
+            <select class="fld" id="district" disabled>
+                <option value="">Pilih kabupaten dulu</option>
+            </select>
+        </div>
+        <div class="sheet-field">
+            <label class="lbl" for="village">Kelurahan / Desa <span class="req">*</span></label>
+            <select class="fld" id="village" disabled>
+                <option value="">Pilih kecamatan dulu</option>
+            </select>
+        </div>
+        <div class="sheet-field">
+            <label class="lbl" for="postal">Kode pos</label>
+            <select class="fld" id="postal" disabled>
+                <option value="">Pilih kelurahan dulu</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="sheet-field">
+        <label class="lbl" for="address">Alamat detail <span class="req">*</span></label>
+        <input class="fld" type="text" id="address" name="address" value="{{ data.hub.address if data.hub else '' }}" placeholder="Jalan, nomor, RT/RW, patokan" required autocomplete="street-address">
+    </div>
+    <p class="hint" id="wilayah-error" hidden></p>
+</form>
+</div>
+<script>
+(function () {
+    var form = document.getElementById("hub-form");
+    var province = document.getElementById("province");
+    var regency = document.getElementById("regency");
+    var district = document.getElementById("district");
+    var village = document.getElementById("village");
+    var postal = document.getElementById("postal");
+    var note = document.getElementById("wilayah-error");
+    var nameInput = document.getElementById("hub-name");
+    var suggested = "";
+
+    function showError(message) {
+        note.hidden = message === "";
+        note.textContent = message;
+    }
+
+    function selectedText(select) {
+        var opt = select.options[select.selectedIndex];
+        if (!opt || opt.value === "") {
+            return "";
+        }
+        return opt.textContent;
+    }
+
+    function cityName(text) {
+        return text.replace(/^(Kota|Kabupaten|Kab\.)\s+/i, "").trim();
+    }
+
+    function resetSelect(select, label) {
+        select.innerHTML = "";
+        var opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = label;
+        select.appendChild(opt);
+        select.disabled = true;
+    }
+
+    function fillSelect(select, rows, emptyLabel) {
+        resetSelect(select, emptyLabel);
+        rows.forEach(function (row) {
+            var opt = document.createElement("option");
+            opt.value = row.id;
+            opt.textContent = row.text;
+            if (row.postal_code) {
+                opt.setAttribute("data-postal", row.postal_code);
+            }
+            select.appendChild(opt);
+        });
+        select.disabled = rows.length === 0;
+    }
+
+    function sync() {
+        var provinceText = selectedText(province);
+        var regencyText = selectedText(regency);
+        var districtText = selectedText(district);
+        var villageText = selectedText(village);
+        document.getElementById("province-name").value = provinceText;
+        document.getElementById("regency-name").value = regencyText;
+        document.getElementById("district-name").value = districtText;
+        document.getElementById("village-name").value = villageText;
+    }
+
+    function suggestName() {
+        var city = cityName(selectedText(regency));
+        if (nameInput.value.trim() === "" || nameInput.value === suggested) {
+            nameInput.value = city;
+        }
+        suggested = city;
+    }
+
+    function load(kind, query) {
+        var url = "/api/wilayah/" + kind;
+        if (query) {
+            url += "?" + query;
+        }
+        return fetch(url, { credentials: "same-origin" }).then(function (resp) {
+            return resp.json().then(function (data) {
+                if (!resp.ok || data.status !== "SUCCESS") {
+                    throw new Error(data.desc || "Data wilayah gagal dimuat");
+                }
+                return data.results || [];
+            });
+        });
+    }
+
+    province.addEventListener("change", function () {
+        resetSelect(regency, "Memuat kabupaten…");
+        resetSelect(district, "Pilih kabupaten dulu");
+        resetSelect(village, "Pilih kecamatan dulu");
+        resetSelect(postal, "Pilih kelurahan dulu");
+        sync();
+        suggestName();
+        if (province.value === "") {
+            resetSelect(regency, "Pilih provinsi dulu");
+            return;
+        }
+        load("kabkota", "provinsi_id=" + encodeURIComponent(province.value)).then(function (rows) {
+            fillSelect(regency, rows, "Pilih kabupaten / kota");
+            showError("");
+        }).catch(function (err) {
+            resetSelect(regency, "Pilih provinsi dulu");
+            showError(err.message);
+        });
+    });
+
+    regency.addEventListener("change", function () {
+        resetSelect(district, "Memuat kecamatan…");
+        resetSelect(village, "Pilih kecamatan dulu");
+        resetSelect(postal, "Pilih kelurahan dulu");
+        sync();
+        suggestName();
+        if (regency.value === "") {
+            resetSelect(district, "Pilih kabupaten dulu");
+            return;
+        }
+        load("kecamatan", "kabkota_id=" + encodeURIComponent(regency.value)).then(function (rows) {
+            fillSelect(district, rows, "Pilih kecamatan");
+            showError("");
+        }).catch(function (err) {
+            resetSelect(district, "Pilih kabupaten dulu");
+            showError(err.message);
+        });
+    });
+
+    district.addEventListener("change", function () {
+        resetSelect(village, "Memuat kelurahan…");
+        resetSelect(postal, "Pilih kelurahan dulu");
+        sync();
+        if (district.value === "") {
+            resetSelect(village, "Pilih kecamatan dulu");
+            return;
+        }
+        load("kelurahan", "kecamatan_id=" + encodeURIComponent(district.value)).then(function (rows) {
+            fillSelect(village, rows, "Pilih kelurahan / desa");
+            showError("");
+        }).catch(function (err) {
+            resetSelect(village, "Pilih kecamatan dulu");
+            showError(err.message);
+        });
+    });
+
+    function applyPostal(code) {
+        resetSelect(postal, "Opsional");
+        if (code !== "") {
+            var opt = document.createElement("option");
+            opt.value = code;
+            opt.textContent = code;
+            postal.appendChild(opt);
+            postal.selectedIndex = 1;
+        }
+        postal.disabled = false;
+        document.getElementById("postal-value").value = code;
+    }
+
+    village.addEventListener("change", function () {
+        sync();
+        if (village.value === "") {
+            resetSelect(postal, "Pilih kelurahan dulu");
+            return;
+        }
+        var opt = village.options[village.selectedIndex];
+        var code = opt ? (opt.getAttribute("data-postal") || "") : "";
+        applyPostal(code);
+    });
+
+    form.addEventListener("submit", function (ev) {
+        if (province.value !== "") {
+            sync();
+        }
+        if (nameInput.value.trim() === "" || document.getElementById("address").value.trim() === "") {
+            ev.preventDefault();
+            showError("Lengkapi nama hub, provinsi sampai kelurahan, dan alamat detail");
+        }
+    });
+
+    load("provinsi", "").then(function (rows) {
+        fillSelect(province, rows, "Pilih provinsi");
+        showError("");
+    }).catch(function (err) {
+        resetSelect(province, "Pilih provinsi");
+        showError(err.message);
+    });
+})();
+</script>
+{% endblock %}

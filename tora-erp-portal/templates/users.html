@@ -1,0 +1,46 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import plus %}
+{% from "_ui.html" import status_badge, role_label %}
+{% block title %}Pengguna — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Pengguna{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('auth_blueprint.users_new') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Pengguna</span>
+        {% if data.users|length %}
+        <span class="list-count">{{ data.users|length }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<table class="tbl odoo-tbl">
+    <thead>
+        <tr><th>Nama pengguna</th><th>Peran</th><th>Nama</th><th>Status</th><th>Dibuat</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for user in data.users %}
+        <tr>
+            <td class="cell-strong font-mono">{{ user.username }}</td>
+            <td class="mute">{{ role_label(user.role) }}</td>
+            <td>{{ user.name }}</td>
+            <td>{{ status_badge(user.status) }}</td>
+            <td class="mute">{{ user.rec_timestamp_str }}</td>
+            <td>
+                <div class="row-actions">
+                    <a class="btn-outline btn-sm" href="{{ url_for('auth_blueprint.users_edit', user_id=user.id) }}">Ubah</a>
+                    {% if user.id != data.current_user.id %}
+                    <form method="post" action="{{ url_for('auth_blueprint.users_delete', user_id=user.id) }}" onsubmit="return confirm('Hapus pengguna ini?');">
+                        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                        <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

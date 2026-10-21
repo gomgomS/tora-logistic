@@ -1,0 +1,83 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import search, plus %}
+{% from "_ui.html" import empty_state, category_label %}
+{% block title %}Kontak — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Kontak{% endblock %}
+{% block erp_content %}
+
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('contacts_blueprint.new_contact') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Kontak</span>
+        {% if data.contacts|length %}
+        <span class="list-count">{{ data.contacts|length }}</span>
+        {% endif %}
+    </div>
+    <form class="cp-search" method="get" action="{{ url_for('contacts_blueprint.index') }}">
+        <span class="list-search-icon">{{ search("w-4 h-4") }}</span>
+        <input class="list-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari...">
+        <input type="hidden" name="category" value="{{ data.category }}">
+    </form>
+    <form class="cp-side cp-side-end" method="get" action="{{ url_for('contacts_blueprint.index') }}">
+        <input type="hidden" name="q" value="{{ data.q }}">
+        <select class="cp-filter" name="category" onchange="this.form.submit()">
+            <option value="">Semua</option>
+            {% for cat in data.categories %}
+            <option value="{{ cat }}" {% if data.category == cat %}selected{% endif %}>{{ category_label(cat) }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+{% if data.contacts|length == 0 %}
+    {{ empty_state("Belum ada kontak", "Buat klien, penerima, sopir, atau vendor.", url_for('contacts_blueprint.new_contact'), "Baru") }}
+{% else %}
+    <table class="tbl odoo-tbl">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Email</th>
+                    <th>Telepon</th>
+                    <th>Kota</th>
+                    <th>Kategori</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contact in data.contacts %}
+                {% set parts = contact.name.split() %}
+                {% set initial = (parts[0][:1] ~ (parts[1][:1] if parts|length > 1 else ''))|upper %}
+                {% set hues = ['navy', 'coral', 'mint', 'sky', 'lavender', 'sand'] %}
+                <tr>
+                    <td>
+                        <div class="who">
+                            <span class="who-mark who-{{ hues[contact.name|length % 6] }}">{{ initial }}</span>
+                            <span class="who-line">
+                                <span class="cell-strong">{{ contact.name }}</span>
+                                {% if contact.company_name %}
+                                <span class="who-sub">{{ contact.company_name }}</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="text-sm">{{ contact.email or "" }}</td>
+                    <td class="text-sm">{{ contact.phone or "" }}</td>
+                    <td class="text-sm">{{ contact.city or "" }}</td>
+                    <td class="mute">{{ category_label(contact.category) }}</td>
+                    <td>
+                        <div class="row-actions">
+                            <a class="btn-outline btn-sm" href="{{ url_for('contacts_blueprint.edit_contact', contact_id=contact.id) }}">Ubah</a>
+                            <form method="post" action="{{ url_for('contacts_blueprint.delete_contact', contact_id=contact.id) }}" onsubmit="return confirm('Hapus kontak ini?');">
+                                <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                                <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+    </table>
+{% endif %}
+</div>
+{% endblock %}

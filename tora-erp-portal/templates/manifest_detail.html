@@ -1,0 +1,178 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import truck, arrow_right, swap %}
+{% from "_ui.html" import status_badge, service_badge %}
+{% block title %}{{ data.manifest.manifest_code }} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Manifest {{ data.manifest.manifest_code }}{% endblock %}
+{% block erp_content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title font-mono" style="display:flex;align-items:center;gap:12px;">
+            {{ data.manifest.manifest_code }}
+            {{ status_badge(data.manifest.status) }}
+        </h1>
+        <p class="page-sub">{{ data.manifest.origin }} → <strong>{{ data.manifest.destination }}</strong> &middot; {{ data.manifest.shipment_ids|length }} kiriman</p>
+    </div>
+    <div class="page-actions">
+        <form method="post" action="{{ url_for('manifests_blueprint.manifest_delete', manifest_code=data.manifest.manifest_code) }}" onsubmit="return confirm('Hapus manifest ini? Semua kiriman kembali ke status Terdaftar.');">
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <button class="btn-outline btn-sm" type="submit">Hapus</button>
+        </form>
+        <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.hub', hub=data.manifest.last_location) }}">{{ swap("w-3.5 h-3.5") }} Sorting di hub terakhir</a>
+    </div>
+</div>
+
+<div class="card journey">
+    <div class="card-head">
+        <div>
+            <h2 class="card-title">Perjalanan truk</h2>
+            <p class="card-sub">Satu klik menggeser truk satu langkah, maju atau kembali.</p>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="journey-now">
+            <span class="journey-badge">{{ truck("w-5 h-5") }}</span>
+            <div>
+                <div class="journey-kicker">Posisi truk</div>
+                <div class="journey-where">{{ data.journey.where }}</div>
+            </div>
+        </div>
+        <form method="post" action="{{ url_for('manifests_blueprint.advance', manifest_code=data.manifest.manifest_code) }}">
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <div class="journey-line">
+                {% for stop in data.journey.stops %}
+                <div class="j-stop {{ stop.cls }}">
+                    {% if stop.back %}
+                    <button class="j-hit" type="submit" name="step" value="back" aria-label="Kembali ke {{ stop.name }}">
+                    {% elif stop.clickable %}
+                    <button class="j-hit" type="submit" name="step" value="forward" aria-label="Tiba di {{ stop.name }}">
+                    {% else %}
+                    <div class="j-hit">
+                    {% endif %}
+                        <span class="j-node">
+                            {% if stop.show_truck %}
+                            {{ truck("w-5 h-5") }}
+                            {% elif stop.cls == 'is-done' %}
+                            <span class="j-check">✓</span>
+                            {% else %}
+                            <span class="j-dot"></span>
+                            {% endif %}
+                        </span>
+                        <span class="j-name">{{ stop.name }}</span>
+                        <span class="j-meta">{{ stop.meta }}</span>
+                    {% if stop.back or stop.clickable %}
+                    </button>
+                    {% else %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% if not loop.last %}
+                {% set leg = data.journey.legs[loop.index0] %}
+                {% if leg.clickable %}
+                <button class="j-leg {{ leg.cls }}" type="submit" name="step" value="forward" aria-label="Berangkat menuju {{ leg.target }}">
+                    <span class="j-road"></span>
+                    <span class="j-go">{{ arrow_right("w-4 h-4") }} Berangkat</span>
+                </button>
+                {% elif leg.back %}
+                <button class="j-leg {{ leg.cls }}" type="submit" name="step" value="back" aria-label="Kembali ke jalur menuju {{ leg.target }}">
+                    <span class="j-road"></span>
+                    <span class="j-go is-back"><span class="j-back-icon">{{ arrow_right("w-4 h-4") }}</span> Kembali</span>
+                </button>
+                {% else %}
+                <div class="j-leg {{ leg.cls }}">
+                    <span class="j-road"></span>
+                    {% if leg.here %}
+                    <span class="j-go is-live">{{ truck("w-5 h-5") }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% if data.journey.can_finish %}
+            <div class="journey-finish">
+                <button class="btn-accent" type="submit" name="step" value="forward">Selesaikan perjalanan</button>
+                <p class="journey-hint">Kiriman yang tujuannya hub ini ditandai terkirim. Sisanya menunggu di hub untuk manifest berikutnya. Klik jalur di belakang truk untuk kembali.</p>
+            </div>
+            {% elif data.journey.done %}
+            <div class="journey-finish">
+                <button class="btn-outline" type="submit" name="step" value="back">Kembali</button>
+                <p class="journey-hint">Perjalanan selesai. Kembali menempatkan truk lagi di hub ini, sebelum kiriman diserahkan.</p>
+            </div>
+            {% else %}
+            <p class="journey-hint">Klik jalur atau hub di depan truk untuk maju. Klik yang di belakang untuk kembali. Tracking kiriman ikut berubah.</p>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="grid-2col" style="grid-template-columns: 1fr 1.2fr;">
+    <div>
+        <div class="card">
+            <div class="card-head"><h2 class="card-title">Penugasan</h2></div>
+            <div class="card-body">
+                <table class="tbl keyval">
+                    <tr><th>Kode manifest</th><td class="font-mono">{{ data.manifest.manifest_code }}</td></tr>
+                    <tr><th>Rute</th><td>{% for stop in data.journey.stops %}{{ stop.name }}{% if not loop.last %} → {% endif %}{% endfor %}</td></tr>
+                    <tr><th>Kendaraan</th><td>{{ data.manifest.vehicle_label }}</td></tr>
+                    <tr><th>Sopir</th><td>{{ data.manifest.driver_name }}</td></tr>
+                    <tr><th>Klien charter</th><td>{{ data.manifest.client_id or '—' }}</td></tr>
+                    <tr><th>Lokasi terakhir</th><td>{{ data.manifest.last_location }}</td></tr>
+                    <tr><th>Pembaruan terakhir</th><td class="muted">{{ data.manifest.last_update }}</td></tr>
+                </table>
+                {% if data.manifest.status == 'PLANNED' %}
+                <form method="post" action="{{ url_for('manifests_blueprint.manifest_fleet', manifest_code=data.manifest.manifest_code) }}" style="margin-top:16px;">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <div class="form-field">
+                        <label class="lbl" for="vehicle_id">Kendaraan</label>
+                        <select class="fld" id="vehicle_id" name="vehicle_id" required>
+                            <option value="">Pilih kendaraan</option>
+                            {% for vehicle in data.vehicles %}
+                            <option value="{{ vehicle.id }}" {% if vehicle.id == data.manifest.vehicle_id %}selected{% endif %}>{{ vehicle.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="lbl" for="driver_id">Sopir</label>
+                        <select class="fld" id="driver_id" name="driver_id" required>
+                            <option value="">Pilih sopir</option>
+                            {% for driver in data.drivers %}
+                            <option value="{{ driver.id }}" {% if driver.id == data.manifest.driver_id %}selected{% endif %}>{{ driver.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="btn-accent btn-sm" type="submit">Simpan penugasan</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <div>
+                <h2 class="card-title">Kiriman Terpasang</h2>
+                <p class="card-sub">Status terkini setelah setiap update massal</p>
+            </div>
+        </div>
+        <div class="tbl-wrap">
+            <table class="tbl odoo-tbl">
+                <thead>
+                    <tr><th>Nomor AWB</th><th>PO</th><th>Layanan</th><th>Tujuan</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in data.shipments %}
+                    <tr>
+                        <td><a class="row-link font-mono" href="{{ url_for('shipments_blueprint.detail', tracking_code=s.tracking_code) }}">{{ s.tracking_code }}</a></td>
+                        <td class="font-mono text-xs">{{ s.po_number }}</td>
+                        <td>{{ service_badge(s.service_type) }}</td>
+                        <td class="text-sm"><strong>{{ s.destination_city }}</strong> <span class="muted">(dari {{ s.origin_city }})</span></td>
+                        <td>{{ status_badge(s.status_utama) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

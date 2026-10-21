@@ -1,0 +1,85 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import plus %}
+{% from "_ui.html" import ownership_badge, empty_state, ownership_label %}
+{% block title %}Armada — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Armada &amp; Sopir{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('fleet_blueprint.vehicle_new') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Kendaraan</span>
+        {% if data.vehicles|length %}
+        <span class="list-count">{{ data.vehicles|length }}</span>
+        {% endif %}
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end">
+        <a class="btn-outline btn-sm" href="{{ url_for('fleet_blueprint.driver_new') }}">{{ plus("w-4 h-4") }} Sopir baru</a>
+    </div>
+</div>
+
+{% if data.vehicles|length == 0 %}
+    {{ empty_state("Belum ada kendaraan", "Daftarkan truk pertama — nomor polisi harus unik.", url_for('fleet_blueprint.vehicle_new'), "Baru") }}
+{% else %}
+<table class="tbl odoo-tbl">
+    <thead><tr><th>Nomor polisi</th><th>Jenis</th><th>Kepemilikan</th><th>Vendor</th><th></th></tr>
+    <tbody>
+        {% for vehicle in data.vehicles %}
+        <tr>
+            <td class="cell-strong font-mono">{{ vehicle.plate_number }}</td>
+            <td>{{ vehicle.vehicle_type }}</td>
+            <td>{{ ownership_badge(vehicle.ownership) }}</td>
+            <td>{{ vehicle.vendor_name }}</td>
+            <td>
+                <div class="row-actions">
+                    <a class="btn-outline btn-sm" href="{{ url_for('fleet_blueprint.vehicle_edit', vehicle_id=vehicle.id) }}">Ubah</a>
+                    <form method="post" action="{{ url_for('fleet_blueprint.vehicle_delete', vehicle_id=vehicle.id) }}" onsubmit="return confirm('Hapus kendaraan ini?');">
+                        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                        <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<div class="cp section-gap">
+    <div class="cp-side">
+        <span class="cp-name">Sopir</span>
+        {% if data.drivers|length %}
+        <span class="list-count">{{ data.drivers|length }}</span>
+        {% endif %}
+    </div>
+</div>
+
+{% if data.drivers|length == 0 %}
+    {{ empty_state("Belum ada sopir", "Hubungkan kontak sopir untuk mendaftarkan sopir.", url_for('fleet_blueprint.driver_new'), "Baru") }}
+{% else %}
+<table class="tbl odoo-tbl">
+    <thead><tr><th>Nama</th><th>SIM</th><th>Tipe</th><th>Telepon</th><th></th></tr>
+    <tbody>
+        {% for driver in data.drivers %}
+        <tr>
+            <td class="cell-strong">{{ driver.contact_name }}</td>
+            <td class="font-mono">{{ driver.license_number }}</td>
+            <td class="mute">{{ ownership_label(driver.type) }}</td>
+            <td>{{ driver.contact_phone }}</td>
+            <td>
+                <div class="row-actions">
+                    <a class="btn-outline btn-sm" href="{{ url_for('fleet_blueprint.driver_edit', driver_id=driver.id) }}">Ubah</a>
+                    <form method="post" action="{{ url_for('fleet_blueprint.driver_delete', driver_id=driver.id) }}" onsubmit="return confirm('Hapus sopir ini?');">
+                        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                        <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

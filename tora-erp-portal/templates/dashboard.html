@@ -1,0 +1,147 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import box, truck, clipboard, swap, users, check_circle, clock, plus, arrow_right, warehouse %}
+{% from "_ui.html" import status_badge, service_badge, status_label %}
+{% block title %}Dasbor — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Dasbor{% endblock %}
+{% block erp_content %}
+
+{%- set dist_cls = {
+    "REGISTERED": "dist-fill-gray",
+    "MANIFESTED": "dist-fill-violet",
+    "IN_TRANSIT": "dist-fill-blue",
+    "ARRIVED_HUB": "dist-fill-amber",
+    "OUT_FOR_DELIVERY": "dist-fill-blue",
+    "DELIVERED": "dist-fill-green"
+} -%}
+{%- set max_count = [data.status_counts|map(attribute='count')|max, 1]|max -%}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Dasbor</h1>
+        <p class="page-sub">Ringkasan operasional — konsolidasi LTL &amp; charter FTL</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn-outline" href="{{ url_for('manifests_blueprint.hub') }}">{{ swap("w-4 h-4") }} Sorting Hub</a>
+        <a class="btn-accent" href="{{ url_for('shipments_blueprint.create') }}">{{ plus("w-4 h-4") }} Order Baru</a>
+    </div>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card kpi-wash-navy">
+        <span class="kpi-icon kpi-icon-navy">{{ box("w-5 h-5") }}</span>
+        <div>
+            <div class="kpi-num">{{ data.stats.shipments_active }}</div>
+            <div class="kpi-label">Order aktif</div>
+            <div class="kpi-foot">{{ data.stats.shipments_total }} total sepanjang waktu</div>
+        </div>
+    </div>
+    <div class="kpi-card kpi-wash-sky">
+        <span class="kpi-icon kpi-icon-blue">{{ truck("w-5 h-5") }}</span>
+        <div>
+            <div class="kpi-num">{{ data.stats.manifests_open }}</div>
+            <div class="kpi-label">Manifest terbuka</div>
+            <div class="kpi-foot">direncanakan atau dalam perjalanan</div>
+        </div>
+    </div>
+    <div class="kpi-card kpi-wash-mint">
+        <span class="kpi-icon kpi-icon-green">{{ check_circle("w-5 h-5") }}</span>
+        <div>
+            <div class="kpi-num">{{ data.stats.shipments_delivered }}</div>
+            <div class="kpi-label">Terkirim</div>
+            <div class="kpi-foot">sampai di tujuan</div>
+        </div>
+    </div>
+    <div class="kpi-card kpi-wash-coral">
+        <span class="kpi-icon kpi-icon-orange">{{ warehouse("w-5 h-5") }}</span>
+        <div>
+            <div class="kpi-num">{{ data.stats.vehicles }}<span class="kpi-num" style="font-size:16px;color:var(--color-mute);"> / {{ data.stats.drivers }}</span></div>
+            <div class="kpi-label">Kendaraan / Sopir</div>
+            <div class="kpi-foot">{{ data.stats.contacts }} kontak di data master</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2col" style="grid-template-columns: 1.6fr 1fr;">
+
+    <div>
+        <div class="card">
+            <div class="card-head">
+                <div>
+                    <h2 class="card-title">Order Terbaru</h2>
+                    <p class="card-sub">Kiriman yang baru masuk ke sistem</p>
+                </div>
+                <a class="btn-outline btn-sm" href="{{ url_for('shipments_blueprint.index') }}">Lihat semua {{ arrow_right("w-3.5 h-3.5") }}</a>
+            </div>
+            {% if data.recent|length == 0 %}
+            <div class="card-body">
+                {% from "_ui.html" import empty_state %}
+                {{ empty_state("Belum ada order", "Buat order LTL atau FTL pertama untuk mulai beroperasi.", url_for('shipments_blueprint.create'), "+ Order Baru") }}
+            </div>
+            {% else %}
+            <div class="tbl-wrap">
+                <table class="tbl odoo-tbl">
+                    <thead>
+                        <tr><th>Nomor AWB</th><th>Layanan</th><th>Pengirim</th><th>Rute</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for s in data.recent %}
+                        <tr>
+                            <td><a class="row-link font-mono" href="{{ url_for('shipments_blueprint.detail', tracking_code=s.tracking_code) }}">{{ s.tracking_code }}</a></td>
+                            <td>{{ service_badge(s.service_type) }}</td>
+                            <td class="text-sm">{{ s.sender_name }}</td>
+                            <td class="text-sm">{{ s.origin_city }} → <strong>{{ s.destination_city }}</strong></td>
+                            <td>{{ status_badge(s.status_utama) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="action-grid mt-4">
+            <a class="action-tile" href="{{ url_for('shipments_blueprint.create') }}">
+                <span class="action-tile-icon">{{ box("w-[18px] h-[18px]") }}</span>
+                <strong>+ Order Baru</strong>
+                <span class="muted text-sm">LTL / FTL — nomor AWB otomatis</span>
+            </a>
+            <a class="action-tile" href="{{ url_for('manifests_blueprint.create') }}">
+                <span class="action-tile-icon">{{ clipboard("w-[18px] h-[18px]") }}</span>
+                <strong>+ Buat Manifest</strong>
+                <span class="muted text-sm">Tugaskan armada, konsolidasi kiriman</span>
+            </a>
+            <a class="action-tile" href="{{ url_for('manifests_blueprint.hub') }}">
+                <span class="action-tile-icon">{{ swap("w-[18px] h-[18px]") }}</span>
+                <strong>Sorting Hub Transit</strong>
+                <span class="muted text-sm">Pecah muatan &amp; buat manifest feeder</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <div>
+                <h2 class="card-title">Status Kiriman</h2>
+                <p class="card-sub">Sebaran di sepanjang alur</p>
+            </div>
+        </div>
+        <div class="card-body">
+            {% for row in data.status_counts %}
+            <div class="dist-row">
+                <div class="dist-top">
+                    <span class="dist-label">{{ status_label(row.status) }}</span>
+                    <span class="dist-count">{{ row.count }}</span>
+                </div>
+                <div class="dist-track">
+                    <div class="dist-fill {{ dist_cls.get(row.status, 'dist-fill-gray') }}" style="width: {{ (row.count * 100 / max_count)|round(0, 'common')|int }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+            <div class="alert-info mt-4" style="margin-bottom:0;">
+                {{ clock("w-4 h-4") }}
+                <span>Perubahan status manifest otomatis menambahkan milestone ke setiap kiriman yang terpasang.</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

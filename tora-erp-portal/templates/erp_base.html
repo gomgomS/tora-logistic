@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% from "_icons.html" import dashboard, box, clipboard, swap, users, truck, shield, search, logout, menu, close, globe, plus, arrow_right %}
+{% from "_ui.html" import role_label %}
+
+{% block shell %}
+<div class="erp-layout">
+
+    <!-- ——— Sidebar ——— -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-mark">T</span>
+            <span>
+                <span class="brand-name">Tora Expedition</span>
+                <span class="brand-sub">Portal ERP</span>
+            </span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="side-section">Operasional</div>
+            <a class="side-link {% if request.path == '/' %}side-link-active{% endif %}" href="{{ url_for('auth_blueprint.dashboard') }}">
+                {{ dashboard("w-[18px] h-[18px]") }} <span>Dasbor</span>
+            </a>
+            <a class="side-link {% if request.path.startswith('/shipments') %}side-link-active{% endif %}" href="{{ url_for('shipments_blueprint.index') }}">
+                {{ box("w-[18px] h-[18px]") }} <span>Order</span>
+                {% if data.sidebar_counts.shipments_active %}<span class="side-count">{{ data.sidebar_counts.shipments_active }}</span>{% endif %}
+            </a>
+            <a class="side-link {% if request.path.startswith('/manifests') %}side-link-active{% endif %}" href="{{ url_for('manifests_blueprint.index') }}">
+                {{ clipboard("w-[18px] h-[18px]") }} <span>Manifest</span>
+                {% if data.sidebar_counts.manifests_open %}<span class="side-count">{{ data.sidebar_counts.manifests_open }}</span>{% endif %}
+            </a>
+            <a class="side-link {% if request.path.startswith('/hub') %}side-link-active{% endif %}" href="{{ url_for('manifests_blueprint.hub') }}">
+                {{ swap("w-[18px] h-[18px]") }} <span>Hub Transit</span>
+            </a>
+            <a class="side-link {% if request.path.startswith('/routes') %}side-link-active{% endif %}" href="{{ url_for('manifests_blueprint.routes') }}">
+                {{ arrow_right("w-[18px] h-[18px]") }} <span>Rute</span>
+            </a>
+
+            <div class="side-section">Data Master</div>
+            <a class="side-link {% if request.path.startswith('/contacts') %}side-link-active{% endif %}" href="{{ url_for('contacts_blueprint.index') }}">
+                {{ users("w-[18px] h-[18px]") }} <span>Kontak</span>
+            </a>
+            <a class="side-link {% if request.path.startswith('/fleet') %}side-link-active{% endif %}" href="{{ url_for('fleet_blueprint.index') }}">
+                {{ truck("w-[18px] h-[18px]") }} <span>Armada</span>
+            </a>
+
+            {% if data.current_user.role == 'superadmin' %}
+            <div class="side-section">Sistem</div>
+            <a class="side-link {% if request.path.startswith('/users') %}side-link-active{% endif %}" href="{{ url_for('auth_blueprint.users') }}">
+                {{ shield("w-[18px] h-[18px]") }} <span>Pengguna</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-foot">
+            <a class="side-link" href="{{ url_for('tracking_blueprint.track_page') }}">{{ globe("w-4 h-4") }} <span>Lacak Kiriman</span></a>
+        </div>
+    </aside>
+    <button type="button" class="sidebar-backdrop" id="sidebarBackdrop" aria-label="Tutup menu"></button>
+
+    <!-- ——— Main column ——— -->
+    <div class="erp-main">
+
+        <header class="topbar">
+            <button type="button" class="hamburger" onclick="toggleSidebar()" aria-label="Buka menu">
+                {{ menu("w-5 h-5") }}
+            </button>
+            <span class="topbar-title">{% block topbar_title %}{% endblock %}</span>
+
+            <div class="topbar-right">
+                <a class="icon-btn" href="{{ url_for('tracking_blueprint.track_page') }}" title="Lacak kiriman">
+                    {{ search("w-[18px] h-[18px]") }}
+                </a>
+                <div class="user-chip">
+                    <span class="avatar">{{ data.current_user.username[:2]|upper }}</span>
+                    <span class="user-chip-names">
+                        <span class="user-chip-name">{{ data.current_user.username }}</span><br>
+                        <span class="user-chip-role">{{ role_label(data.current_user.role) }}</span>
+                    </span>
+                </div>
+                <form method="post" action="{{ url_for('auth_blueprint.logout') }}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <button type="submit" class="icon-btn" title="Keluar">{{ logout("w-[18px] h-[18px]") }}</button>
+                </form>
+            </div>
+        </header>
+
+        <main class="erp-content">
+            {% if data.form_error %}
+            <div class="alert-error">{{ data.form_error }}</div>
+            {% endif %}
+            {% if data.form_success %}
+            <div class="alert-success">{{ data.form_success }}</div>
+            {% endif %}
+
+            {% block erp_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+{% include "_ai_chat.html" %}
+
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("sidebar-open");
+    document.getElementById("sidebarBackdrop").classList.toggle("show");
+}
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("sidebarBackdrop").addEventListener("click", toggleSidebar);
+});
+</script>
+{% endblock %}

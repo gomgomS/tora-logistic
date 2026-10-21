@@ -1,0 +1,68 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import users %}
+{% from "_ui.html" import category_label %}
+{% block title %}{% if data.contact %}Ubah Kontak{% else %}Kontak Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.contact %}Ubah Kontak{% else %}Kontak Baru{% endif %}{% endblock %}
+{% block erp_content %}
+
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('contacts_blueprint.index') }}">Kontak</a>
+        <span>/</span>
+        <strong>{% if data.contact %}Ubah{% else %}Baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('contacts_blueprint.index') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="contact-form">Simpan</button>
+    </div>
+</div>
+
+<form id="contact-form" class="contact-sheet" method="post" action="{% if data.contact %}{{ url_for('contacts_blueprint.update_contact', contact_id=data.contact.id) }}{% else %}{{ url_for('contacts_blueprint.create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="next" value="{{ url_for('contacts_blueprint.index') }}">
+
+    <div class="contact-hero">
+        <span class="who-mark who-navy contact-hero-mark">{{ users("w-5 h-5") }}</span>
+        <div class="contact-hero-fields">
+            <input class="sheet-name" type="text" name="name" value="{{ data.contact.name if data.contact else '' }}" placeholder="Nama (perusahaan atau perorangan)" required autofocus>
+            <input class="fld sheet-line" type="text" name="company_name" value="{{ data.contact.company_name if data.contact else '' }}" placeholder="Perusahaan">
+            <input class="fld sheet-line" type="email" name="email" value="{{ data.contact.email if data.contact else '' }}" placeholder="Email">
+            <input class="fld sheet-line" type="text" name="phone" value="{{ data.contact.phone if data.contact else '' }}" placeholder="Telepon">
+        </div>
+    </div>
+
+    <div class="contact-grid">
+        <div>
+            <div class="sheet-field">
+                <label class="lbl" for="address">Alamat</label>
+                <input class="fld" type="text" id="address" name="address" value="{{ data.contact.address if data.contact else '' }}" placeholder="Jalan">
+            </div>
+            <div class="sheet-field">
+                <label class="lbl" for="city">Kota</label>
+                <input class="fld" type="text" id="city" name="city" value="{{ data.contact.city if data.contact else '' }}" list="city-list" placeholder="Kota">
+            </div>
+        </div>
+        <div>
+            <div class="sheet-field">
+                <label class="lbl">Kategori <span class="req">*</span></label>
+                <div class="radio-row">
+                    {% for cat in data.categories %}
+                    <label class="radio-pill">
+                        <input type="radio" name="category" value="{{ cat }}" {% if data.contact and data.contact.category == cat %}checked{% elif not data.contact and cat == 'CLIENT' %}checked{% endif %} required>
+                        {{ category_label(cat) }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<datalist id="city-list">
+    {% for city in ['Jakarta','Bandung','Semarang','Surabaya','Malang','Yogyakarta','Solo','Denpasar','Medan','Palembang','Pekanbaru','Makassar','Balikpapan','Banjarmasin','Pontianak','Lampung'] %}
+    <option value="{{ city }}"></option>
+    {% endfor %}
+</datalist>
+</div>
+{% endblock %}

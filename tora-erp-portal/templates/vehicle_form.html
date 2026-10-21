@@ -1,0 +1,50 @@
+{% extends "erp_base.html" %}
+{% from "_ui.html" import ownership_label %}
+{% block title %}{% if data.vehicle %}Ubah Kendaraan{% else %}Kendaraan Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.vehicle %}Ubah Kendaraan{% else %}Kendaraan Baru{% endif %}{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('fleet_blueprint.index') }}">Armada</a>
+        <span>/</span>
+        <strong>{% if data.vehicle %}Ubah kendaraan{% else %}Kendaraan baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('fleet_blueprint.index') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="vehicle-form">Simpan</button>
+    </div>
+</div>
+
+<form id="vehicle-form" class="contact-sheet" method="post" action="{% if data.vehicle %}{{ url_for('fleet_blueprint.vehicle_update', vehicle_id=data.vehicle.id) }}{% else %}{{ url_for('fleet_blueprint.vehicle_create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <div class="contact-grid">
+        <div>
+            <div class="sheet-field">
+                <label class="lbl" for="plate_number">Nomor polisi <span class="req">*</span></label>
+                <input class="fld" type="text" id="plate_number" name="plate_number" value="{{ data.vehicle.plate_number if data.vehicle else '' }}" placeholder="B 9111 UYZ" required>
+            </div>
+            <div class="sheet-field">
+                <label class="lbl" for="vehicle_type">Jenis kendaraan <span class="req">*</span></label>
+                <select class="fld" id="vehicle_type" name="vehicle_type" required>
+                    {% for vt in data.vehicle_types %}<option value="{{ vt }}" {% if data.vehicle and data.vehicle.vehicle_type == vt %}selected{% endif %}>{{ vt }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div>
+            <div class="sheet-field">
+                <label class="lbl" for="ownership">Kepemilikan <span class="req">*</span></label>
+                <select class="fld" id="ownership" name="ownership" required>
+                    {% for own in data.ownerships %}<option value="{{ own }}" {% if data.vehicle and data.vehicle.ownership == own %}selected{% endif %}>{{ ownership_label(own) }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="sheet-field">
+                <label class="lbl" for="vendor_name">Nama vendor</label>
+                <input class="fld" type="text" id="vendor_name" name="vendor_name" value="{{ data.vehicle.vendor_name if data.vehicle else '' }}" placeholder="Untuk unit vendor">
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+{% endblock %}

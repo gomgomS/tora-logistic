@@ -1,0 +1,92 @@
+{# ---------------------------------------------------------------------------
+ # Tora Expedition — shared UI macros (design-system primitives).
+ # Usage:  {% from "_ui.html" import status_badge, service_badge, empty_state %}
+ # --------------------------------------------------------------------------- #}
+
+{% macro status_label(status) -%}
+    {%- set labels = {
+        "DELIVERED": "Terkirim",
+        "COMPLETED": "Selesai",
+        "IN_TRANSIT": "Dalam Perjalanan",
+        "ARRIVED_HUB": "Tiba di Hub",
+        "OUT_FOR_DELIVERY": "Dalam pengantaran",
+        "ARRIVED": "Tiba",
+        "MANIFESTED": "Sudah Manifest",
+        "REGISTERED": "Terdaftar",
+        "PLANNED": "Direncanakan",
+        "ENABLE": "Aktif",
+        "ORDER_REGISTERED": "Order Diterima",
+        "CONSOLIDATED": "Dikonsolidasi"
+    } -%}
+    {{ labels.get(status, status) }}
+{%- endmacro %}
+
+{% macro category_label(cat) -%}
+    {%- set labels = {"CLIENT": "Klien", "RECEIVER": "Penerima", "DRIVER": "Sopir", "VENDOR": "Vendor"} -%}
+    {{ labels.get(cat, cat) }}
+{%- endmacro %}
+
+{% macro ownership_label(own) -%}
+    {%- set labels = {"INTERNAL": "Internal", "VENDOR": "Vendor"} -%}
+    {{ labels.get(own, own) }}
+{%- endmacro %}
+
+{% macro role_label(role) -%}
+    {%- set labels = {"superadmin": "Superadmin", "admin": "Admin"} -%}
+    {{ labels.get(role, role) }}
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+    {%- set cls = {
+        "DELIVERED": "badge-green",
+        "COMPLETED": "badge-green",
+        "IN_TRANSIT": "badge-blue",
+        "OUT_FOR_DELIVERY": "badge-blue",
+        "ARRIVED_HUB": "badge-amber",
+        "ARRIVED": "badge-amber",
+        "MANIFESTED": "badge-violet",
+        "REGISTERED": "badge-gray",
+        "PLANNED": "badge-gray",
+        "ENABLE": "badge-green"
+    }.get(status, "badge-gray") -%}
+    <span class="badge {{ cls }}">{{ status_label(status) }}</span>
+{%- endmacro %}
+
+{% macro service_badge(service) -%}
+    {%- set cls = "badge-orange" if service == "FTL" else "badge-navy" -%}
+    <span class="badge {{ cls }}">{{ service }}</span>
+{%- endmacro %}
+
+{% macro ownership_badge(ownership) -%}
+    {%- set cls = "badge-green" if ownership == "INTERNAL" else "badge-amber" -%}
+    <span class="badge {{ cls }}">{{ ownership_label(ownership) }}</span>
+{%- endmacro %}
+
+{% macro statusbar(current, steps) -%}
+    {%- set ns = namespace(passed=true) -%}
+    <div class="statusbar" aria-label="Status">
+        {%- for step in steps -%}
+            {%- if step == current -%}
+                {%- set ns.passed = false -%}
+                <span class="statusbar-step is-current">{{ status_label(step) }}</span>
+            {%- elif ns.passed -%}
+                <span class="statusbar-step is-done">{{ status_label(step) }}</span>
+            {%- else -%}
+                <span class="statusbar-step">{{ status_label(step) }}</span>
+            {%- endif -%}
+        {%- endfor -%}
+    </div>
+{%- endmacro %}
+
+{% macro empty_state(title, desc, cta_url="", cta_label="") -%}
+    <div class="empty">
+        <span class="empty-icon">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.4 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.8 1.1Z"/></svg>
+        </span>
+        <div class="empty-title">{{ title }}</div>
+        <div class="empty-desc">{{ desc }}</div>
+        {% if cta_url and cta_label %}
+        <a class="btn-primary btn-sm mt-4" href="{{ cta_url }}">{{ cta_label }}</a>
+        {% endif %}
+    </div>
+{%- endmacro %}

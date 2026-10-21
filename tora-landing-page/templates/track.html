@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% from "_icons.html" import search, box, route, clock %}
+{% block title %}Lacak Kiriman — {{ data.site_name }}{% endblock %}
+{% block og_description %}Public shipment tracking{% endblock %}
+{% block main_class %}w-full max-w-2xl mx-auto px-4 py-12{% endblock %}
+{% block content %}
+<div class="page-head" style="text-align:center;">
+    <div style="margin:0 auto;">
+        <h1 class="page-title" data-i18n="title">Lacak Kiriman</h1>
+        <p class="page-sub" data-i18n="subtitle">Masukkan nomor resi atau nomor pesanan</p>
+    </div>
+</div>
+
+<div style="display:flex;justify-content:center;margin-bottom:16px;">
+    <div class="lang-toggle">
+        <button type="button" class="lang-btn" id="lang-id" onclick="setLang('id')">Bahasa Indonesia</button>
+        <button type="button" class="lang-btn" id="lang-en" onclick="setLang('en')">English</button>
+    </div>
+</div>
+
+<form method="get" action="{{ url_for('tracking_blueprint.track_page') }}" class="search-bar" style="margin:0 auto 28px auto;">
+    <input class="fld" type="text" name="q" value="{{ data.query }}" placeholder="AWB-20260101-0001 / PO-2026-0001" data-i18n-ph="placeholder" required>
+    <button type="submit" class="btn-accent">{{ search("w-4 h-4") }}<span data-i18n="search">Lacak</span></button>
+</form>
+
+{% if data.not_found %}
+<div class="alert-error" data-i18n="notfound">Tidak ada kiriman ditemukan untuk pencarian tersebut.</div>
+{% endif %}
+
+{% if data.result %}
+{% set s = data.result %}
+<div class="card">
+    <div class="card-head">
+        <div>
+            <h2 class="card-title font-mono" style="font-size:17px;">{{ s.tracking_code }}</h2>
+            <p class="card-sub">{{ s.origin_city }} → {{ s.destination_city }} &middot; {{ s.created_at }}</p>
+        </div>
+        <span class="badge {% if s.status_utama == 'DELIVERED' %}badge-green{% elif s.status_utama == 'IN_TRANSIT' %}badge-blue{% elif s.status_utama == 'ARRIVED_HUB' %}badge-amber{% else %}badge-gray{% endif %}" data-status="{{ s.status_utama }}"></span>
+    </div>
+    <div class="card-body">
+        <table class="tbl keyval">
+            <tr><th data-i18n="f_status">Status</th><td><strong data-status="{{ s.status_utama }}"></strong></td></tr>
+            <tr><th data-i18n="f_service">Layanan</th><td>{% if s.service_type == 'FTL' %}<span data-i18n="v_ftl">Truk khusus</span>{% else %}<span data-i18n="v_ltl">Reguler</span>{% endif %}</td></tr>
+            <tr><th data-i18n="f_route">Rute</th><td>{{ s.origin_city }} → {{ s.destination_city }}</td></tr>
+            {% if s.po_number %}<tr><th data-i18n="f_po">No. PO</th><td class="font-mono">{{ s.po_number }}</td></tr>{% endif %}
+            <tr><th data-i18n="f_sender">Pengirim</th><td>{{ s.sender_name }}</td></tr>
+            <tr><th data-i18n="f_receiver">Penerima</th><td>{{ s.receiver_name }}</td></tr>
+        </table>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-head">
+        <div>
+            <h2 class="card-title" data-i18n="timeline">Riwayat pengiriman</h2>
+            <p class="card-sub" data-count="{{ s.tracking_logs|length }}">{{ s.tracking_logs|length }} pembaruan</p>
+        </div>
+        {{ clock("w-5 h-5") }}
+    </div>
+    <div class="card-body">
+        <div class="timeline">
+            {% for log in s.tracking_logs|reverse %}
+            <div class="tl-item {% if loop.first %}is-latest{% endif %} {% if log.milestone_status == 'DELIVERED' %}is-final{% endif %}">
+                <div class="tl-dot"></div>
+                <div class="tl-body">
+                    <div class="tl-head">
+                        <strong class="tl-title" data-event="{{ log.milestone_status }}" data-location="{{ log.location }}" data-note="{{ log.notes }}"></strong>
+                    </div>
+                    <div class="tl-time" data-time="{{ log.timestamp }}">{{ log.timestamp }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block shell %}
+{{ super() }}
+<script>
+var I18N = {
+    "id": {
+        "title": "Lacak Kiriman",
+        "subtitle": "Masukkan nomor resi atau nomor pesanan",
+        "placeholder": "Nomor resi atau nomor pesanan",
+        "search": "Lacak",
+        "notfound": "Nomor itu tidak ditemukan.",
+        "f_status": "Status",
+        "f_service": "Layanan",
+        "f_route": "Dari — ke",
+        "f_po": "No. pesanan",
+        "f_sender": "Pengirim",
+        "f_receiver": "Penerima",
+        "f_created": "Tanggal pesanan",
+        "timeline": "Riwayat pengiriman",
+        "v_ltl": "Reguler",
+        "v_ftl": "Truk khusus"
+    },
+    "en": {
+        "title": "Track Your Shipment",
+        "subtitle": "Enter the receipt number or order number",
+        "placeholder": "Receipt number or order number",
+        "search": "Track",
+        "notfound": "That number was not found.",
+        "f_status": "Status",
+        "f_service": "Service",
+        "f_route": "From — to",
+        "f_po": "Order number",
+        "f_sender": "Sender",
+        "f_receiver": "Receiver",
+        "f_created": "Order date",
+        "timeline": "Tracking history",
+        "v_ltl": "Regular",
+        "v_ftl": "Dedicated truck"
+    }
+};
+var STATUS_LABELS = {
+    "REGISTERED":   {"id": "Pesanan diterima",  "en": "Shipment received"},
+    "MANIFESTED":   {"id": "Sedang diproses",   "en": "Being processed"},
+    "IN_TRANSIT":   {"id": "Dalam perjalanan",  "en": "On the way"},
+    "ARRIVED_HUB":  {"id": "Tiba di gudang",    "en": "At the warehouse"},
+    "DELIVERED":    {"id": "Sudah diterima",    "en": "Delivered"},
+    "OUT_FOR_DELIVERY": {"id": "Sedang diantar", "en": "Out for delivery"}
+};
+var DAYS = {
+    "id": ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"],
+    "en": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+};
+var MONTHS = {
+    "id": ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"],
+    "en": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+};
+function label(kind, key) {
+    var entry = STATUS_LABELS[key];
+    if (entry == null) { return key; }
+    return entry[kind];
+}
+function cleanPlace(location) {
+    return (location || "").replace(/^\s*Menuju\s+/i, "").trim();
+}
+function eventLine(kind, status, location, note) {
+    var heading = /^\s*Menuju\s+/i.test(location || "");
+    var place = cleanPlace(location);
+    var upper = place.toUpperCase();
+    if (kind === "en") {
+        if (status === "ORDER_REGISTERED" || status === "REGISTERED") {
+            return place ? "SHIPMENT RECEIVED [" + upper + "]" : "SHIPMENT RECEIVED";
+        }
+        if (status === "CONSOLIDATED" || status === "MANIFESTED") {
+            return place ? "PROCESSED AT WAREHOUSE [" + upper + "]" : "PROCESSED AT WAREHOUSE";
+        }
+        if (status === "IN_TRANSIT") {
+            if (heading && place) { return "ON THE WAY TO " + upper; }
+            if (place) { return "DEPARTED FROM TRANSIT [" + upper + "]"; }
+            return "ON THE WAY";
+        }
+        if (status === "ARRIVED_HUB") {
+            return place ? "ARRIVED AT WAREHOUSE [" + upper + "]" : "ARRIVED AT WAREHOUSE";
+        }
+        if (status === "OUT_FOR_DELIVERY") {
+            return place ? "OUT FOR DELIVERY [" + upper + "]" : "OUT FOR DELIVERY";
+        }
+        if (status === "DELIVERED") {
+            var whoEn = (note || "").replace(/^Diterima oleh\s+/i, "").trim();
+            if (whoEn && whoEn !== (note || "").trim()) { return "RECEIVED BY " + whoEn.toUpperCase(); }
+            return place ? "SHIPMENT DELIVERED [" + upper + "]" : "SHIPMENT DELIVERED";
+        }
+        return place ? status + " [" + upper + "]" : status;
+    }
+    if (status === "ORDER_REGISTERED" || status === "REGISTERED") {
+        return place ? "Barang diterima di " + place : "Barang diterima";
+    }
+    if (status === "CONSOLIDATED" || status === "MANIFESTED") {
+        return place ? "Barang diproses di gudang " + place : "Barang diproses di gudang";
+    }
+    if (status === "IN_TRANSIT") {
+        if (heading && place) { return "Dalam perjalanan ke " + place; }
+        if (place) { return "Berangkat dari " + place; }
+        return "Dalam perjalanan";
+    }
+    if (status === "ARRIVED_HUB") {
+        return place ? "Tiba di gudang " + place : "Tiba di gudang";
+    }
+    if (status === "OUT_FOR_DELIVERY") {
+        return place ? "Sedang diantar ke penerima di " + place : "Sedang diantar ke penerima";
+    }
+    if (status === "DELIVERED") {
+        var who = (note || "").replace(/^Diterima oleh\s+/i, "").trim();
+        if (who && who !== (note || "").trim()) { return "Paket diterima oleh " + who; }
+        return place ? "Paket sudah diterima di " + place : "Paket sudah diterima";
+    }
+    return place ? status + " di " + place : status;
+}
+function formatTime(kind, raw) {
+    var match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(raw || "");
+    if (match == null) { return raw; }
+    var day = new Date(+match[1], +match[2] - 1, +match[3]).getDay();
+    var hour = +match[4];
+    var hour12 = hour % 12;
+    if (hour12 === 0) { hour12 = 12; }
+    var suffix = hour < 12 ? "am" : "pm";
+    return DAYS[kind][day] + ", " + (+match[3]) + " " + MONTHS[kind][+match[2] - 1] + " " + match[1] + " (" + hour12 + ":" + match[5] + " " + suffix + ")";
+}
+function setLang(kind) {
+    var dict = I18N[kind];
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) {
+        var key = nodes[i].getAttribute("data-i18n");
+        if (dict[key] != null) { nodes[i].textContent = dict[key]; }
+    }
+    var phs = document.querySelectorAll("[data-i18n-ph]");
+    for (var j = 0; j < phs.length; j++) {
+        var pk = phs[j].getAttribute("data-i18n-ph");
+        if (dict[pk] != null) { phs[j].setAttribute("placeholder", dict[pk]); }
+    }
+    var st = document.querySelectorAll("[data-status]");
+    for (var k = 0; k < st.length; k++) {
+        st[k].textContent = label(kind, st[k].getAttribute("data-status"));
+    }
+    var events = document.querySelectorAll("[data-event]");
+    for (var m = 0; m < events.length; m++) {
+        events[m].textContent = eventLine(kind, events[m].getAttribute("data-event"), events[m].getAttribute("data-location"), events[m].getAttribute("data-note"));
+    }
+    var times = document.querySelectorAll("[data-time]");
+    for (var t = 0; t < times.length; t++) {
+        times[t].textContent = formatTime(kind, times[t].getAttribute("data-time"));
+    }
+    var counted = document.querySelector("[data-count]");
+    if (counted != null) {
+        var total = counted.getAttribute("data-count");
+        counted.textContent = kind === "en" ? total + " updates" : total + " pembaruan";
+    }
+    document.getElementById("lang-id").className = "lang-btn" + (kind === "id" ? " lang-btn-active" : "");
+    document.getElementById("lang-en").className = "lang-btn" + (kind === "en" ? " lang-btn-active" : "");
+    try { localStorage.setItem("track_lang", kind); } catch (e) {}
+}
+(function () {
+    var saved = "id";
+    try { saved = localStorage.getItem("track_lang") || "id"; } catch (e) {}
+    setLang(saved);
+})();
+</script>
+{% endblock %}

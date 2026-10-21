@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_icons.html" import box, layers, truck, search, arrow_right %}
+{% block title %}Masuk — {{ data.site_name }}{% endblock %}
+{% block main_class %}w-full flex-1{% endblock %}
+{% block content %}
+<div class="auth-shell">
+
+    <div class="auth-brand">
+        <div class="auth-brand-grid"></div>
+        <div class="auth-brand-inner">
+            <a class="brand" href="{{ url_for('auth_blueprint.login') }}">
+                <span class="brand-mark">T</span>
+                <span>
+                    <span class="brand-name" style="color:#fff;">Tora Expedition</span>
+                    <span class="brand-sub">Portal ERP</span>
+                </span>
+            </a>
+
+            <h2>Operasional logistik hibrida,<br>satu portal terpadu.</h2>
+            <p>Kelola order LTL &amp; FTL, konsolidasi manifest, hingga sorting di transit hub — dengan pelacakan yang selalu sinkron.</p>
+
+            <div class="auth-brand-points">
+                <div class="auth-point">{{ box("w-[18px] h-[18px]") }}<span>Input order LTL &amp; FTL dengan nomor AWB otomatis</span></div>
+                <div class="auth-point">{{ layers("w-[18px] h-[18px]") }}<span>Konsolidasi manifest &amp; update tracking sekaligus</span></div>
+                <div class="auth-point">{{ truck("w-[18px] h-[18px]") }}<span>Sorting di hub transit &amp; re-manifest feeder</span></div>
+                <div class="auth-point">{{ search("w-[18px] h-[18px]") }}<span>Lacak publik lewat AWB / nomor PO</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-form-wrap">
+        <div class="auth-form">
+            <h1>Masuk</h1>
+            <p class="auth-sub">Khusus staf — masukkan akun portal ERP.</p>
+
+            {% if data.bootstrapped %}
+            <div class="alert-info">
+                Superadmin awal dibuat — username: <strong>{{ data.default_username }}</strong>.
+                Atur <span class="font-mono">SUPERADMIN_USERNAME</span> / <span class="font-mono">SUPERADMIN_PASSWORD</span> sebelum produksi.
+            </div>
+            {% endif %}
+            {% if data.form_error %}
+            <div class="alert-error">{{ data.form_error }}</div>
+            {% endif %}
+
+            <form method="post" action="{{ url_for('auth_blueprint.login') }}">
+                <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+                <div class="form-field">
+                    <label class="lbl" for="username">Nama pengguna</label>
+                    <input class="fld" type="text" id="username" name="username" required autofocus autocomplete="username">
+                </div>
+                <div class="form-field">
+                    <label class="lbl" for="password">Kata sandi</label>
+                    <input class="fld" type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-accent btn-block btn-lg">Masuk {{ arrow_right("w-4 h-4") }}</button>
+            </form>
+
+            <p class="muted text-sm mt-4">
+                Pelanggan? <a class="underline" href="{{ url_for('tracking_blueprint.track_page') }}" style="color: var(--color-accent);">Lacak kiriman di sini</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,598 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import box, plus, inbox, route %}
+{% block title %}{% if data.shipment %}Ubah Order{% else %}Input Order{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.shipment %}Ubah Order{% else %}Input Order{% endif %}{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('shipments_blueprint.index') }}">Order</a>
+        <span>/</span>
+        <strong>{% if data.shipment %}Ubah{% else %}Baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('shipments_blueprint.index') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="order-form">Simpan</button>
+    </div>
+</div>
+<form id="order-form" class="contact-sheet" method="post" action="{% if data.shipment %}{{ url_for('shipments_blueprint.update', tracking_code=data.shipment.tracking_code) }}{% else %}{{ url_for('shipments_blueprint.create') }}{% endif %}">
+                <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                <div class="form-field">
+                    <label class="lbl">Jenis layanan <span class="req">*</span></label>
+                    <div class="radio-row">
+                        <label class="radio-pill"><input type="radio" name="service_type" value="LTL" {% if data.prefill_service != 'FTL' %}checked{% endif %} onchange="toggleFtl()"> LTL — Konsolidasi</label>
+                        <label class="radio-pill"><input type="radio" name="service_type" value="FTL" {% if data.prefill_service == 'FTL' %}checked{% endif %} onchange="toggleFtl()"> FTL — Charter</label>
+                    </div>
+                </div>
+                <div class="grid-form-2col">
+                    <div class="form-field">
+                        <label class="lbl" for="sender_input">Pengirim (Klien) <span class="req">*</span></label>
+                        <div class="m2o" data-category="CLIENT">
+                            <input type="hidden" class="m2o-id" name="sender_id" value="">
+                            <input class="fld m2o-input" id="sender_input" type="text" autocomplete="off" placeholder="Ketik 2 huruf…">
+                            <button type="button" class="m2o-clear" hidden aria-label="Hapus pengirim">×</button>
+                            <div class="m2o-menu" hidden></div>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label class="lbl" for="receiver_input">Penerima <span class="req">*</span></label>
+                        <div class="m2o" data-category="RECEIVER">
+                            <input type="hidden" class="m2o-id" name="receiver_id" value="">
+                            <input class="fld m2o-input" id="receiver_input" type="text" autocomplete="off" placeholder="Ketik 2 huruf…">
+                            <button type="button" class="m2o-clear" hidden aria-label="Hapus penerima">×</button>
+                            <div class="m2o-menu" hidden></div>
+                        </div>
+                    </div>
+                </div>
+                {% set ship = data.shipment %}
+                <section class="place-block">
+                    <h2 class="section-title">Alamat pengirim</h2>
+                    <input type="hidden" data-place="province" name="origin_province" value="{{ ship.origin_province if ship else '' }}">
+                    <input type="hidden" data-place="regency" name="origin_regency" value="{{ ship.origin_regency if ship else '' }}">
+                    <input type="hidden" data-place="district" name="origin_district" value="{{ ship.origin_district if ship else '' }}">
+                    <input type="hidden" data-place="village" name="origin_village" value="{{ ship.origin_village if ship else '' }}">
+                    <input type="hidden" data-place="postal" name="origin_postal_code" value="{{ ship.origin_postal_code if ship else '' }}">
+                    <input type="hidden" data-place="city" name="origin_city" value="{{ ship.origin_city if ship else '' }}">
+                    {% if ship and ship.origin_regency %}
+                    <p class="hint">Tersimpan: {{ ship.origin_village }}, {{ ship.origin_district }}, {{ ship.origin_regency }}, {{ ship.origin_province }}{% if ship.origin_postal_code %} {{ ship.origin_postal_code }}{% endif %}. Pilih ulang hanya kalau alamatnya berubah.</p>
+                    {% endif %}
+                    <div class="contact-grid">
+                        <div class="sheet-field">
+                            <label class="lbl">Provinsi <span class="req">*</span></label>
+                            <select class="fld" data-place="province-select"><option value="">Memuat provinsi…</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kabupaten / Kota <span class="req">*</span></label>
+                            <select class="fld" data-place="regency-select" disabled><option value="">Pilih provinsi dulu</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kecamatan <span class="req">*</span></label>
+                            <select class="fld" data-place="district-select" disabled><option value="">Pilih kabupaten dulu</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kelurahan / Desa <span class="req">*</span></label>
+                            <select class="fld" data-place="village-select" disabled><option value="">Pilih kecamatan dulu</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kode pos</label>
+                            <select class="fld" data-place="postal-select" disabled><option value="">Pilih kelurahan dulu</option></select>
+                        </div>
+                    </div>
+                    <div class="sheet-field">
+                        <label class="lbl">Alamat detail <span class="req">*</span></label>
+                        <input class="fld" data-place="address" type="text" name="origin_address" value="{{ ship.origin_address if ship else '' }}" placeholder="Jalan, nomor, RT/RW, patokan" required autocomplete="street-address">
+                    </div>
+                </section>
+                <section class="place-block">
+                    <h2 class="section-title">Alamat penerima</h2>
+                    <input type="hidden" data-place="province" name="destination_province" value="{{ ship.destination_province if ship else '' }}">
+                    <input type="hidden" data-place="regency" name="destination_regency" value="{{ ship.destination_regency if ship else '' }}">
+                    <input type="hidden" data-place="district" name="destination_district" value="{{ ship.destination_district if ship else '' }}">
+                    <input type="hidden" data-place="village" name="destination_village" value="{{ ship.destination_village if ship else '' }}">
+                    <input type="hidden" data-place="postal" name="destination_postal_code" value="{{ ship.destination_postal_code if ship else '' }}">
+                    <input type="hidden" data-place="city" name="destination_city" value="{{ ship.destination_city if ship else '' }}">
+                    {% if ship and ship.destination_regency %}
+                    <p class="hint">Tersimpan: {{ ship.destination_village }}, {{ ship.destination_district }}, {{ ship.destination_regency }}, {{ ship.destination_province }}{% if ship.destination_postal_code %} {{ ship.destination_postal_code }}{% endif %}. Pilih ulang hanya kalau alamatnya berubah.</p>
+                    {% endif %}
+                    <div class="contact-grid">
+                        <div class="sheet-field">
+                            <label class="lbl">Provinsi <span class="req">*</span></label>
+                            <select class="fld" data-place="province-select"><option value="">Memuat provinsi…</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kabupaten / Kota <span class="req">*</span></label>
+                            <select class="fld" data-place="regency-select" disabled><option value="">Pilih provinsi dulu</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kecamatan <span class="req">*</span></label>
+                            <select class="fld" data-place="district-select" disabled><option value="">Pilih kabupaten dulu</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kelurahan / Desa <span class="req">*</span></label>
+                            <select class="fld" data-place="village-select" disabled><option value="">Pilih kecamatan dulu</option></select>
+                        </div>
+                        <div class="sheet-field">
+                            <label class="lbl">Kode pos</label>
+                            <select class="fld" data-place="postal-select" disabled><option value="">Pilih kelurahan dulu</option></select>
+                        </div>
+                    </div>
+                    <div class="sheet-field">
+                        <label class="lbl">Alamat detail <span class="req">*</span></label>
+                        <input class="fld" data-place="address" type="text" name="destination_address" value="{{ ship.destination_address if ship else '' }}" placeholder="Jalan, nomor, RT/RW, patokan" required autocomplete="street-address">
+                    </div>
+                </section>
+                <p class="hint" id="place-error" hidden></p>
+                <div class="form-field">
+                    <label class="lbl" for="po_number">Nomor PO <span id="po-hint" class="muted">(opsional — referensi klien B2B, bisa dilacak publik)</span></label>
+                    <input class="fld" type="text" id="po_number" name="po_number" value="{{ data.shipment.po_number if data.shipment else '' }}" placeholder="PO-2026-0001">
+                </div>
+</form>
+{% if data.shipment %}
+<div id="order-preset" hidden data-sender-id="{{ data.shipment.sender_id }}" data-sender-name="{{ data.shipment.sender_name }}" data-receiver-id="{{ data.shipment.receiver_id }}" data-receiver-name="{{ data.shipment.receiver_name }}"></div>
+{% endif %}
+            <datalist id="city-list">
+                {% for city in data.service_cities %}<option value="{{ city }}"></option>{% endfor %}
+            </datalist>
+
+<div class="m2o-modal" id="contactModal" hidden>
+    <div class="m2o-modal-card" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+        <div class="card-head">
+            <div>
+                <h2 class="card-title" id="contactModalTitle">Buat dan ubah</h2>
+                <p class="card-sub" id="contactModalCat"></p>
+            </div>
+            <button type="button" class="icon-btn" id="contactModalClose" aria-label="Tutup">×</button>
+        </div>
+        <form class="card-body" id="contactModalForm">
+            <div class="form-field">
+                <label class="lbl" for="modal_name">Nama <span class="req">*</span></label>
+                <input class="fld" type="text" id="modal_name" required>
+            </div>
+            <div class="form-field">
+                <label class="lbl" for="modal_company">Nama perusahaan</label>
+                <input class="fld" type="text" id="modal_company">
+            </div>
+            <div class="grid-form-2col">
+                <div class="form-field">
+                    <label class="lbl" for="modal_phone">Telepon</label>
+                    <input class="fld" type="text" id="modal_phone">
+                </div>
+                <div class="form-field">
+                    <label class="lbl" for="modal_city">Kota</label>
+                    <input class="fld" type="text" id="modal_city" list="city-list">
+                </div>
+            </div>
+            <div class="form-field">
+                <label class="lbl" for="modal_email">Email</label>
+                <input class="fld" type="email" id="modal_email">
+            </div>
+            <div class="form-field">
+                <label class="lbl" for="modal_address">Alamat</label>
+                <input class="fld" type="text" id="modal_address">
+            </div>
+            <p class="alert-error" id="contactModalError" hidden></p>
+            <button type="submit" class="btn-accent">Simpan kontak</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleFtl() {
+    var isFtl = document.querySelector('input[name="service_type"][value="FTL"]').checked;
+    document.getElementById("po-hint").textContent = isFtl
+        ? "(nomor PO klien FTL — opsional)"
+        : "(opsional — referensi klien B2B, bisa dilacak publik)";
+}
+
+(function () {
+    var csrf = document.querySelector('input[name="csrf_token"]').value;
+    var modal = document.getElementById("contactModal");
+    var modalForm = document.getElementById("contactModalForm");
+    var modalError = document.getElementById("contactModalError");
+    var activeBox = null;
+    var MIN = 2;
+    var CAT = { CLIENT: "Klien", RECEIVER: "Penerima", DRIVER: "Sopir", VENDOR: "Vendor" };
+
+    function postContact(fields) {
+        var body = new URLSearchParams();
+        body.set("csrf_token", csrf);
+        Object.keys(fields).forEach(function (key) {
+            body.set(key, fields[key] || "");
+        });
+        return fetch("/api/contacts", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString()
+        }).then(function (res) {
+            return res.json().then(function (data) {
+                data._ok = res.ok;
+                return data;
+            });
+        });
+    }
+
+    function choose(box, id, text) {
+        box.querySelector(".m2o-id").value = id;
+        box.querySelector(".m2o-input").value = text;
+        box.querySelector(".m2o-input").setCustomValidity("");
+        box.classList.add("has-value");
+        box.querySelector(".m2o-clear").hidden = false;
+        closeMenu(box);
+    }
+
+    function clearChoice(box) {
+        box.querySelector(".m2o-id").value = "";
+        box.classList.remove("has-value");
+        box.querySelector(".m2o-clear").hidden = true;
+    }
+
+    function closeMenu(box) {
+        var menu = box.querySelector(".m2o-menu");
+        menu.hidden = true;
+        menu.innerHTML = "";
+    }
+
+    function openModal(box, name) {
+        activeBox = box;
+        closeMenu(box);
+        document.getElementById("contactModalTitle").textContent = "Buat dan ubah";
+        document.getElementById("contactModalCat").textContent = "Disimpan sebagai " + (CAT[box.getAttribute("data-category")] || box.getAttribute("data-category"));
+        document.getElementById("modal_name").value = name;
+        document.getElementById("modal_company").value = "";
+        document.getElementById("modal_phone").value = "";
+        document.getElementById("modal_city").value = "";
+        document.getElementById("modal_email").value = "";
+        document.getElementById("modal_address").value = "";
+        modalError.hidden = true;
+        modal.hidden = false;
+        document.getElementById("modal_name").focus();
+    }
+
+    function renderMenu(box, term, state, results) {
+        var menu = box.querySelector(".m2o-menu");
+        menu.innerHTML = "";
+        menu.hidden = false;
+
+        var createBtn = document.createElement("button");
+        createBtn.type = "button";
+        createBtn.className = "m2o-row";
+        createBtn.title = "Buat kontak baru";
+        createBtn.appendChild(document.createTextNode("Buat "));
+        var quoted = document.createElement("strong");
+        quoted.textContent = '"' + term + '"';
+        createBtn.appendChild(quoted);
+        createBtn.addEventListener("click", function () {
+            createBtn.disabled = true;
+            postContact({ name: term, category: box.getAttribute("data-category") }).then(function (data) {
+                if (!data._ok) {
+                    createBtn.disabled = false;
+                    return;
+                }
+                choose(box, data.id, data.text || data.name);
+            }).catch(function () {
+                createBtn.disabled = false;
+            });
+        });
+        menu.appendChild(createBtn);
+
+        var editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "m2o-row";
+        editBtn.textContent = "Buat dan ubah...";
+        editBtn.addEventListener("click", function () { openModal(box, term); });
+        menu.appendChild(editBtn);
+
+        var status = document.createElement("div");
+        status.className = "m2o-status";
+        if (state === "loading") {
+            status.innerHTML = '<span class="m2o-spin"></span><span>Mencari...</span>';
+            menu.appendChild(status);
+            return;
+        }
+        if (!results || results.length === 0) {
+            status.textContent = "Tidak ada kontak yang cocok";
+            menu.appendChild(status);
+            return;
+        }
+        var wanted = box.getAttribute("data-category");
+        results.forEach(function (item) {
+            var row = document.createElement("button");
+            row.type = "button";
+            row.className = "m2o-row m2o-match";
+            row.textContent = item.category && item.category !== wanted
+                ? item.text + " · " + (CAT[item.category] || item.category)
+                : item.text;
+            row.addEventListener("click", function () { choose(box, item.id, item.text); });
+            menu.appendChild(row);
+        });
+    }
+
+    document.querySelectorAll(".m2o").forEach(function (box) {
+        var input = box.querySelector(".m2o-input");
+        var timer = null;
+        var seq = 0;
+
+        input.addEventListener("input", function () {
+            clearChoice(box);
+            var term = input.value.trim();
+            if (term.length < MIN) {
+                closeMenu(box);
+                return;
+            }
+            renderMenu(box, term, "loading", []);
+            var ticket = ++seq;
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                var url = "/api/contacts?q=" + encodeURIComponent(term);
+                fetch(url, { credentials: "same-origin" }).then(function (res) { return res.json(); }).then(function (data) {
+                    if (ticket !== seq) { return; }
+                    renderMenu(box, term, "ready", data.results || []);
+                });
+            }, 250);
+        });
+
+        box.querySelector(".m2o-clear").addEventListener("click", function () {
+            input.value = "";
+            clearChoice(box);
+            closeMenu(box);
+            input.focus();
+        });
+    });
+
+    document.addEventListener("click", function (event) {
+        document.querySelectorAll(".m2o").forEach(function (box) {
+            if (!box.contains(event.target)) { closeMenu(box); }
+        });
+    });
+
+    document.getElementById("contactModalClose").addEventListener("click", function () {
+        modal.hidden = true;
+    });
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) { modal.hidden = true; }
+    });
+
+    modalForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (!activeBox) { return; }
+        var fields = {
+            name: document.getElementById("modal_name").value.trim(),
+            category: activeBox.getAttribute("data-category"),
+            company_name: document.getElementById("modal_company").value.trim(),
+            phone: document.getElementById("modal_phone").value.trim(),
+            city: document.getElementById("modal_city").value.trim(),
+            email: document.getElementById("modal_email").value.trim(),
+            address: document.getElementById("modal_address").value.trim()
+        };
+        postContact(fields).then(function (data) {
+            if (!data._ok) {
+                modalError.textContent = data.desc || "Kontak tidak bisa dibuat";
+                modalError.hidden = false;
+                return;
+            }
+            choose(activeBox, data.id, data.text || data.name);
+            modal.hidden = true;
+        });
+    });
+
+    document.querySelector("form[action]").addEventListener("submit", function (event) {
+        var blocked = false;
+        document.querySelectorAll(".m2o").forEach(function (box) {
+            var input = box.querySelector(".m2o-input");
+            if (box.querySelector(".m2o-id").value === "") {
+                input.setCustomValidity("Pilih kontak, atau buat baru");
+                if (!blocked) { input.reportValidity(); }
+                blocked = true;
+            } else {
+                input.setCustomValidity("");
+            }
+        });
+        if (blocked) { event.preventDefault(); }
+    });
+    var preset = document.getElementById("order-preset");
+    if (preset) {
+        var boxes = document.querySelectorAll(".m2o");
+        if (boxes[0]) { choose(boxes[0], preset.getAttribute("data-sender-id"), preset.getAttribute("data-sender-name") || ""); }
+        if (boxes[1]) { choose(boxes[1], preset.getAttribute("data-receiver-id"), preset.getAttribute("data-receiver-name") || ""); }
+    }
+})();
+</script>
+<script>
+(function () {
+    var form = document.getElementById("order-form");
+    var note = document.getElementById("place-error");
+
+    function showError(message) {
+        note.hidden = message === "";
+        note.textContent = message;
+    }
+
+    function selectedText(select) {
+        var opt = select.options[select.selectedIndex];
+        if (!opt || opt.value === "") {
+            return "";
+        }
+        return opt.textContent;
+    }
+
+    function cityName(text) {
+        return text.replace(/^(Kota|Kabupaten|Kab\.)\s+/i, "").trim();
+    }
+
+    function resetSelect(select, label) {
+        select.innerHTML = "";
+        var opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = label;
+        select.appendChild(opt);
+        select.disabled = true;
+    }
+
+    function fillSelect(select, rows, emptyLabel) {
+        resetSelect(select, emptyLabel);
+        rows.forEach(function (row) {
+            var opt = document.createElement("option");
+            opt.value = row.id;
+            opt.textContent = row.text;
+            if (row.postal_code) {
+                opt.setAttribute("data-postal", row.postal_code);
+            }
+            select.appendChild(opt);
+        });
+        select.disabled = rows.length === 0;
+    }
+
+    function load(kind, query) {
+        var url = "/api/wilayah/" + kind;
+        if (query) {
+            url += "?" + query;
+        }
+        return fetch(url, { credentials: "same-origin" }).then(function (resp) {
+            return resp.json().then(function (data) {
+                if (!resp.ok || data.status !== "SUCCESS") {
+                    throw new Error(data.desc || "Data wilayah gagal dimuat");
+                }
+                return data.results || [];
+            });
+        });
+    }
+
+    function field(block, key) {
+        return block.querySelector('[data-place="' + key + '"]');
+    }
+
+    function sync(block) {
+        field(block, "province").value = selectedText(field(block, "province-select"));
+        field(block, "regency").value = selectedText(field(block, "regency-select"));
+        field(block, "district").value = selectedText(field(block, "district-select"));
+        field(block, "village").value = selectedText(field(block, "village-select"));
+        var regencyText = field(block, "regency").value;
+        if (regencyText !== "") {
+            field(block, "city").value = cityName(regencyText);
+        }
+    }
+
+    function applyPostal(block, code) {
+        var postal = field(block, "postal-select");
+        resetSelect(postal, "Opsional");
+        if (code !== "") {
+            var opt = document.createElement("option");
+            opt.value = code;
+            opt.textContent = code;
+            postal.appendChild(opt);
+            postal.selectedIndex = 1;
+        }
+        postal.disabled = false;
+        field(block, "postal").value = code;
+    }
+
+    function bind(block) {
+        var province = field(block, "province-select");
+        var regency = field(block, "regency-select");
+        var district = field(block, "district-select");
+        var village = field(block, "village-select");
+
+        province.addEventListener("change", function () {
+            resetSelect(regency, "Memuat kabupaten…");
+            resetSelect(district, "Pilih kabupaten dulu");
+            resetSelect(village, "Pilih kecamatan dulu");
+            resetSelect(field(block, "postal-select"), "Pilih kelurahan dulu");
+            if (province.value === "") {
+                resetSelect(regency, "Pilih provinsi dulu");
+                return;
+            }
+            load("kabkota", "provinsi_id=" + encodeURIComponent(province.value)).then(function (rows) {
+                fillSelect(regency, rows, "Pilih kabupaten / kota");
+                showError("");
+            }).catch(function (err) {
+                resetSelect(regency, "Pilih provinsi dulu");
+                showError(err.message);
+            });
+        });
+
+        regency.addEventListener("change", function () {
+            resetSelect(district, "Memuat kecamatan…");
+            resetSelect(village, "Pilih kecamatan dulu");
+            resetSelect(field(block, "postal-select"), "Pilih kelurahan dulu");
+            if (regency.value === "") {
+                resetSelect(district, "Pilih kabupaten dulu");
+                return;
+            }
+            load("kecamatan", "kabkota_id=" + encodeURIComponent(regency.value)).then(function (rows) {
+                fillSelect(district, rows, "Pilih kecamatan");
+                showError("");
+            }).catch(function (err) {
+                resetSelect(district, "Pilih kabupaten dulu");
+                showError(err.message);
+            });
+        });
+
+        district.addEventListener("change", function () {
+            resetSelect(village, "Memuat kelurahan…");
+            resetSelect(field(block, "postal-select"), "Pilih kelurahan dulu");
+            if (district.value === "") {
+                resetSelect(village, "Pilih kecamatan dulu");
+                return;
+            }
+            load("kelurahan", "kecamatan_id=" + encodeURIComponent(district.value)).then(function (rows) {
+                fillSelect(village, rows, "Pilih kelurahan / desa");
+                showError("");
+            }).catch(function (err) {
+                resetSelect(village, "Pilih kecamatan dulu");
+                showError(err.message);
+            });
+        });
+
+        village.addEventListener("change", function () {
+            if (village.value === "") {
+                resetSelect(field(block, "postal-select"), "Pilih kelurahan dulu");
+                return;
+            }
+            var opt = village.options[village.selectedIndex];
+            var code = opt ? (opt.getAttribute("data-postal") || "") : "";
+            applyPostal(block, code);
+        });
+
+        load("provinsi", "").then(function (rows) {
+            fillSelect(province, rows, "Pilih provinsi");
+            showError("");
+        }).catch(function (err) {
+            resetSelect(province, "Pilih provinsi");
+            showError(err.message);
+        });
+    }
+
+    document.querySelectorAll(".place-block").forEach(bind);
+
+    form.addEventListener("submit", function (ev) {
+        var blocks = document.querySelectorAll(".place-block");
+        for (var i = 0; i < blocks.length; i++) {
+            var block = blocks[i];
+            var province = field(block, "province-select");
+            var village = field(block, "village-select");
+            var address = field(block, "address");
+            if (province.value !== "") {
+                if (village.value === "") {
+                    ev.preventDefault();
+                    showError("Lengkapi provinsi sampai kelurahan, dan alamat detail");
+                    return;
+                }
+                sync(block);
+            } else if (field(block, "province").value === "") {
+                ev.preventDefault();
+                showError("Lengkapi alamat pengirim dan penerima");
+                return;
+            }
+            if (address.value.trim() === "") {
+                ev.preventDefault();
+                showError("Alamat detail wajib diisi");
+                return;
+            }
+        }
+    });
+})();
+</script>
+</div>
+{% endblock %}

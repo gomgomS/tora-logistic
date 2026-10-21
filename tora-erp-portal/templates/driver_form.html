@@ -1,0 +1,310 @@
+{% extends "erp_base.html" %}
+{% from "_ui.html" import ownership_label %}
+{% block title %}{% if data.driver %}Ubah Sopir{% else %}Sopir Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.driver %}Ubah Sopir{% else %}Sopir Baru{% endif %}{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('fleet_blueprint.index') }}">Armada</a>
+        <span>/</span>
+        <strong>{% if data.driver %}Ubah sopir{% else %}Sopir baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('fleet_blueprint.index') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="driver-form">Simpan</button>
+    </div>
+</div>
+
+<form id="driver-form" class="contact-sheet" method="post" action="{% if data.driver %}{{ url_for('fleet_blueprint.driver_update', driver_id=data.driver.id) }}{% else %}{{ url_for('fleet_blueprint.driver_create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <div class="contact-grid">
+        <div>
+            <div class="sheet-field">
+                <label class="lbl" for="contact_input">Kontak sopir <span class="req">*</span></label>
+                <div class="m2o" data-category="DRIVER">
+                    <input type="hidden" class="m2o-id" name="contact_id" value="">
+                    <input class="fld m2o-input" id="contact_input" type="text" autocomplete="off" placeholder="Ketik 2 huruf…">
+                    <button type="button" class="m2o-clear" hidden aria-label="Hapus kontak">×</button>
+                    <div class="m2o-menu" hidden></div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="sheet-field">
+                <label class="lbl" for="license_number">Nomor SIM <span class="req">*</span></label>
+                <input class="fld" type="text" id="license_number" name="license_number" value="{{ data.driver.license_number if data.driver else '' }}" required>
+            </div>
+            <div class="sheet-field">
+                <label class="lbl" for="type">Tipe sopir <span class="req">*</span></label>
+                <select class="fld" id="type" name="type" required>
+                    {% for dt in data.driver_types %}<option value="{{ dt }}" {% if data.driver and data.driver.type == dt %}selected{% endif %}>{{ ownership_label(dt) }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</form>
+{% if data.driver %}
+<div id="driver-preset" hidden data-id="{{ data.driver.contact_id }}" data-name="{{ data.driver.contact_name }}"></div>
+{% endif %}
+</div>
+
+<div class="m2o-modal" id="contactModal" hidden>
+    <div class="m2o-modal-card" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+        <div class="card-head">
+            <div>
+                <h2 class="card-title" id="contactModalTitle">Buat dan ubah</h2>
+                <p class="card-sub" id="contactModalCat"></p>
+            </div>
+            <button type="button" class="icon-btn" id="contactModalClose" aria-label="Tutup">×</button>
+        </div>
+        <form class="card-body" id="contactModalForm">
+            <div class="form-field">
+                <label class="lbl" for="modal_name">Nama <span class="req">*</span></label>
+                <input class="fld" type="text" id="modal_name" required>
+            </div>
+            <div class="form-field">
+                <label class="lbl" for="modal_company">Nama perusahaan</label>
+                <input class="fld" type="text" id="modal_company">
+            </div>
+            <div class="grid-form-2col">
+                <div class="form-field">
+                    <label class="lbl" for="modal_phone">Telepon</label>
+                    <input class="fld" type="text" id="modal_phone">
+                </div>
+                <div class="form-field">
+                    <label class="lbl" for="modal_city">Kota</label>
+                    <input class="fld" type="text" id="modal_city" list="city-list">
+                </div>
+            </div>
+            <div class="form-field">
+                <label class="lbl" for="modal_email">Email</label>
+                <input class="fld" type="email" id="modal_email">
+            </div>
+            <div class="form-field">
+                <label class="lbl" for="modal_address">Alamat</label>
+                <input class="fld" type="text" id="modal_address">
+            </div>
+            <p class="alert-error" id="contactModalError" hidden></p>
+            <button type="submit" class="btn-accent">Simpan kontak</button>
+        </form>
+    </div>
+</div>
+<datalist id="city-list">
+    {% for city in ['Jakarta','Bandung','Semarang','Surabaya','Malang','Yogyakarta','Solo','Denpasar','Medan','Palembang','Makassar','Balikpapan'] %}
+    <option value="{{ city }}"></option>
+    {% endfor %}
+</datalist>
+
+<script>
+(function () {
+    var csrf = document.querySelector('input[name="csrf_token"]').value;
+    var modal = document.getElementById("contactModal");
+    var modalForm = document.getElementById("contactModalForm");
+    var modalError = document.getElementById("contactModalError");
+    var activeBox = null;
+    var MIN = 2;
+    var CAT = { CLIENT: "Klien", RECEIVER: "Penerima", DRIVER: "Sopir", VENDOR: "Vendor" };
+
+    function postContact(fields) {
+        var body = new URLSearchParams();
+        body.set("csrf_token", csrf);
+        Object.keys(fields).forEach(function (key) {
+            body.set(key, fields[key] || "");
+        });
+        return fetch("/api/contacts", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString()
+        }).then(function (res) {
+            return res.json().then(function (data) {
+                data._ok = res.ok;
+                return data;
+            });
+        });
+    }
+
+    function choose(box, id, text) {
+        box.querySelector(".m2o-id").value = id;
+        box.querySelector(".m2o-input").value = text;
+        box.querySelector(".m2o-input").setCustomValidity("");
+        box.classList.add("has-value");
+        box.querySelector(".m2o-clear").hidden = false;
+        closeMenu(box);
+    }
+
+    function clearChoice(box) {
+        box.querySelector(".m2o-id").value = "";
+        box.classList.remove("has-value");
+        box.querySelector(".m2o-clear").hidden = true;
+    }
+
+    function closeMenu(box) {
+        var menu = box.querySelector(".m2o-menu");
+        menu.hidden = true;
+        menu.innerHTML = "";
+    }
+
+    function openModal(box, name) {
+        activeBox = box;
+        closeMenu(box);
+        document.getElementById("contactModalTitle").textContent = "Buat dan ubah";
+        document.getElementById("contactModalCat").textContent = "Disimpan sebagai " + (CAT[box.getAttribute("data-category")] || box.getAttribute("data-category"));
+        document.getElementById("modal_name").value = name;
+        document.getElementById("modal_company").value = "";
+        document.getElementById("modal_phone").value = "";
+        document.getElementById("modal_city").value = "";
+        document.getElementById("modal_email").value = "";
+        document.getElementById("modal_address").value = "";
+        modalError.hidden = true;
+        modal.hidden = false;
+        document.getElementById("modal_name").focus();
+    }
+
+    function renderMenu(box, term, state, results) {
+        var menu = box.querySelector(".m2o-menu");
+        menu.innerHTML = "";
+        menu.hidden = false;
+
+        var createBtn = document.createElement("button");
+        createBtn.type = "button";
+        createBtn.className = "m2o-row";
+        createBtn.title = "Buat kontak baru";
+        createBtn.appendChild(document.createTextNode("Buat "));
+        var quoted = document.createElement("strong");
+        quoted.textContent = '"' + term + '"';
+        createBtn.appendChild(quoted);
+        createBtn.addEventListener("click", function () {
+            createBtn.disabled = true;
+            postContact({ name: term, category: box.getAttribute("data-category") }).then(function (data) {
+                if (!data._ok) {
+                    createBtn.disabled = false;
+                    return;
+                }
+                choose(box, data.id, data.text || data.name);
+            }).catch(function () {
+                createBtn.disabled = false;
+            });
+        });
+        menu.appendChild(createBtn);
+
+        var editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "m2o-row";
+        editBtn.textContent = "Buat dan ubah...";
+        editBtn.addEventListener("click", function () { openModal(box, term); });
+        menu.appendChild(editBtn);
+
+        var status = document.createElement("div");
+        status.className = "m2o-status";
+        if (state === "loading") {
+            status.innerHTML = '<span class="m2o-spin"></span><span>Mencari...</span>';
+            menu.appendChild(status);
+            return;
+        }
+        if (!results || results.length === 0) {
+            status.textContent = "Tidak ada kontak yang cocok";
+            menu.appendChild(status);
+            return;
+        }
+        var wanted = box.getAttribute("data-category");
+        results.forEach(function (item) {
+            var row = document.createElement("button");
+            row.type = "button";
+            row.className = "m2o-row m2o-match";
+            row.textContent = item.category && item.category !== wanted
+                ? item.text + " · " + (CAT[item.category] || item.category)
+                : item.text;
+            row.addEventListener("click", function () { choose(box, item.id, item.text); });
+            menu.appendChild(row);
+        });
+    }
+
+    document.querySelectorAll(".m2o").forEach(function (box) {
+        var input = box.querySelector(".m2o-input");
+        var timer = null;
+        var seq = 0;
+
+        input.addEventListener("input", function () {
+            clearChoice(box);
+            var term = input.value.trim();
+            if (term.length < MIN) {
+                closeMenu(box);
+                return;
+            }
+            renderMenu(box, term, "loading", []);
+            var ticket = ++seq;
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                var url = "/api/contacts?q=" + encodeURIComponent(term);
+                fetch(url, { credentials: "same-origin" }).then(function (res) { return res.json(); }).then(function (data) {
+                    if (ticket !== seq) { return; }
+                    renderMenu(box, term, "ready", data.results || []);
+                });
+            }, 250);
+        });
+
+        box.querySelector(".m2o-clear").addEventListener("click", function () {
+            input.value = "";
+            clearChoice(box);
+            closeMenu(box);
+            input.focus();
+        });
+    });
+
+    document.addEventListener("click", function (event) {
+        document.querySelectorAll(".m2o").forEach(function (box) {
+            if (!box.contains(event.target)) { closeMenu(box); }
+        });
+    });
+
+    document.getElementById("contactModalClose").addEventListener("click", function () {
+        modal.hidden = true;
+    });
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) { modal.hidden = true; }
+    });
+
+    modalForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (!activeBox) { return; }
+        var fields = {
+            name: document.getElementById("modal_name").value.trim(),
+            category: activeBox.getAttribute("data-category"),
+            company_name: document.getElementById("modal_company").value.trim(),
+            phone: document.getElementById("modal_phone").value.trim(),
+            city: document.getElementById("modal_city").value.trim(),
+            email: document.getElementById("modal_email").value.trim(),
+            address: document.getElementById("modal_address").value.trim()
+        };
+        postContact(fields).then(function (data) {
+            if (!data._ok) {
+                modalError.textContent = data.desc || "Kontak tidak bisa dibuat";
+                modalError.hidden = false;
+                return;
+            }
+            choose(activeBox, data.id, data.text || data.name);
+            modal.hidden = true;
+        });
+    });
+
+    var preset = document.getElementById("driver-preset");
+    if (preset) {
+        choose(document.querySelector(".m2o"), preset.getAttribute("data-id"), preset.getAttribute("data-name") || "");
+    }
+    document.getElementById("driver-form").addEventListener("submit", function (event) {
+        var box = document.querySelector(".m2o");
+        var input = box.querySelector(".m2o-input");
+        if (box.querySelector(".m2o-id").value === "") {
+                input.setCustomValidity("Pilih kontak, atau buat baru");
+            input.reportValidity();
+            event.preventDefault();
+        } else {
+            input.setCustomValidity("");
+        }
+    });
+})();
+</script>
+{% endblock %}

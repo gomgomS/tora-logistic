@@ -1,0 +1,62 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import plus %}
+{% from "_ui.html" import status_badge, empty_state, status_label %}
+{% block title %}Manifest — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Manifest{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<form class="cp" method="get" action="{{ url_for('manifests_blueprint.index') }}">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('manifests_blueprint.create') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Manifest</span>
+        {% if data.manifests|length %}
+        <span class="list-count">{{ data.manifests|length }}</span>
+        {% endif %}
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end">
+        <select class="cp-filter" name="status" onchange="this.form.submit()">
+            <option value="">Semua status</option>
+            {% for st in data.statuses %}
+            <option value="{{ st }}" {% if data.status_filter == st %}selected{% endif %}>{{ status_label(st) }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+{% if data.manifests|length == 0 %}
+    {{ empty_state("Belum ada manifest", "Buat manifest pertama: tugaskan kendaraan dan sopir, lalu konsolidasi kiriman.", url_for('manifests_blueprint.create'), "Baru") }}
+{% else %}
+<table class="tbl odoo-tbl">
+    <thead>
+        <tr><th>Manifest</th><th>Rute</th><th>Kendaraan</th><th>Sopir</th><th>Kiriman</th><th>Status</th><th>Lokasi terakhir</th><th>Diperbarui</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for m in data.manifests %}
+        <tr>
+            <td><a class="row-link font-mono" href="{{ url_for('manifests_blueprint.detail', manifest_code=m.manifest_code) }}">{{ m.manifest_code }}</a></td>
+            <td>{{ m.origin }} → {{ m.destination }}</td>
+            <td>{{ m.vehicle_label }}</td>
+            <td>{{ m.driver_name }}</td>
+            <td>{{ m.shipment_count }}</td>
+            <td>{{ status_badge(m.status) }}</td>
+            <td>{{ m.last_location }}</td>
+            <td class="mute">{{ m.last_update }}</td>
+            <td>
+                <div class="row-actions">
+                    {% if m.status == 'PLANNED' %}
+                    <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.detail', manifest_code=m.manifest_code) }}">Ubah</a>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('manifests_blueprint.manifest_delete', manifest_code=m.manifest_code) }}" onsubmit="return confirm('Hapus manifest ini? Semua kiriman kembali ke status Terdaftar.');">
+                        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                        <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+</div>
+{% endblock %}

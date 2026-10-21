@@ -1,0 +1,218 @@
+<div class="ai-dock" id="aiDock">
+    <div class="ai-panel" id="aiPanel" hidden>
+        <div class="ai-head">
+            <div>
+                <div class="ai-title">Asisten</div>
+                <div class="ai-sub">Membuat dan mengubah kontak, truk, hub, rute, dan order setelah Anda konfirmasi</div>
+            </div>
+            <button type="button" class="ai-x" id="aiClose" title="Tutup">×</button>
+        </div>
+        <div class="ai-log" id="aiLog"></div>
+        <form class="ai-form" id="aiForm">
+            <input class="ai-input" id="aiInput" type="text" autocomplete="off" placeholder="Buat order contoh Jakarta ke Surabaya">
+            <button type="submit" class="ai-send" id="aiSend">Kirim</button>
+        </form>
+    </div>
+    <button type="button" class="ai-fab" id="aiFab" title="Asisten">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 16.5V7.8A2.8 2.8 0 0 1 7.8 5h8.4A2.8 2.8 0 0 1 19 7.8v5.4A2.8 2.8 0 0 1 16.2 16H9l-4 3.2v-2.7z"/></svg>
+    </button>
+</div>
+<script>
+(function () {
+    var KEY = "tora-ai-chat";
+    var token = {{ data.csrf_token|tojson }};
+    var fab = document.getElementById("aiFab");
+    var panel = document.getElementById("aiPanel");
+    var log = document.getElementById("aiLog");
+    var form = document.getElementById("aiForm");
+    var input = document.getElementById("aiInput");
+    var send = document.getElementById("aiSend");
+    var state = { open: false, messages: [], pending: null };
+    try {
+        var saved = JSON.parse(sessionStorage.getItem(KEY) || "null");
+        if (saved && saved.messages) state = saved;
+    } catch (e) {}
+    var labels = {
+        create_contact: "Kontak",
+        create_vehicle: "Kendaraan",
+        create_driver: "Sopir",
+        create_hub: "Hub",
+        update_hub: "Hub",
+        create_route: "Rute",
+        create_shipment: "Order"
+    };
+
+    function save() {
+        sessionStorage.setItem(KEY, JSON.stringify({
+            open: state.open,
+            messages: state.messages.slice(-20),
+            pending: state.pending
+        }));
+    }
+    function setOpen(open) {
+        state.open = open;
+        panel.hidden = !open;
+        if (open) input.focus();
+        save();
+    }
+    function bubble(role, text) {
+        var el = document.createElement("div");
+        el.className = "ai-msg ai-msg-" + role;
+        el.textContent = text;
+        log.appendChild(el);
+        return el;
+    }
+    function render() {
+        log.innerHTML = "";
+        if (!state.messages.length) {
+            bubble("assistant", "Sebutkan data yang ingin dibuat. Saya tampilkan dulu, dan belum ada yang tersimpan sampai Anda menekan Konfirmasi.");
+        }
+        state.messages.forEach(function (msg) {
+            bubble(msg.role === "user" ? "user" : "assistant", msg.content);
+            (msg.links || []).forEach(function (link) {
+                var a = document.createElement("a");
+                a.className = "ai-link";
+                a.href = link.href;
+                a.textContent = link.label;
+                log.appendChild(a);
+            });
+        });
+        if (state.pending && state.pending.length) {
+            var card = document.createElement("div");
+            card.className = "ai-card";
+            state.pending.forEach(function (item) {
+                var row = document.createElement("div");
+                row.className = "ai-row";
+                var kind = document.createElement("span");
+                kind.className = "ai-kind";
+                kind.textContent = labels[item.tool] || item.tool;
+                var sum = document.createElement("span");
+                sum.textContent = item.summary || "";
+                row.appendChild(kind);
+                row.appendChild(sum);
+                card.appendChild(row);
+            });
+            var actions = document.createElement("div");
+            actions.className = "ai-actions";
+            var yes = document.createElement("button");
+            yes.type = "button";
+            yes.className = "ai-confirm";
+            yes.textContent = "Konfirmasi";
+            yes.addEventListener("click", applyPending);
+            var no = document.createElement("button");
+            no.type = "button";
+            no.className = "ai-dismiss";
+            no.textContent = "Batalkan";
+            no.addEventListener("click", function () {
+                state.pending = null;
+                save();
+                render();
+            });
+            actions.appendChild(yes);
+            actions.appendChild(no);
+            card.appendChild(actions);
+            log.appendChild(card);
+        }
+        log.scrollTop = log.scrollHeight;
+    }
+    function busy(on) {
+        send.disabled = on;
+        input.disabled = on;
+    }
+    function post(url, body) {
+        return fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+            body: JSON.stringify(body)
+        }).then(function (res) {
+            return res.json().catch(function () {
+                return { status: "ERROR", desc: "Silakan masuk lagi." };
+            });
+        });
+    }
+    function applyPending() {
+        if (!state.pending || !state.pending.length) return;
+        busy(true);
+        post("/api/ai/apply", { csrf_token: token, actions: state.pending }).then(function (data) {
+            busy(false);
+            if (data.status !== "SUCCESS") {
+                bubble("assistant", data.desc || "Data tidak bisa dibuat.");
+                return;
+            }
+            var lines = (data.results || []).map(function (item) {
+                var name = labels[item.tool] || "Data";
+                if (item.status === "SUCCESS") {
+                    var verb = "dibuat";
+                    if (item.tool === "update_hub" || (item.desc || "").indexOf("diperbarui") >= 0) {
+                        verb = "diubah";
+                    }
+                    return name + " " + verb + ": " + (item.label || item.name || item.tracking_code || "tersimpan");
+                }
+                return name + " gagal: " + (item.desc || "galat");
+            });
+            state.messages.push({
+                role: "assistant",
+                content: lines.join("\n"),
+                links: (data.results || []).filter(function (item) {
+                    return item.status === "SUCCESS" && item.href;
+                }).map(function (item) {
+                    return {
+                        href: item.href,
+                        label: (labels[item.tool] || "Buka") + ": " + (item.label || "buka")
+                    };
+                })
+            });
+            state.pending = null;
+            save();
+            render();
+        }).catch(function () {
+            busy(false);
+            bubble("assistant", "Tidak terhubung ke server.");
+        });
+    }
+    function isYes(text) {
+        return /^(ya|yes|ok|oke|okay|lanjut|do it|yes[, ]+do it|buatkan|confirm)[.! ]*$/i.test(text);
+    }
+    form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var text = input.value.trim();
+        if (!text) return;
+        input.value = "";
+        if (state.pending && state.pending.length && isYes(text)) {
+            state.messages.push({ role: "user", content: text });
+            save();
+            render();
+            applyPending();
+            return;
+        }
+        state.messages.push({ role: "user", content: text });
+        state.pending = null;
+        save();
+        render();
+        busy(true);
+        post("/api/ai/chat", {
+            csrf_token: token,
+            messages: state.messages.map(function (m) { return { role: m.role, content: m.content }; })
+        }).then(function (data) {
+            busy(false);
+            if (data.status !== "SUCCESS") {
+                state.messages.push({ role: "assistant", content: data.desc || "Asisten tidak bisa membalas." });
+            } else {
+                state.messages.push({ role: "assistant", content: data.reply || "Selesai." });
+                state.pending = (data.proposals && data.proposals.length) ? data.proposals : null;
+            }
+            save();
+            render();
+        }).catch(function () {
+            busy(false);
+            state.messages.push({ role: "assistant", content: "Tidak terhubung ke server." });
+            save();
+            render();
+        });
+    });
+    fab.addEventListener("click", function () { setOpen(!state.open); });
+    document.getElementById("aiClose").addEventListener("click", function () { setOpen(false); });
+    setOpen(!!state.open);
+    render();
+})();
+</script>

@@ -1,0 +1,57 @@
+{% extends "erp_base.html" %}
+{% block title %}{% if data.user_rec %}Ubah Pengguna{% else %}Pengguna Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}{% if data.user_rec %}Ubah Pengguna{% else %}Pengguna Baru{% endif %}{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('auth_blueprint.users') }}">Pengguna</a>
+        <span>/</span>
+        <strong>{% if data.user_rec %}Ubah{% else %}Baru{% endif %}</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('auth_blueprint.users') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="user-form">Simpan</button>
+    </div>
+</div>
+
+<form id="user-form" class="contact-sheet" method="post" action="{% if data.user_rec %}{{ url_for('auth_blueprint.users_update', user_id=data.user_rec.id) }}{% else %}{{ url_for('auth_blueprint.users_create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <div class="contact-grid">
+        <div>
+            <div class="sheet-field">
+                <label class="lbl" for="username">Nama pengguna <span class="req">*</span></label>
+                <input class="fld" type="text" id="username" name="username" value="{{ data.user_rec.username if data.user_rec else '' }}" required minlength="3">
+            </div>
+            <div class="sheet-field">
+                <label class="lbl" for="password">Kata sandi {% if not data.user_rec %}<span class="req">*</span>{% endif %}</label>
+                <input class="fld" type="password" id="password" name="password" {% if not data.user_rec %}required{% endif %} minlength="8" placeholder="{% if data.user_rec %}Kosongkan kalau tidak diganti{% else %}Minimal 8 karakter{% endif %}">
+            </div>
+        </div>
+        <div>
+            <div class="sheet-field">
+                <label class="lbl" for="name">Nama tampilan</label>
+                <input class="fld" type="text" id="name" name="name" value="{{ data.user_rec.name if data.user_rec else '' }}">
+            </div>
+            <div class="sheet-field">
+                <label class="lbl" for="role">Peran <span class="req">*</span></label>
+                <select class="fld" id="role" name="role" required>
+                    <option value="admin" {% if not data.user_rec or data.user_rec.role == 'admin' %}selected{% endif %}>Admin</option>
+                    <option value="superadmin" {% if data.user_rec and data.user_rec.role == 'superadmin' %}selected{% endif %}>Superadmin</option>
+                </select>
+            </div>
+            {% if data.user_rec %}
+            <div class="sheet-field">
+                <label class="lbl" for="status">Status</label>
+                <select class="fld" id="status" name="status">
+                    <option value="ENABLE" {% if data.user_rec.status == 'ENABLE' %}selected{% endif %}>Aktif</option>
+                    <option value="DISABLE" {% if data.user_rec.status == 'DISABLE' %}selected{% endif %}>Nonaktif</option>
+                </select>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+</div>
+{% endblock %}

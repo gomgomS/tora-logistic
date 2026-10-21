@@ -1,0 +1,55 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import plus %}
+{% from "_ui.html" import empty_state %}
+{% block title %}Rute — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Rute{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('manifests_blueprint.route_new') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Rute</span>
+        {% if data.routes|length %}
+        <span class="list-count">{{ data.routes|length }}</span>
+        {% endif %}
+    </div>
+    <div></div>
+    <div></div>
+</div>
+
+{% if data.routes|length %}
+<div class="route-list">
+    {% for route in data.routes %}
+    <article class="route-card">
+        <div class="route-card-head">
+            <div>
+                <div class="route-card-title">{{ route.label }}</div>
+                <div class="mute text-xs">{{ route.hub_names|length }} hub</div>
+            </div>
+            <div class="route-card-actions">
+                <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.route_edit', route_id=route.id) }}">Ubah</a>
+                <form method="post" action="{{ url_for('manifests_blueprint.route_delete', route_id=route.id) }}" onsubmit="return confirm('Hapus rute ini?');">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                </form>
+            </div>
+        </div>
+        <ol class="route-stops">
+            {% for name in route.hub_names %}
+            <li class="route-stop">
+                <span class="route-stop-mark" aria-hidden="true">{{ loop.index }}</span>
+                <span class="route-stop-name">{{ name }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+        {% if route.vehicle_label or route.driver_label %}
+        <p class="mute text-xs route-card-meta">{{ route.vehicle_label }}{% if route.vehicle_label and route.driver_label %} · {% endif %}{{ route.driver_label }}</p>
+        {% endif %}
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+    {{ empty_state("Belum ada rute", "Tekan Baru, lalu seret hub yang mau dilalui. Boleh dua, tiga, atau semuanya.", "", "") }}
+{% endif %}
+</div>
+{% endblock %}

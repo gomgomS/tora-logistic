@@ -1,0 +1,237 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import clipboard, truck, users, box, layers, check %}
+{% from "_ui.html" import status_badge, service_badge, empty_state %}
+{% block title %}Buat Manifest — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Buat Manifest{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<div class="cp">
+    <div class="cp-side crumb">
+        <a href="{{ url_for('manifests_blueprint.index') }}">Manifest</a>
+        <span>/</span>
+        <strong>Baru</strong>
+    </div>
+    <div></div>
+    <div class="cp-side cp-side-end page-actions">
+        <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.index') }}">Buang</a>
+        <button class="btn-accent btn-sm" type="submit" form="manifest-form">Simpan</button>
+    </div>
+</div>
+
+<form id="manifest-form" method="post" action="{{ url_for('manifests_blueprint.create') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <div class="grid-2col" style="grid-template-columns: 1fr 1.35fr;">
+        <div>
+                    <div class="form-field">
+                        <label class="lbl" for="route_id">Rute <span class="req">*</span></label>
+                        {% if data.routes|length %}
+                        <select class="fld" id="route_id" name="route_id" required>
+                            <option value="">Pilih rute</option>
+                            {% for route in data.routes %}
+                            <option value="{{ route.id }}" data-origin="{{ route.origin_name }}" data-destination="{{ route.destination_name }}" data-vehicle-id="{{ route.vehicle_id }}" data-vehicle-label="{{ route.vehicle_label }}" data-driver-id="{{ route.driver_id }}" data-driver-label="{{ route.driver_label }}" {% if route.origin_name == data.default_origin and route.destination_name == data.default_destination %}selected{% endif %}>{{ route.label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <p class="hint">Belum ada rute. <a href="{{ url_for('manifests_blueprint.route_new') }}">Buat rute</a> dari hub yang sudah terdaftar.</p>
+                        {% endif %}
+                        <input type="hidden" name="origin" id="origin" value="{{ data.default_origin }}">
+                        <input type="hidden" name="destination" id="destination" value="{{ data.default_destination }}">
+                    </div>
+                    <div class="form-field">
+                        <label class="lbl" for="vehicle_id">Kendaraan <span class="req">*</span></label>
+                        <select class="fld select2-vehicle" id="vehicle_id" name="vehicle_id" required>
+                            <option value=""></option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="lbl" for="driver_id">Sopir <span class="req">*</span></label>
+                        <select class="fld select2-driver" id="driver_id" name="driver_id" required>
+                            <option value=""></option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="lbl" for="client_id">Klien charter (khusus FTL)</label>
+                        <select class="fld select2-client" id="client_id" name="client_id">
+                            <option value=""></option>
+                        </select>
+                        <p class="hint">Kendaraan dan sopir terisi dari rute. Keduanya bisa diganti sebelum simpan. Klien charter opsional, khusus FTL.</p>
+                    </div>
+        </div>
+
+        <div>
+            <div class="kiriman-bar">
+                <span class="cp-name">Kiriman</span>
+                <span class="list-count" id="kiriman-count">{{ data.candidates|length }}</span>
+                {% if data.candidates|length %}
+                <input class="mini-filter-input" id="kiriman-q" type="search" placeholder="Cari resi atau kota" oninput="filterKiriman()">
+                <select class="mini-filter-select" id="kiriman-loc" onchange="filterKiriman()">
+                    <option value="">Semua lokasi</option>
+                </select>
+                {% endif %}
+                <button type="button" class="btn-outline btn-sm" onclick="selectMatching()">Pilih sesuai tujuan</button>
+            </div>
+            {% if data.candidates|length == 0 %}
+                {{ empty_state("Tidak ada kiriman", "Kandidat adalah order berstatus Terdaftar atau kargo yang sudah disorting di hub (Tiba di Hub). Buat order dulu.", url_for('shipments_blueprint.create'), "Baru") }}
+            {% else %}
+                <p class="hint check-empty" id="kiriman-empty" hidden>Tidak ada kiriman yang cocok.</p>
+                <div class="check-list">
+                    {% for s in data.candidates %}
+                    <label class="check-row" data-find="{{ s.tracking_code }} {{ s.origin_city }} {{ s.destination_city }} {{ s.current_location or s.origin_city }}" data-loc="{{ s.current_location or s.origin_city }}">
+                        <input type="checkbox" name="shipment_ids" value="{{ s.id }}" class="chk" data-dest="{{ s.destination_city|lower }}">
+                        <span class="check-main">
+                            <span class="font-mono text-sm">{{ s.tracking_code }}</span>
+                            <span class="muted text-sm">{{ s.origin_city }} →</span>
+                            <span class="text-sm"><strong>{{ s.destination_city }}</strong></span>
+                            {{ status_badge(s.status_utama) }}
+                            {{ service_badge(s.service_type) }}
+                        </span>
+                        <span class="check-loc">Sekarang di <strong>{{ s.current_location or s.origin_city or '—' }}</strong></span>
+                    </label>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script>
+function syncRoute() {
+    var route = document.getElementById("route_id");
+    var origin = document.getElementById("origin");
+    var destination = document.getElementById("destination");
+    if (!route || route.selectedIndex < 0) {
+        return;
+    }
+    var opt = route.options[route.selectedIndex];
+    origin.value = opt.getAttribute("data-origin") || "";
+    destination.value = opt.getAttribute("data-destination") || "";
+    fillFleet(opt);
+}
+function fillOne(selector, id, label) {
+    if (!window.jQuery || !$(selector).data("select2")) {
+        return;
+    }
+    var $el = $(selector);
+    if (!id) {
+        $el.val(null).trigger("change");
+        return;
+    }
+    var found = false;
+    $el.find("option").each(function () {
+        if (this.value === id) {
+            found = true;
+        }
+    });
+    if (!found) {
+        $el.append(new Option(label || id, id, true, true));
+    }
+    $el.val(id).trigger("change");
+}
+function fillFleet(opt) {
+    if (!opt) {
+        return;
+    }
+    fillOne(".select2-vehicle", opt.getAttribute("data-vehicle-id") || "", opt.getAttribute("data-vehicle-label") || "");
+    fillOne(".select2-driver", opt.getAttribute("data-driver-id") || "", opt.getAttribute("data-driver-label") || "");
+}
+function filterKiriman() {
+    var queryBox = document.getElementById("kiriman-q");
+    var locBox = document.getElementById("kiriman-loc");
+    var q = "";
+    var loc = "";
+    if (queryBox) {
+        q = (queryBox.value || "").trim().toLowerCase();
+    }
+    if (locBox) {
+        loc = (locBox.value || "").trim().toLowerCase();
+    }
+    var rows = document.querySelectorAll(".check-row");
+    var shown = 0;
+    for (var i = 0; i < rows.length; i++) {
+        var hay = (rows[i].getAttribute("data-find") || "").toLowerCase();
+        var rowLoc = (rows[i].getAttribute("data-loc") || "").toLowerCase();
+        var ok = (q === "" || hay.indexOf(q) !== -1) && (loc === "" || rowLoc === loc);
+        rows[i].hidden = !ok;
+        if (ok) {
+            shown += 1;
+        }
+    }
+    var count = document.getElementById("kiriman-count");
+    if (count) {
+        count.textContent = String(shown);
+    }
+    var empty = document.getElementById("kiriman-empty");
+    if (empty) {
+        empty.hidden = shown !== 0;
+    }
+}
+function fillLocationFilter() {
+    var locBox = document.getElementById("kiriman-loc");
+    if (!locBox) {
+        return;
+    }
+    var seen = {};
+    var rows = document.querySelectorAll(".check-row");
+    var names = [];
+    for (var i = 0; i < rows.length; i++) {
+        var name = (rows[i].getAttribute("data-loc") || "").trim();
+        var key = name.toLowerCase();
+        if (name !== "" && !seen[key]) {
+            seen[key] = true;
+            names.push(name);
+        }
+    }
+    names.sort(function (a, b) { return a.localeCompare(b); });
+    for (var n = 0; n < names.length; n++) {
+        var opt = document.createElement("option");
+        opt.value = names[n];
+        opt.textContent = names[n];
+        locBox.appendChild(opt);
+    }
+}
+function selectMatching() {
+    syncRoute();
+    var dest = (document.getElementById("destination").value || "").trim().toLowerCase();
+    if (dest === "") {
+        alert("Pilih rute dulu");
+        return;
+    }
+    var boxes = document.querySelectorAll('input[name="shipment_ids"]');
+    for (var i = 0; i < boxes.length; i++) {
+        boxes[i].checked = boxes[i].getAttribute("data-dest") === dest;
+    }
+}
+fillLocationFilter();
+var routeSelect = document.getElementById("route_id");
+if (routeSelect) {
+    routeSelect.addEventListener("change", syncRoute);
+    syncRoute();
+}
+document.getElementById("manifest-form").addEventListener("submit", syncRoute);
+$(document).ready(function () {
+    $(".select2-vehicle").select2({
+        ajax: { url: "/api/vehicles", dataType: "json", delay: 250,
+                data: function (params) { return { q: params.term || "" }; },
+                processResults: function (resp) { return { results: resp.results }; } },
+        placeholder: "Cari nopol / jenis…", allowClear: true, width: "100%"
+    });
+    $(".select2-driver").select2({
+        ajax: { url: "/api/drivers", dataType: "json", delay: 250,
+                data: function (params) { return { q: params.term || "" }; },
+                processResults: function (resp) { return { results: resp.results }; } },
+        placeholder: "Cari sopir…", allowClear: true, width: "100%"
+    });
+    $(".select2-client").select2({
+        ajax: { url: "/api/contacts", dataType: "json", delay: 250,
+                data: function (params) { return { q: params.term || "", category: "CLIENT" }; },
+                processResults: function (resp) { return { results: resp.results }; } },
+        placeholder: "Opsional — klien charter FTL…", allowClear: true, width: "100%"
+    });
+    syncRoute();
+});
+</script>
+</div>
+{% endblock %}

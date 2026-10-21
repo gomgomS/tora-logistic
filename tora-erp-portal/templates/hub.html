@@ -1,0 +1,63 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import search, plus %}
+{% from "_ui.html" import empty_state %}
+{% block title %}Hub Transit — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Hub Transit{% endblock %}
+{% block erp_content %}
+<div class="flat-page">
+<form class="cp" method="get" action="{{ url_for('manifests_blueprint.hub') }}">
+    <div class="cp-side">
+        <a class="btn-accent btn-sm" href="{{ url_for('manifests_blueprint.hub_new') }}">{{ plus("w-4 h-4") }} Baru</a>
+        <span class="cp-name">Hub</span>
+        {% if data.hubs|length %}
+        <span class="list-count">{{ data.hubs|length }}</span>
+        {% endif %}
+    </div>
+    <div class="cp-search">
+        <span class="list-search-icon">{{ search("w-4 h-4") }}</span>
+        <input class="list-search-input" type="text" name="q" value="{{ data.q }}" placeholder="Cari hub" autocomplete="off">
+    </div>
+    <div class="cp-side cp-side-end">
+        <button type="submit" class="btn-accent btn-sm">Saring</button>
+    </div>
+</form>
+
+{% if data.hubs|length %}
+<table class="tbl odoo-tbl">
+    <thead>
+        <tr><th>Nama</th></tr>
+    </thead>
+    <tbody>
+        {% for hub in data.hubs %}
+        <tr>
+            <td>
+                <div class="hub-row">
+                    <div>
+                        <a class="row-link" href="{{ url_for('manifests_blueprint.hub_desk', hub_id=hub.id) }}">{{ hub.name }}</a>
+                        {% if hub.village or hub.district or hub.postal_code or hub.address %}
+                        <div class="mute text-xs">
+                            {% if hub.village %}{{ hub.village }}{% endif %}{% if hub.district %}{% if hub.village %}, {% endif %}{{ hub.district }}{% endif %}{% if hub.regency %} · {{ hub.regency }}{% endif %}{% if hub.postal_code %} · {{ hub.postal_code }}{% endif %}
+                            {% if hub.address %}<div>{{ hub.address }}</div>{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="row-actions">
+                    <a class="btn-outline btn-sm" href="{{ url_for('manifests_blueprint.hub_edit', hub_id=hub.id) }}">Ubah</a>
+                    <form method="post" action="{{ url_for('manifests_blueprint.hub_delete', hub_id=hub.id) }}" onsubmit="return confirm('Hapus hub ini? Kargo yang sudah parkir tidak ikut terhapus.');">
+                        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                        <button class="btn-outline btn-sm" type="submit">Hapus</button>
+                    </form>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% elif data.q %}
+    {{ empty_state("Tidak ada hub", "Tidak ada hub dengan nama itu.", "", "") }}
+{% else %}
+    {{ empty_state("Belum ada hub", "Tambah hub transit, lalu buka hub itu untuk antar dan feeder.", url_for('manifests_blueprint.hub_new'), "Baru") }}
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{
+  "name": "slapz-framework",
+  "version": "1.0.0",
+  "description": "SLAPZ (slapz102) — Flask + MongoDB boilerplate. Node is only used to build the Tailwind CSS bundle.",
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i ./static/v2/input.css -o ./static/v2/app.output.css",
+    "dev:css": "npx @tailwindcss/cli -i ./static/v2/input.css -o ./static/v2/app.output.css --watch"
+  },
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.12",
+    "tailwindcss": "^4.2.4"
+  }
+}

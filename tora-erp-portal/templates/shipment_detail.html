@@ -1,0 +1,109 @@
+{% extends "erp_base.html" %}
+{% from "_icons.html" import box, route, clock, plus, clipboard, arrow_right %}
+{% from "_ui.html" import status_badge, service_badge, statusbar, status_label %}
+{% block title %}{{ data.shipment.tracking_code }} — {{ data.site_name }}{% endblock %}
+{% block topbar_title %}Order {{ data.shipment.tracking_code }}{% endblock %}
+{% block erp_content %}
+<div class="page-head">
+    <div>
+        <h1 class="page-title font-mono" style="display:flex;align-items:center;gap:12px;">
+            {{ data.shipment.tracking_code }}
+            {{ service_badge(data.shipment.service_type) }}
+            {{ status_badge(data.shipment.status_utama) }}
+        </h1>
+        <p class="page-sub">{{ data.shipment.origin_city }} → <strong>{{ data.shipment.destination_city }}</strong>
+            {% if data.shipment.active_manifest_code %} &middot; di manifest <a class="row-link font-mono" href="{{ url_for('manifests_blueprint.detail', manifest_code=data.shipment.active_manifest_code) }}">{{ data.shipment.active_manifest_code }}</a>{% endif %}
+        </p>
+        {{ statusbar(data.shipment.status_utama, ["REGISTERED", "MANIFESTED", "IN_TRANSIT", "ARRIVED_HUB", "OUT_FOR_DELIVERY", "DELIVERED"]) }}
+    </div>
+    <div class="page-actions">
+        {% if data.shipment.status_utama == 'REGISTERED' %}
+        <a class="btn-outline btn-sm" href="{{ url_for('shipments_blueprint.edit', tracking_code=data.shipment.tracking_code) }}">Ubah</a>
+        <form method="post" action="{{ url_for('shipments_blueprint.delete', tracking_code=data.shipment.tracking_code) }}" onsubmit="return confirm('Hapus order ini?');">
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <button class="btn-outline btn-sm" type="submit">Hapus</button>
+        </form>
+        {% endif %}
+        <a class="btn-outline btn-sm" href="{{ url_for('tracking_blueprint.track_page', q=data.shipment.tracking_code) }}">Tampilan publik {{ arrow_right("w-3.5 h-3.5") }}</a>
+    </div>
+</div>
+
+<div class="grid-2col" style="grid-template-columns: 1fr 1.2fr;">
+    <div>
+        <div class="card">
+            <div class="card-head"><h2 class="card-title">Detail Order</h2></div>
+            <div class="card-body">
+                <table class="tbl keyval">
+                    <tr><th>Nomor AWB</th><td class="font-mono">{{ data.shipment.tracking_code }}</td></tr>
+                    <tr><th>Nomor PO</th><td class="font-mono">{{ data.shipment.po_number or '—' }}</td></tr>
+                    <tr><th>Pengirim</th><td>{{ data.shipment.sender_name }}{% if data.shipment.sender_company %} <span class="muted">({{ data.shipment.sender_company }})</span>{% endif %}</td></tr>
+                    <tr><th>Penerima</th><td>{{ data.shipment.receiver_name }}{% if data.shipment.receiver_company %} <span class="muted">({{ data.shipment.receiver_company }})</span>{% endif %}</td></tr>
+                    <tr><th>Alamat pengirim</th><td>{% if data.shipment.origin_address %}{{ data.shipment.origin_address }}{% if data.shipment.origin_village %}, {{ data.shipment.origin_village }}{% endif %}{% if data.shipment.origin_district %}, {{ data.shipment.origin_district }}{% endif %}{% if data.shipment.origin_regency %}, {{ data.shipment.origin_regency }}{% endif %}{% if data.shipment.origin_province %}, {{ data.shipment.origin_province }}{% endif %}{% if data.shipment.origin_postal_code %} {{ data.shipment.origin_postal_code }}{% endif %}{% else %}{{ data.shipment.origin_city }}{% endif %}</td></tr>
+                    <tr><th>Alamat penerima</th><td>{% if data.shipment.destination_address %}{{ data.shipment.destination_address }}{% if data.shipment.destination_village %}, {{ data.shipment.destination_village }}{% endif %}{% if data.shipment.destination_district %}, {{ data.shipment.destination_district }}{% endif %}{% if data.shipment.destination_regency %}, {{ data.shipment.destination_regency }}{% endif %}{% if data.shipment.destination_province %}, {{ data.shipment.destination_province }}{% endif %}{% if data.shipment.destination_postal_code %} {{ data.shipment.destination_postal_code }}{% endif %}{% else %}{{ data.shipment.destination_city }}{% endif %}</td></tr>
+                    <tr><th>Lokasi saat ini</th><td>{{ data.shipment.current_location }}</td></tr>
+                    <tr><th>Dibuat</th><td class="muted">{{ data.shipment.rec_timestamp_str }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-head">
+                <div>
+                    <h2 class="card-title">Tambah Milestone</h2>
+                    <p class="card-sub">Update manual (misalnya last mile)</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="hint" style="margin-bottom:14px;">Milestone massal ditambahkan otomatis setiap status manifest kiriman ini berubah.</p>
+                <form method="post" action="{{ url_for('shipments_blueprint.add_log', tracking_code=data.shipment.tracking_code) }}">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <div class="form-field">
+                        <label class="lbl" for="milestone_status">Milestone <span class="req">*</span></label>
+                        <select class="fld" id="milestone_status" name="milestone_status" required>
+                            {% for m in data.manual_milestones %}
+                            <option value="{{ m.value }}">{{ m.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="lbl" for="location">Lokasi</label>
+                        <input class="fld" type="text" id="location" name="location" placeholder="misalnya Malang">
+                    </div>
+                    <div class="form-field">
+                        <label class="lbl" for="notes">Catatan</label>
+                        <input class="fld" type="text" id="notes" name="notes" placeholder="Diterima oleh …">
+                    </div>
+                    <button type="submit" class="btn-primary">{{ plus("w-4 h-4") }} Tambah Catatan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <div>
+                <h2 class="card-title">Riwayat Perjalanan</h2>
+                <p class="card-sub">{{ data.logs|length }} milestone, terbaru di atas</p>
+            </div>
+            {{ clock("w-5 h-5") }}
+        </div>
+        <div class="card-body">
+            <div class="timeline">
+                {% for log in data.logs %}
+                <div class="tl-item {% if log.milestone_status == 'DELIVERED' %}is-final{% endif %}">
+                    <div class="tl-dot"></div>
+                    <div class="tl-body">
+                        <div class="tl-head">
+                            <span class="tl-title">{{ status_label(log.milestone_status) }}</span>
+                            <span class="badge {% if log.milestone_status == 'DELIVERED' %}badge-green{% elif log.milestone_status == 'IN_TRANSIT' %}badge-blue{% elif log.milestone_status == 'ARRIVED_HUB' %}badge-amber{% else %}badge-gray{% endif %}">{{ log.location }}</span>
+                        </div>
+                        <div class="text-sm">{{ log.notes }}</div>
+                        <div class="tl-time">{{ log.timestamp }} · oleh {{ log.updated_by_name }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ data.site_name }}{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='v2/app.output.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='brand/favicon.svg') }}">
+    <meta property="og:title" content="{% block og_title %}{{ data.site_name }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Logistik hibrida — konsolidasi LTL &amp; charter FTL{% endblock %}">
+    <meta property="og:image" content="{{ data.og_image }}">
+    <meta property="og:url" content="{{ data.og_url }}">
+</head>
+<body class="antialiased">
+{% block shell %}
+<div class="public-shell">
+    <header class="public-header">
+        <div class="public-header-row">
+            <a class="brand" href="{{ url_for('auth_blueprint.login') }}">
+                <span class="brand-mark">T</span>
+                <span>
+                    <span class="brand-name">{{ data.site_name }}</span>
+                    <span class="brand-sub">Portal ERP</span>
+                </span>
+            </a>
+            <a class="btn-outline btn-sm" href="{{ url_for('tracking_blueprint.track_page') }}">Lacak Kiriman</a>
+        </div>
+    </header>
+
+    <main class="{% block main_class %}w-full max-w-3xl mx-auto px-4 py-12{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="public-footer">
+        <div class="public-footer-row">
+            <span>{{ data.site_name }} &middot; Portal Staf</span>
+            <span>Logistik Hibrida — LTL + FTL</span>
+        </div>
+    </footer>
+</div>
+{% endblock %}
+</body>
+</html>

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}{{ data.site_name }} — Sample Items{% endblock %}
+
+{% block content %}
+<section class="mb-10">
+    <h1 class="text-3xl font-extrabold tracking-tight">Sample Items</h1>
+    <p class="mt-2 text-sm text-mute">
+        This page is rendered by the <span class="font-mono">sample</span> module —
+        the reference implementation of the blueprint &rarr; view &rarr; proc flow.
+        Create an item below and watch it round-trip through MongoDB.
+    </p>
+</section>
+
+<section class="mb-12">
+    <form method="post" action="{{ url_for('sample_blueprint.create') }}" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+        {% if data.form_error %}
+        <p class="border border-red-600 px-3 py-2 text-sm text-red-600">{{ data.form_error }}</p>
+        {% endif %}
+        <input
+            type="text" name="title" placeholder="Title"
+            class="w-full border border-line px-3 py-2 text-sm focus:outline-none focus:border-black"
+        >
+        <textarea
+            name="body" rows="3" placeholder="Body (optional)"
+            class="w-full border border-line px-3 py-2 text-sm focus:outline-none focus:border-black"
+        ></textarea>
+        <button type="submit" class="btn-primary">Add item</button>
+    </form>
+</section>
+
+<section>
+    {% if data.sample_items %}
+    <ul class="space-y-4">
+        {% for item in data.sample_items %}
+        <li class="border border-line p-4">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <a href="{{ url_for('sample_blueprint.detail', slug=item.slug) }}" class="font-bold hover:underline">
+                        {{ item.title }}
+                    </a>
+                    {% if item.body %}
+                    <p class="mt-1 text-sm text-mute">{{ item.body }}</p>
+                    {% endif %}
+                    <p class="mt-2 font-mono text-xs text-mute">
+                        {{ item.rec_timestamp_str }} &middot; pkey {{ item.pkey }}
+                    </p>
+                </div>
+                <form method="post" action="{{ url_for('sample_blueprint.delete', slug=item.slug) }}">
+                    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                    <button type="submit" class="text-xs uppercase tracking-widest text-mute hover:text-red-600">
+                        Delete
+                    </button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="border border-dashed border-line px-4 py-8 text-center text-sm text-mute">
+        No items yet — add the first one above.
+    </p>
+    {% endif %}
+</section>
+{% endblock %}

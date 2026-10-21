@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% from "_icons.html" import box, layers, truck, search, route, warehouse, pin, check, check_circle, clock, arrow_right, phone, mail %}
+
+{% block title %}{{ data.site_name }} — Logistik Hibrida LTL &amp; FTL{% endblock %}
+{% block og_title %}{{ data.site_name }} — Logistik Hibrida LTL &amp; FTL{% endblock %}
+{% block og_description %}Ekspedisi kargo LTL &amp; FTL dengan konsolidasi modern dan pelacakan real-time.{% endblock %}
+{% block main_class %}w-full{% endblock %}
+
+{% block content %}
+
+<!-- ——— HERO ——— -->
+<section class="hero">
+    <div class="hero-row">
+        <div>
+            <span class="eyebrow">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12.5 9 5 9-5"/></svg>
+                Logistik Hibrida LTL + FTL
+            </span>
+            <h1>Kiriman ke seluruh Indonesia,<br><span class="hl">terlacak</span> dari gudang ke gudang.</h1>
+            <p class="hero-sub">
+                Tora Expedition menggabungkan konsolidasi kargo (LTL) dan truk dedikasi (FTL)
+                dalam satu jaringan transit hub — setiap milestone perjalanan tercatat dan bisa
+                dilacak kapan saja.
+            </p>
+            <div class="hero-ctas">
+                <a class="btn-accent btn-lg" href="/track">{{ search("w-4 h-4") }} Lacak Kiriman</a>
+                <a class="btn-outline btn-lg" href="#layanan">Lihat Layanan {{ arrow_right("w-4 h-4") }}</a>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="track-card">
+                <div class="track-card-top">
+                    <div>
+                        <div class="track-card-code">AWB-20261015-0042</div>
+                        <div class="track-card-route">PO-2026-0918 &middot; LTL Konsolidasi</div>
+                    </div>
+                    <span class="badge badge-blue">Dalam Perjalanan</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span class="route-city">Jakarta</span>
+                    <span class="route-city">Surabaya</span>
+                    <span class="route-city">Malang</span>
+                </div>
+                <div class="route-dots">
+                    <span class="route-dot route-dot-start"></span>
+                    <span class="route-line"></span>
+                    <span class="route-dot"></span>
+                    <span class="route-line"></span>
+                    <span class="route-dot route-dot-end"></span>
+                </div>
+                <div class="timeline" style="padding-left:24px;">
+                    <div class="tl-item">
+                        <div class="tl-dot"></div>
+                        <div class="tl-head"><span class="tl-title">Order Diterima</span></div>
+                        <div class="tl-time">14 Okt &middot; Jakarta — Gudang Asal</div>
+                    </div>
+                    <div class="tl-item">
+                        <div class="tl-dot"></div>
+                        <div class="tl-head"><span class="tl-title">Konsolidasi Manifest</span></div>
+                        <div class="tl-time">14 Okt &middot; MAN-20261014-0007</div>
+                    </div>
+                    <div class="tl-item">
+                        <div class="tl-dot"></div>
+                        <div class="tl-head"><span class="tl-title">Dalam Perjalanan</span></div>
+                        <div class="tl-time">15 Okt &middot; Transit via Surabaya Hub</div>
+                    </div>
+                </div>
+            </div>
+            <div class="float-chip float-chip-a">{{ truck("w-[18px] h-[18px]") }} Wingbox &middot; B 9111 UYZ</div>
+            <div class="float-chip float-chip-b">{{ check_circle("w-[18px] h-[18px]") }} Update otomatis semua kiriman</div>
+        </div>
+    </div>
+</section>
+
+<!-- ——— STATS ——— -->
+<section class="section" style="padding:56px 0;">
+    <div class="section-inner">
+        <div class="stat-strip">
+            <div class="stat-strip-item">
+                <div class="stat-strip-num">16<span>+</span></div>
+                <div class="stat-strip-label">Kota terjangkau</div>
+            </div>
+            <div class="stat-strip-item">
+                <div class="stat-strip-num">3</div>
+                <div class="stat-strip-label">Transit hub utama</div>
+            </div>
+            <div class="stat-strip-item">
+                <div class="stat-strip-num">2<span>×</span></div>
+                <div class="stat-strip-label">Model layanan LTL &amp; FTL</div>
+            </div>
+            <div class="stat-strip-item">
+                <div class="stat-strip-num">24<span>/7</span></div>
+                <div class="stat-strip-label">Pelacakan kiriman</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ——— SERVICES ——— -->
+<section class="section section-alt" id="layanan">
+    <div class="section-inner">
+        <div class="section-head">
+            <div class="section-kicker">Layanan Kami</div>
+            <h2 class="section-title">Satu jaringan, dua model pengiriman</h2>
+            <p class="section-desc">Pilih konsolidasi hemat untuk kargo kurir, atau truk dedikasi untuk volume besar — keduanya dalam sistem pelacakan yang sama.</p>
+        </div>
+
+        <div class="svc-grid">
+            <div class="svc-card">
+                <span class="svc-icon svc-icon-navy">{{ layers("w-6 h-6") }}</span>
+                <h3>LTL Konsolidasi</h3>
+                <p>Kargo Anda digabung dengan kiriman lain di manifest trunk &amp; feeder — biaya efisien tanpa mengorbankan kecepatan.</p>
+                <div class="svc-list">
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Tarif per colly / kg</span>
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Sorting di transit hub</span>
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Cocok untuk ritel &amp; distribusi</span>
+                </div>
+                <span class="svc-tag">LTL · kurang dari satu truk</span>
+            </div>
+
+            <div class="svc-card">
+                <span class="svc-icon svc-icon-orange">{{ truck("w-6 h-6") }}</span>
+                <h3>FTL Charter</h3>
+                <p>Truk dedikasi untuk satu klien — dari CDD hingga trailer. Kendaraan internal maupun vendor terverifikasi.</p>
+                <div class="svc-list">
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Armada internal + vendor</span>
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} PO B2B dapat dilacak publik</span>
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Rute &amp; jadwal fleksibel</span>
+                </div>
+                <span class="svc-tag">FTL · satu truk penuh</span>
+            </div>
+
+            <div class="svc-card">
+                <span class="svc-icon svc-icon-blue">{{ search("w-6 h-6") }}</span>
+                <h3>Pelacakan Real-Time</h3>
+                <p>Setiap milestone — penerimaan, konsolidasi, transit hub, dan pengiriman — otomatis tercatat di timeline kiriman Anda.</p>
+                <div class="svc-list">
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Cari via nomor AWB</span>
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Atau nomor PO perusahaan</span>
+                    <span class="svc-list-item">{{ check("w-4 h-4") }} Bahasa Indonesia</span>
+                </div>
+                <span class="svc-tag">Lacak Publik</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ——— HOW IT WORKS ——— -->
+<section class="section" id="cara-kerja">
+    <div class="section-inner">
+        <div class="section-head center">
+            <div class="section-kicker">Cara Kerja</div>
+            <h2 class="section-title">Dari order hingga terkirim dalam 4 langkah</h2>
+            <p class="section-desc">Proses hibrida kami menjaga kargo tetap bergerak — dan Anda selalu tahu posisinya.</p>
+        </div>
+
+        <div class="steps-grid">
+            <div class="step">
+                <span class="step-num">1</span>
+                <h3>{{ box("w-4 h-4") }} Order Dibuat</h3>
+                <p>Order LTL atau FTL terdaftar dengan AWB otomatis. Kargo diterima di gudang asal.</p>
+            </div>
+            <div class="step">
+                <span class="step-num">2</span>
+                <h3>{{ layers("w-4 h-4") }} Konsolidasi</h3>
+                <p>Kiriman dimuat ke manifest bersama kendaraan &amp; sopir yang ditugaskan.</p>
+            </div>
+            <div class="step">
+                <span class="step-num">3</span>
+                <h3>{{ warehouse("w-4 h-4") }} Transit Hub</h3>
+                <p>Di hub, kargo disorting dan dire-manifest ke feeder tujuan akhirnya.</p>
+            </div>
+            <div class="step">
+                <span class="step-num">4</span>
+                <h3>{{ check_circle("w-4 h-4") }} Terkirim</h3>
+                <p>Status Terkirim (POD) tercatat otomatis saat manifest tujuan akhir selesai.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ——— COVERAGE ——— -->
+<section class="section section-alt" id="jangkauan">
+    <div class="section-inner">
+        <div class="section-head">
+            <div class="section-kicker">Jangkauan</div>
+            <h2 class="section-title">Jaringan hub lintas pulau</h2>
+            <p class="section-desc">Rute trunk menghubungkan hub utama; feeder menjangkau kota-kota sekitarnya.</p>
+        </div>
+
+        <div class="hub-pills">
+            <span class="hub-pill">{{ pin("w-4 h-4") }} Jakarta Hub</span>
+            <span class="hub-pill">{{ pin("w-4 h-4") }} Surabaya Hub</span>
+            <span class="hub-pill">{{ pin("w-4 h-4") }} Medan Hub</span>
+        </div>
+
+        <div class="chip-cloud">
+            <span class="chip">Bandung</span>
+            <span class="chip">Semarang</span>
+            <span class="chip">Malang</span>
+            <span class="chip">Yogyakarta</span>
+            <span class="chip">Solo</span>
+            <span class="chip">Denpasar</span>
+            <span class="chip">Palembang</span>
+            <span class="chip">Pekanbaru</span>
+            <span class="chip">Lampung</span>
+            <span class="chip">Makassar</span>
+            <span class="chip">Balikpapan</span>
+            <span class="chip">Banjarmasin</span>
+            <span class="chip">Pontianak</span>
+            <span class="chip">…dan kota lainnya</span>
+        </div>
+    </div>
+</section>
+
+<!-- ——— CTA BAND ——— -->
+<section class="cta-band">
+    <div class="cta-band-inner">
+        <div>
+            <h2>Punya nomor AWB atau PO?</h2>
+            <p>Lacak posisi kiriman Anda sekarang — timeline lengkap, tanpa perlu login.</p>
+        </div>
+        <form method="get" action="/track" class="search-bar" style="max-width:440px;margin:0;">
+            <input class="fld" type="text" name="q" placeholder="AWB-20260101-0001 / PO-2026-0001" required>
+            <button type="submit" class="btn-accent">{{ search("w-4 h-4") }} Lacak</button>
+        </form>
+    </div>
+</section>
+
+{% endblock %}
