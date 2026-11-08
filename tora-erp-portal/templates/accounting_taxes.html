@@ -1,0 +1,164 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import search, sliders, chevron_down, funnel, close %}
+{% from "_ui.html" import empty_state %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
+{% block title %}Pajak — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.tax_new') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb-stack">
+            <a class="app-crumb-parent" href="{{ url_for('accounting_blueprint.settings') }}">Konfigurasi</a>
+            <span class="app-cp-title">Pajak</span>
+        </div>
+    </div>
+
+    <form class="app-cp-middle" method="get" action="{{ url_for('accounting_blueprint.taxes') }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }}
+                {% if data.tax_use %}{{ data.tax_uses[data.tax_use] }}{% else %}Penjualan <em>atau</em> Pembelian{% endif %}
+                {% if data.tax_use %}
+                <a href="{{ url_for('accounting_blueprint.taxes', q=data.q) }}" title="Hapus filter" aria-label="Hapus filter tipe">{{ close("w-3 h-3") }}</a>
+                {% endif %}
+            </span>
+            {% if data.tax_use %}<input type="hidden" name="tax_use" value="{{ data.tax_use }}">{% endif %}
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari ..." aria-label="Cari pajak">
+            <div class="app-search-filter">
+                <button type="button" class="app-search-toggle" data-dropdown="taxesFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
+                    {{ chevron_down("w-4 h-4") }}
+                </button>
+                <div class="app-dropdown app-filter-menu" id="taxesFilterMenu">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Tipe Pajak</div>
+                    <a class="app-dropdown-item {% if not data.tax_use %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.taxes', q=data.q) }}">Penjualan atau Pembelian</a>
+                    {% for key, label in data.tax_uses.items() %}
+                    <a class="app-dropdown-item {% if data.tax_use == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.taxes', tax_use=key, q=data.q) }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, "accounting_blueprint.taxes", data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{%- set can_toggle = data.current_user.can('accounting', 'update') -%}
+{%- set columns = [
+    {"key": "desc", "label": "Deskripsi", "default": true},
+    {"key": "use", "label": "Tipe Pajak", "default": true},
+    {"key": "scope", "label": "Lingkup pajak", "default": true},
+    {"key": "label", "label": "Label pada Faktur", "default": true},
+    {"key": "rate", "label": "Tarif efektif", "default": false}
+] -%}
+{%- set hidden_cols = columns|rejectattr("default")|map(attribute="key")|list -%}
+{% if pager.total == 0 %}
+    <div class="app-empty">
+        {{ empty_state("Tidak ada pajak yang cocok", "Ubah kata kunci atau hapus filter.", url_for('accounting_blueprint.taxes'), "Hapus pencarian") }}
+    </div>
+{% else %}
+<div class="app-list-area">
+    <div class="app-list-wrap">
+        <table class="app-list" id="taxesList" data-table-key="taxes">
+            <thead>
+                <tr>
+                    <th data-key="name" data-width="220">Nama pajak</th>
+                    <th data-col="desc" data-width="300" {% if 'desc' in hidden_cols %}class="app-col-hidden"{% endif %}>Deskripsi</th>
+                    <th data-col="use" data-width="120" {% if 'use' in hidden_cols %}class="app-col-hidden"{% endif %}>Tipe Pajak</th>
+                    <th data-col="scope" data-width="120" {% if 'scope' in hidden_cols %}class="app-col-hidden"{% endif %}>Lingkup pajak</th>
+                    <th data-col="label" data-width="150" {% if 'label' in hidden_cols %}class="app-col-hidden"{% endif %}>Label pada Faktur</th>
+                    <th data-col="rate" data-width="120" class="app-num{% if 'rate' in hidden_cols %} app-col-hidden{% endif %}">Tarif efektif</th>
+                    <th data-key="active" data-width="80">Aktif</th>
+                    <th class="app-list-optional">
+                        <button type="button" class="app-col-toggle" data-dropdown="taxesColMenu" title="Pilih kolom" aria-haspopup="true" aria-expanded="false">
+                            {{ sliders("w-4 h-4") }}
+                        </button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tax in data.taxes %}
+                <tr data-href="{{ url_for('accounting_blueprint.tax_edit', code=tax.code) }}" class="{% if not tax.active %}app-row-inactive{% endif %}">
+                    <td><a class="app-list-name" href="{{ url_for('accounting_blueprint.tax_edit', code=tax.code) }}" title="{{ tax.name }}"><span class="app-list-name-text">{{ tax.name }}</span></a></td>
+                    <td data-col="desc" title="{{ tax.description }}" {% if 'desc' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ tax.description }}</td>
+                    <td data-col="use" {% if 'use' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ tax.tax_use_label }}</td>
+                    <td data-col="scope" {% if 'scope' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ tax.scope_label if tax.scope else "" }}</td>
+                    <td data-col="label" {% if 'label' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ tax.invoice_label }}</td>
+                    <td data-col="rate" class="app-num{% if 'rate' in hidden_cols %} app-col-hidden{% endif %}">{{ '%g'|format(tax.rate * 100) }}%</td>
+                    <td>
+                        <form method="post" action="{{ url_for('accounting_blueprint.tax_toggle', code=tax.code) }}" data-tax-toggle>
+                            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+                            <button type="submit" class="app-switch {% if tax.active %}app-switch-on{% endif %}" role="switch" aria-checked="{{ 'true' if tax.active else 'false' }}" aria-label="Aktif: {{ tax.name }}" {% if not can_toggle %}disabled{% endif %}>
+                                <span class="app-switch-knob"></span>
+                            </button>
+                        </form>
+                    </td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="app-dropdown app-col-menu" id="taxesColMenu" data-col-menu-for="taxesList">
+        {% for col in columns %}
+        <label class="app-dropdown-check">
+            <input type="checkbox" class="app-check" value="{{ col.key }}" {% if col.default %}checked{% endif %}>
+            <span>{{ col.label }}</span>
+        </label>
+        {% endfor %}
+        <hr class="launcher-menu-sep">
+        <button type="button" class="app-dropdown-action" data-col-reset>Reset lebar kolom</button>
+    </div>
+</div>
+
+{{ pager_bar(pager, "accounting_blueprint.taxes", data.page_args) }}
+{% endif %}
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Aktif switch: toggle in place with fetch (the form still works without JS).
+    document.querySelectorAll("[data-tax-toggle]").forEach(function (form) {
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var btn = form.querySelector(".app-switch");
+            btn.disabled = true;
+            fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                headers: { "X-Requested-With": "fetch" },
+                credentials: "same-origin"
+            }).then(function (res) {
+                return res.json();
+            }).then(function (payload) {
+                if (payload.status !== "SUCCESS") {
+                    alert(payload.desc || "Gagal mengubah status pajak");
+                    return;
+                }
+                btn.classList.toggle("app-switch-on", payload.active);
+                btn.setAttribute("aria-checked", payload.active ? "true" : "false");
+                form.closest("tr").classList.toggle("app-row-inactive", !payload.active);
+            }).catch(function () {
+                alert("Koneksi gagal, coba lagi");
+            }).then(function () {
+                btn.disabled = false;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

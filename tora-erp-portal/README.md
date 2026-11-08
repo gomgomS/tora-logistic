@@ -5,8 +5,10 @@ Clone it, install two dependencies, point it at MongoDB, and start building —
 the framework ships with a complete, working **sample module** that shows every
 convention you need to follow.
 
-> **Building something new here?** Read [`AGENTS.md`](AGENTS.md) first — it is
-> the rulebook for humans *and* AI assistants working on this codebase.
+> **Building something new here?** Read the
+> [`python-backend-expert` skill](.cursor/skills/python-backend-expert/SKILL.md)
+> first — it is the rulebook for humans *and* AI assistants working on this
+> codebase.
 
 ---
 
@@ -597,7 +599,7 @@ round — kept here as an honest snapshot of where the framework stands.
 | Security | 8/10 | CSRF on all forms, sanitization everywhere, session hardening, secret guard; no auth sample yet |
 | Developer experience | 8.5/10 | two pip deps, one-command run, working sample module, full docs |
 | Maintainability & testing | 7/10 | pytest suite covers the sample flow; import-time DB handle and `print()` logging remain |
-| Documentation | 9/10 | README + AGENTS.md cover setup, patterns, and AI rules |
+| Documentation | 9/10 | README + `.cursor/skills/python-backend-expert/` cover setup, patterns, and AI rules |
 
 **Known path to 9/10** (kept honest, in priority order):
 

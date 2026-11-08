@@ -37,7 +37,7 @@
 {% if data.shipments|length == 0 %}
     {{ empty_state("Tidak ada kiriman", "Ubah filter, atau buat order pertama.", url_for('shipments_blueprint.create'), "Baru") }}
 {% else %}
-<table class="tbl odoo-tbl">
+<table class="tbl list-tbl">
     <thead>
         <tr><th>Nomor AWB</th><th>PO</th><th>Layanan</th><th>Pengirim → Penerima</th><th>Rute</th><th>Status</th><th>Manifest</th><th>Dibuat</th><th></th></tr>
     </thead>

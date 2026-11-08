@@ -1,0 +1,59 @@
+{# ---------------------------------------------------------------------------
+ # User menu (avatar + dropdown) for the launcher and app navbars.
+ # Usage:  {% include "_user_menu.html" %}   (needs data.current_user, data.csrf_token)
+ # --------------------------------------------------------------------------- #}
+{% from "_icons.html" import globe, cog, logout %}
+{% from "_ui.html" import role_label %}
+<div class="launcher-user">
+    <button type="button" class="launcher-user-toggle" id="launcherUserToggle" aria-haspopup="true" aria-expanded="false">
+        <span class="launcher-user-name">{{ data.current_user.username }}</span>
+        <span class="launcher-avatar">{{ data.current_user.username[:1]|upper }}</span>
+    </button>
+
+    <div class="launcher-menu" id="launcherMenu" role="menu">
+        <div class="launcher-menu-head">
+            <strong>{{ data.current_user.username }}</strong>
+            <span>{{ role_label(data.current_user.role) }}</span>
+        </div>
+        <a class="launcher-menu-item" href="{{ url_for('tracking_blueprint.track_page') }}" role="menuitem">
+            {{ globe("w-4 h-4") }} Lacak Kiriman
+        </a>
+        {% if data.current_user.can('users', 'read') %}
+        <a class="launcher-menu-item" href="{{ url_for('settings_blueprint.index') }}" role="menuitem">
+            {{ cog("w-4 h-4") }} Pengaturan
+        </a>
+        {% endif %}
+        <hr class="launcher-menu-sep">
+        <form method="post" action="{{ url_for('auth_blueprint.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <button type="submit" class="launcher-menu-item" role="menuitem">
+                {{ logout("w-4 h-4") }} Keluar
+            </button>
+        </form>
+    </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var toggle = document.getElementById("launcherUserToggle");
+    var menu = document.getElementById("launcherMenu");
+    function setOpen(open) {
+        menu.classList.toggle("launcher-menu-open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    toggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        setOpen(!menu.classList.contains("launcher-menu-open"));
+    });
+    menu.addEventListener("click", function (e) {
+        e.stopPropagation();
+    });
+    document.addEventListener("click", function () {
+        setOpen(false);
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+            setOpen(false);
+        }
+    });
+});
+</script>

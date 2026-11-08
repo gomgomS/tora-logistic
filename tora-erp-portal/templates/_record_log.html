@@ -1,0 +1,59 @@
+{# ---------------------------------------------------------------------------
+ # Activity log pane for any record form.
+ #
+ # Usage (as the right side of .app-split):
+ #   {% from "_record_log.html" import record_log %}
+ #   {{ record_log("contact", record_id, data.log_groups, data.csrf_token,
+ #                 request.full_path, data.current_user.username) }}
+ #
+ #   model       key registered in record_log_proc.LOG_MODELS
+ #   record_id   str(_id); "" while the record is not saved yet
+ #   groups      record_log_proc().list_groups(model, record_id)
+ #   next_url    where a no-JavaScript form post returns to
+ #   user_name   shown on the "Membuat record baru..." line of a new record
+ #
+ # Script: static/v2/record-log.js (loaded by app_base.html).
+ # --------------------------------------------------------------------------- #}
+{% from "_record_log_entry.html" import log_entry %}
+
+{% macro record_log(model, record_id, groups, csrf_token, next_url, user_name) %}
+<aside class="log-pane" data-log-pane>
+    <div class="log-head">
+        <button type="button" class="log-btn log-btn-primary" data-log-toggle {% if not record_id %}disabled title="Simpan data terlebih dulu"{% endif %}>Log catatan</button>
+    </div>
+
+    <div class="log-scroll">
+        {% if record_id %}
+        <form class="log-composer" method="post" action="{{ url_for('record_log_blueprint.add_note', model=model, record_id=record_id) }}" data-log-form hidden>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <textarea name="body" rows="3" maxlength="5000" placeholder="Log catatan internal..." aria-label="Catatan" required></textarea>
+            <div class="log-composer-actions">
+                <button type="submit" class="log-btn log-btn-primary">Log</button>
+                <button type="button" class="log-btn" data-log-cancel>Batal</button>
+                <span class="log-composer-error" data-log-error></span>
+            </div>
+        </form>
+        {% endif %}
+
+        <div class="log-list" data-log-list>
+            {% if not record_id %}
+            <div class="log-day"><span>Hari Ini</span></div>
+            <div class="log-entry log-entry-create">
+                <span class="log-avatar log-avatar-{{ (user_name or '')|length % 6 }}">{{ (user_name or "S")[:1]|upper }}</span>
+                <div class="log-body">
+                    <div class="log-meta"><strong>{{ user_name }}</strong></div>
+                    <div class="log-text">Membuat record baru...</div>
+                </div>
+            </div>
+            {% endif %}
+            {% for group in groups %}
+            <div class="log-day"><span>{{ group.label }}</span></div>
+            {% for entry in group.entries %}
+            {{ log_entry(entry) }}
+            {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</aside>
+{% endmacro %}

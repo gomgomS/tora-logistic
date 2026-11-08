@@ -1,83 +1,161 @@
-{% extends "erp_base.html" %}
-{% from "_icons.html" import search, plus %}
+{% extends "app_base.html" %}
+{% from "_icons.html" import users, search, sliders, chevron_down, funnel, close %}
 {% from "_ui.html" import empty_state, category_label %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
 {% block title %}Kontak — {{ data.site_name }}{% endblock %}
-{% block topbar_title %}Kontak{% endblock %}
-{% block erp_content %}
+{% block app_name %}Kontak{% endblock %}
+{% block app_home %}{{ url_for('contacts_blueprint.index') }}{% endblock %}
+{% block app_icon_class %}app-icon-contacts{% endblock %}
+{% block app_icon %}{{ users("w-4 h-4") }}{% endblock %}
 
-<div class="flat-page">
-<div class="cp">
-    <div class="cp-side">
-        <a class="btn-accent btn-sm" href="{{ url_for('contacts_blueprint.new_contact') }}">{{ plus("w-4 h-4") }} Baru</a>
-        <span class="cp-name">Kontak</span>
-        {% if data.contacts|length %}
-        <span class="list-count">{{ data.contacts|length }}</span>
+{% block app_menu %}
+<a class="app-nav-link app-nav-link-active" href="{{ url_for('contacts_blueprint.index') }}">Kontak</a>
+{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('contacts', 'create') %}
+        <a class="app-btn-primary" href="{{ url_for('contacts_blueprint.new_contact') }}">Baru</a>
+        {% endif %}
+        <span class="app-cp-title">Kontak</span>
+        {% if data.current_user.can('contacts', 'delete') %}
+        <div class="app-cp-selection" id="contactsSelection" hidden>
+            <span><strong data-select-count>0</strong> dipilih</span>
+            <button type="submit" form="contactsBulkForm" class="app-btn-secondary" onclick="return confirm('Hapus kontak yang dipilih?');">Hapus</button>
+        </div>
         {% endif %}
     </div>
-    <form class="cp-search" method="get" action="{{ url_for('contacts_blueprint.index') }}">
-        <span class="list-search-icon">{{ search("w-4 h-4") }}</span>
-        <input class="list-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari...">
-        <input type="hidden" name="category" value="{{ data.category }}">
-    </form>
-    <form class="cp-side cp-side-end" method="get" action="{{ url_for('contacts_blueprint.index') }}">
-        <input type="hidden" name="q" value="{{ data.q }}">
-        <select class="cp-filter" name="category" onchange="this.form.submit()">
-            <option value="">Semua</option>
-            {% for cat in data.categories %}
-            <option value="{{ cat }}" {% if data.category == cat %}selected{% endif %}>{{ category_label(cat) }}</option>
-            {% endfor %}
-        </select>
-    </form>
-</div>
 
-{% if data.contacts|length == 0 %}
-    {{ empty_state("Belum ada kontak", "Buat klien, penerima, sopir, atau vendor.", url_for('contacts_blueprint.new_contact'), "Baru") }}
+    <form class="app-cp-middle" method="get" action="{{ url_for('contacts_blueprint.index') }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            {% if data.category %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ category_label(data.category) }}
+                <a href="{{ url_for('contacts_blueprint.index', q=data.q) }}" title="Hapus filter" aria-label="Hapus filter">{{ close("w-3 h-3") }}</a>
+            </span>
+            <input type="hidden" name="category" value="{{ data.category }}">
+            {% endif %}
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari ..." aria-label="Cari kontak">
+            <div class="app-search-filter">
+                <button type="button" class="app-search-toggle" data-dropdown="contactsFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
+                    {{ chevron_down("w-4 h-4") }}
+                </button>
+                <div class="app-dropdown app-filter-menu" id="contactsFilterMenu">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Kategori</div>
+                    <a class="app-dropdown-item {% if not data.category %}app-dropdown-item-active{% endif %}" href="{{ url_for('contacts_blueprint.index', q=data.q) }}">Semua</a>
+                    {% for cat in data.categories %}
+                    <a class="app-dropdown-item {% if data.category == cat %}app-dropdown-item-active{% endif %}" href="{{ url_for('contacts_blueprint.index', category=cat, q=data.q) }}">{{ category_label(cat) }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, "contacts_blueprint.index", data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{%- set can_delete = data.current_user.can('contacts', 'delete') -%}
+{#- Optional list columns: key matches data-col on the cells, default = shown
+    until the user changes it in the column chooser (saved per browser). -#}
+{%- set columns = [
+    {"key": "created", "label": "Dibuat pada", "default": false},
+    {"key": "company", "label": "Perusahaan", "default": false},
+    {"key": "email", "label": "Email", "default": true},
+    {"key": "phone", "label": "Telepon", "default": true},
+    {"key": "category", "label": "Kategori", "default": true},
+    {"key": "address", "label": "Alamat", "default": false},
+    {"key": "city", "label": "Kota", "default": true}
+] -%}
+{%- set hidden_cols = columns|rejectattr("default")|map(attribute="key")|list -%}
+{% if pager.total == 0 %}
+    <div class="app-empty">
+    {% if data.q or data.category %}
+        {{ empty_state("Tidak ada kontak yang cocok", "Ubah kata kunci atau hapus filter kategori.", url_for('contacts_blueprint.index'), "Hapus pencarian") }}
+    {% else %}
+        {{ empty_state("Belum ada kontak", "Buat klien, penerima, sopir, atau vendor.", url_for('contacts_blueprint.new_contact'), "Baru") }}
+    {% endif %}
+    </div>
 {% else %}
-    <table class="tbl odoo-tbl">
+{% if can_delete %}
+<form id="contactsBulkForm" method="post" action="{{ url_for('contacts_blueprint.bulk_delete') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="category" value="{{ data.category }}">
+    <input type="hidden" name="q" value="{{ data.q }}">
+</form>
+{% endif %}
+
+<div class="app-list-area">
+    <div class="app-list-wrap">
+        <table class="app-list" id="contactsList" data-table-key="contacts" {% if can_delete %}data-select-bar="contactsSelection"{% endif %}>
             <thead>
                 <tr>
-                    <th>Nama</th>
-                    <th>Email</th>
-                    <th>Telepon</th>
-                    <th>Kota</th>
-                    <th>Kategori</th>
-                    <th></th>
+                    {% if can_delete %}
+                    <th class="app-list-check"><input type="checkbox" class="app-check" data-check-all aria-label="Pilih semua"></th>
+                    {% endif %}
+                    <th data-key="name" data-width="240">Nama</th>
+                    <th data-col="created" data-width="130" {% if 'created' in hidden_cols %}class="app-col-hidden"{% endif %}>Dibuat pada</th>
+                    <th data-col="company" data-width="180" {% if 'company' in hidden_cols %}class="app-col-hidden"{% endif %}>Perusahaan</th>
+                    <th data-col="email" data-width="220" {% if 'email' in hidden_cols %}class="app-col-hidden"{% endif %}>Email</th>
+                    <th data-col="phone" data-width="130" {% if 'phone' in hidden_cols %}class="app-col-hidden"{% endif %}>Telepon</th>
+                    <th data-col="category" data-width="110" {% if 'category' in hidden_cols %}class="app-col-hidden"{% endif %}>Kategori</th>
+                    <th data-col="address" data-width="240" {% if 'address' in hidden_cols %}class="app-col-hidden"{% endif %}>Alamat</th>
+                    <th data-col="city" data-width="130" {% if 'city' in hidden_cols %}class="app-col-hidden"{% endif %}>Kota</th>
+                    <th class="app-list-optional">
+                        <button type="button" class="app-col-toggle" data-dropdown="contactsColMenu" title="Pilih kolom" aria-haspopup="true" aria-expanded="false">
+                            {{ sliders("w-4 h-4") }}
+                        </button>
+                    </th>
                 </tr>
             </thead>
             <tbody>
                 {% for contact in data.contacts %}
-                {% set parts = contact.name.split() %}
-                {% set initial = (parts[0][:1] ~ (parts[1][:1] if parts|length > 1 else ''))|upper %}
-                {% set hues = ['navy', 'coral', 'mint', 'sky', 'lavender', 'sand'] %}
-                <tr>
+                <tr data-href="{{ url_for('contacts_blueprint.edit_contact', contact_id=contact.id) }}">
+                    {% if can_delete %}
+                    <td class="app-list-check"><input type="checkbox" class="app-check" name="ids" value="{{ contact.id }}" form="contactsBulkForm" aria-label="Pilih {{ contact.name }}"></td>
+                    {% endif %}
                     <td>
-                        <div class="who">
-                            <span class="who-mark who-{{ hues[contact.name|length % 6] }}">{{ initial }}</span>
-                            <span class="who-line">
-                                <span class="cell-strong">{{ contact.name }}</span>
-                                {% if contact.company_name %}
-                                <span class="who-sub">{{ contact.company_name }}</span>
-                                {% endif %}
-                            </span>
-                        </div>
+                        <a class="app-list-name" href="{{ url_for('contacts_blueprint.edit_contact', contact_id=contact.id) }}" title="{{ contact.name }}">
+                            <span class="app-avatar app-avatar-{{ contact.name|length % 6 }}">{{ contact.name[:1]|upper }}</span>
+                            <span class="app-list-name-text">{{ contact.name }}</span>
+                        </a>
                     </td>
-                    <td class="text-sm">{{ contact.email or "" }}</td>
-                    <td class="text-sm">{{ contact.phone or "" }}</td>
-                    <td class="text-sm">{{ contact.city or "" }}</td>
-                    <td class="mute">{{ category_label(contact.category) }}</td>
-                    <td>
-                        <div class="row-actions">
-                            <a class="btn-outline btn-sm" href="{{ url_for('contacts_blueprint.edit_contact', contact_id=contact.id) }}">Ubah</a>
-                            <form method="post" action="{{ url_for('contacts_blueprint.delete_contact', contact_id=contact.id) }}" onsubmit="return confirm('Hapus kontak ini?');">
-                                <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
-                                <button class="btn-outline btn-sm" type="submit">Hapus</button>
-                            </form>
-                        </div>
-                    </td>
+                    <td data-col="created" {% if 'created' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ (contact.rec_timestamp_str or "")[:16] }}</td>
+                    <td data-col="company" title="{{ contact.company_name or '' }}" {% if 'company' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ contact.company_name or "" }}</td>
+                    <td data-col="email" title="{{ contact.email or '' }}" {% if 'email' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ contact.email or "" }}</td>
+                    <td data-col="phone" {% if 'phone' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ contact.phone or "" }}</td>
+                    <td data-col="category" {% if 'category' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ category_label(contact.category) }}</td>
+                    <td data-col="address" title="{{ contact.address or '' }}" {% if 'address' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ contact.address or "" }}</td>
+                    <td data-col="city" title="{{ contact.city or '' }}" {% if 'city' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ contact.city or "" }}</td>
+                    <td></td>
                 </tr>
                 {% endfor %}
             </tbody>
-    </table>
-{% endif %}
+        </table>
+    </div>
+
+    <div class="app-dropdown app-col-menu" id="contactsColMenu" data-col-menu-for="contactsList">
+        {% for col in columns %}
+        <label class="app-dropdown-check">
+            <input type="checkbox" class="app-check" value="{{ col.key }}" {% if col.default %}checked{% endif %}>
+            <span>{{ col.label }}</span>
+        </label>
+        {% endfor %}
+        <hr class="launcher-menu-sep">
+        <button type="button" class="app-dropdown-action" data-col-reset>Reset lebar kolom</button>
+    </div>
 </div>
+
+{{ pager_bar(pager, "contacts_blueprint.index", data.page_args) }}
+{% endif %}
 {% endblock %}

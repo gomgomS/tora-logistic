@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_icons.html" import dashboard, search %}
+{#- ---------------------------------------------------------------------------
+ # Standalone app shell: app navbar + control panel + content.
+ # Blocks:
+ #   app_name        navbar title ("Kontak")
+ #   app_home        URL the app title links to
+ #   app_icon        icon macro output inside the colored app square
+ #   app_icon_class  color modifier for the app square (app-icon-contacts, ...)
+ #   app_menu        navbar menu sections (<a class="app-nav-link">)
+ #   app_control     control panel row (buttons, search, pager)
+ #   app_content     page body
+ #   app_scripts     page scripts
+ # --------------------------------------------------------------------------- -#}
+
+{% block shell %}
+<div class="app-shell {% block app_shell_class %}{% endblock %}">
+
+    <!-- ——— App navbar ——— -->
+    <nav class="app-nav">
+        <a class="app-nav-apps" href="{{ url_for('auth_blueprint.dashboard') }}" title="Semua aplikasi" aria-label="Semua aplikasi">
+            {{ dashboard("w-[18px] h-[18px]") }}
+        </a>
+        <a class="app-nav-brand" href="{% block app_home %}{{ url_for('auth_blueprint.dashboard') }}{% endblock %}">
+            <span class="app-nav-brand-icon {% block app_icon_class %}{% endblock %}">{% block app_icon %}{% endblock %}</span>
+            <span>{% block app_name %}{% endblock %}</span>
+        </a>
+        <div class="app-nav-sections">
+            {% block app_menu %}{% endblock %}
+        </div>
+        <div class="app-nav-right">
+            <a class="app-nav-icon" href="{{ url_for('tracking_blueprint.track_page') }}" title="Lacak kiriman" aria-label="Lacak kiriman">
+                {{ search("w-[18px] h-[18px]") }}
+            </a>
+            {% include "_user_menu.html" %}
+        </div>
+    </nav>
+
+    {% block app_control %}{% endblock %}
+
+    <main class="app-content">
+        {% if data.form_error %}
+        <div class="alert-error app-alert">{{ data.form_error }}</div>
+        {% endif %}
+        {% if data.form_success %}
+        <div class="alert-success app-alert">{{ data.form_success }}</div>
+        {% endif %}
+
+        {% block app_content %}{% endblock %}
+    </main>
+</div>
+
+{% include "_ai_chat.html" %}
+<script src="{{ url_for('static', filename='v2/app-list.js') }}"></script>
+<script src="{{ url_for('static', filename='v2/record-log.js') }}"></script>
+{% block app_scripts %}{% endblock %}
+{% endblock %}

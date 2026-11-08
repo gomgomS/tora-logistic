@@ -1,0 +1,82 @@
+{# ---------------------------------------------------------------------------
+ # Server-side pagination controls. Every link is a plain GET to the backend,
+ # which returns only the requested page (see slapz102_stdlib/paginate.py).
+ #
+ # Usage:  {% from "_pagination.html" import pager_compact, pager_bar %}
+ #         {{ pager_compact(data.pager, "contacts_blueprint.index", data.page_args) }}
+ #         {{ pager_bar(data.pager, "contacts_blueprint.index", data.page_args) }}
+ #
+ #   pager      dict from paginate.build()
+ #   endpoint   url_for endpoint of the list page
+ #   args       current filters to keep on every link ({"q": ..., ...})
+ # --------------------------------------------------------------------------- #}
+{% from "_icons.html" import chevron_left, chevron_right %}
+
+{%- macro page_url(pager, endpoint, args, page, per_page=None) -%}
+{%- set qs = {} -%}
+{%- for key, value in args.items() if value -%}{%- set _ = qs.update({key: value}) -%}{%- endfor -%}
+{%- set size = per_page if per_page != None else pager.per_page -%}
+{%- if size != pager.default_per_page -%}{%- set _ = qs.update({"per_page": size}) -%}{%- endif -%}
+{%- if page > 1 -%}{%- set _ = qs.update({"page": page}) -%}{%- endif -%}
+{{- url_for(endpoint, **qs) -}}
+{%- endmacro -%}
+
+{% macro pager_compact(pager, endpoint, args) %}
+<div class="app-pager">
+    <span class="app-pager-value"><strong>{{ pager.start }}-{{ pager.end }}</strong> / {{ pager.total }}</span>
+    <div class="app-pager-buttons">
+        {% if pager.has_prev %}
+        <a href="{{ page_url(pager, endpoint, args, pager.page - 1) }}" title="Sebelumnya" aria-label="Halaman sebelumnya">{{ chevron_left("w-4 h-4") }}</a>
+        {% else %}
+        <span class="app-pager-disabled" aria-hidden="true">{{ chevron_left("w-4 h-4") }}</span>
+        {% endif %}
+        {% if pager.has_next %}
+        <a href="{{ page_url(pager, endpoint, args, pager.page + 1) }}" title="Berikutnya" aria-label="Halaman berikutnya">{{ chevron_right("w-4 h-4") }}</a>
+        {% else %}
+        <span class="app-pager-disabled" aria-hidden="true">{{ chevron_right("w-4 h-4") }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro pager_bar(pager, endpoint, args) %}
+<nav class="app-pagebar" aria-label="Halaman">
+    <form class="app-pagebar-size" method="get" action="{{ url_for(endpoint) }}">
+        {% for key, value in args.items() if value %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+        <label for="pagebarSize">Baris per halaman</label>
+        <select id="pagebarSize" name="per_page" onchange="this.form.submit()">
+            {% for size in pager.page_sizes %}
+            <option value="{{ size }}" {% if size == pager.per_page %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <span class="app-pagebar-range">{{ pager.start }}-{{ pager.end }} dari {{ pager.total }}</span>
+
+    {% if pager.pages > 1 %}
+    <div class="app-pagebar-pages">
+        {% if pager.has_prev %}
+        <a class="app-pagebar-btn" href="{{ page_url(pager, endpoint, args, pager.page - 1) }}" aria-label="Halaman sebelumnya">{{ chevron_left("w-4 h-4") }}</a>
+        {% else %}
+        <span class="app-pagebar-btn app-pagebar-off" aria-hidden="true">{{ chevron_left("w-4 h-4") }}</span>
+        {% endif %}
+        {% for number in pager.window %}
+            {% if number == None %}
+            <span class="app-pagebar-gap">…</span>
+            {% elif number == pager.page %}
+            <span class="app-pagebar-btn app-pagebar-current" aria-current="page">{{ number }}</span>
+            {% else %}
+            <a class="app-pagebar-btn" href="{{ page_url(pager, endpoint, args, number) }}">{{ number }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if pager.has_next %}
+        <a class="app-pagebar-btn" href="{{ page_url(pager, endpoint, args, pager.page + 1) }}" aria-label="Halaman berikutnya">{{ chevron_right("w-4 h-4") }}</a>
+        {% else %}
+        <span class="app-pagebar-btn app-pagebar-off" aria-hidden="true">{{ chevron_right("w-4 h-4") }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</nav>
+{% endmacro %}

@@ -16,6 +16,7 @@ from view.contacts import view_contacts
 # /contacts            master list
 # /contacts/new        new-contact page
 # /contacts/create     form POST (order entry may send "next")
+# /contacts/bulk-delete  soft delete of the rows selected in the list view
 # /api/contacts        autocomplete JSON and quick create
 # ---------------------------------------------------------------------------
 
@@ -65,6 +66,16 @@ def update_contact(contact_id):
 def delete_contact(contact_id):
     try:
         return view_contacts.html_delete(contact_id)
+    except Exception as e:
+        print(traceback.format_exc())
+        return "Terjadi kesalahan", 500
+    # end try
+# end def
+
+@contacts_blueprint.route("/contacts/bulk-delete", methods=["POST"])
+def bulk_delete():
+    try:
+        return view_contacts.html_bulk_delete()
     except Exception as e:
         print(traceback.format_exc())
         return "Terjadi kesalahan", 500

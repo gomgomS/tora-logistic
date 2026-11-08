@@ -1,0 +1,74 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import search %}
+{% block title %}Dasbor Akuntansi — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+<div class="app-cp">
+    <div class="app-cp-left">
+        <span class="acc-cp-title">Dasbor Akuntansi</span>
+    </div>
+    <div class="app-cp-right">
+        <div class="app-search acc-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            <input class="app-search-input" type="search" placeholder="Cari jurnal ..." aria-label="Cari jurnal" data-journal-search>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+<div class="acc-page">
+    <div class="acc-kanban">
+        {% for j in data.journals %}
+        <article class="acc-card" data-journal-card>
+            <header class="acc-card-head">
+                <div>
+                    <h2 class="acc-card-title"><a href="{{ url_for('accounting_blueprint.page', slug=j.links[0][1]) }}">{{ j.name }}</a></h2>
+                    <div class="acc-card-code">{{ j.code }}</div>
+                </div>
+            </header>
+            <div class="acc-card-body">
+                <div class="acc-card-actions">
+                    {%- set target = j.primary[1] -%}
+                    <a class="app-btn-primary" href="{{ url_for(target) if '.' in target else url_for('accounting_blueprint.page', slug=target) }}">{{ j.primary[0] }}</a>
+                </div>
+                <div class="acc-card-metric">
+                    <div class="acc-card-metric-label">{{ j.metric }}{% if j.count %} ({{ j.count }}){% endif %}</div>
+                    <div class="acc-card-amount">{{ j.amount }}</div>
+                </div>
+            </div>
+            <footer class="acc-card-foot">
+                {% for label, slug in j.links %}
+                <a href="{{ url_for('accounting_blueprint.page', slug=slug) }}">{{ label }}</a>
+                {% endfor %}
+            </footer>
+        </article>
+        {% endfor %}
+    </div>
+    <p class="set-empty" data-journal-empty hidden>Tidak ada jurnal yang cocok.</p>
+</div>
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var input = document.querySelector("[data-journal-search]");
+    var empty = document.querySelector("[data-journal-empty]");
+    if (!input) {
+        return;
+    }
+    input.addEventListener("input", function () {
+        var q = input.value.trim().toLowerCase();
+        var shown = 0;
+        document.querySelectorAll("[data-journal-card]").forEach(function (card) {
+            var match = q === "" || card.textContent.toLowerCase().indexOf(q) !== -1;
+            card.hidden = !match;
+            if (match) {
+                shown = shown + 1;
+            }
+        });
+        empty.hidden = shown !== 0;
+    });
+});
+</script>
+{% endblock %}

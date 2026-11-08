@@ -37,6 +37,18 @@
 
 {% macro chevron_down(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="m6 9 6 6 6-6"/></svg>{% endmacro %}
 
+{% macro chevron_left(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="m15 6-6 6 6 6"/></svg>{% endmacro %}
+
+{% macro chevron_right(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="m9 6 6 6-6 6"/></svg>{% endmacro %}
+
+{% macro sliders(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h4"/><path d="M12 12h8"/><circle cx="10" cy="12" r="2"/><path d="M4 18h12"/><path d="M20 18h0"/><circle cx="18" cy="18" r="2"/></svg>{% endmacro %}
+
+{% macro building(cls="w-5 h-5") %}{{ _svg(cls) }}<rect x="4" y="3" width="11" height="18" rx="1"/><path d="M15 9h4a1 1 0 0 1 1 1v11h-5"/><path d="M8 7h3"/><path d="M8 11h3"/><path d="M8 15h3"/><path d="M9 21v-3h1v3"/></svg>{% endmacro %}
+
+{% macro cloud_upload(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="M7 18a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.6 1.5A3.8 3.8 0 0 1 17.5 18"/><path d="M12 12v8"/><path d="m9 15 3-3 3 3"/></svg>{% endmacro %}
+
+{% macro funnel(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="M4 5h16l-6.2 7.4V19l-3.6 1.6v-8.2L4 5Z"/></svg>{% endmacro %}
+
 {% macro check(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="m5 13 4 4L19 7"/></svg>{% endmacro %}
 
 {% macro check_circle(cls="w-5 h-5") %}{{ _svg(cls) }}<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5 5.5-6"/></svg>{% endmacro %}
@@ -56,5 +68,9 @@
 {% macro route(cls="w-5 h-5") %}{{ _svg(cls) }}<circle cx="5.5" cy="6.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M5.5 9v2.5a3.5 3.5 0 0 0 3.5 3.5h7"/></svg>{% endmacro %}
 
 {% macro warehouse(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="M4 10v10h5v-6h6v6h5V10"/><path d="M2.5 10.5 12 4l9.5 6.5"/></svg>{% endmacro %}
+
+{% macro cog(cls="w-5 h-5") %}{{ _svg(cls) }}<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>{% endmacro %}
+
+{% macro chart_line(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/><path d="M16 7h4v4"/></svg>{% endmacro %}
 
 {% macro inbox(cls="w-5 h-5") %}{{ _svg(cls) }}<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.4 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.8 1.1Z"/></svg>{% endmacro %}

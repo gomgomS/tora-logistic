@@ -1,0 +1,112 @@
+{% extends "app_base.html" %}
+{% from "_icons.html" import cog, search, arrow_right %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{% block title %}Pengaturan — {{ data.site_name }}{% endblock %}
+{% block app_name %}Pengaturan{% endblock %}
+{% block app_home %}{{ url_for('settings_blueprint.index') }}{% endblock %}
+{% block app_icon_class %}app-icon-settings{% endblock %}
+{% block app_icon %}{{ cog("w-4 h-4") }}{% endblock %}
+
+{% block app_menu %}
+<a class="app-nav-link app-nav-link-active" href="{{ url_for('settings_blueprint.index') }}">Pengaturan Umum</a>
+<a class="app-nav-link" href="{{ url_for('auth_blueprint.users') }}">Pengguna</a>
+{% endblock %}
+
+{% block app_control %}
+<div class="app-cp">
+    <div class="app-cp-left">
+        <span class="app-cp-title">Pengaturan</span>
+    </div>
+    <div class="app-cp-middle">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            <input class="app-search-input" type="search" placeholder="Cari pengaturan ..." aria-label="Cari pengaturan" data-settings-search>
+        </div>
+    </div>
+    <div class="app-cp-right"></div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+<div class="set-layout">
+    <nav class="set-sidebar" aria-label="Kelompok pengaturan">
+        <a class="set-menu-item set-menu-item-active" href="{{ url_for('settings_blueprint.index') }}">
+            {{ cog("w-[18px] h-[18px]") }} <span>Pengaturan Umum</span>
+        </a>
+    </nav>
+
+    <div class="set-main">
+        <section class="set-section" data-settings-section>
+            <h2 class="set-section-head">Pengguna</h2>
+            <div class="set-grid">
+                <div class="set-box" data-settings-box>
+                    <div class="set-title">Tambah Pengguna Baru</div>
+                    <p class="set-muted">Buat akun untuk staf, lalu atur peran dan hak aksesnya.</p>
+                    {% if data.current_user.can('users', 'create') %}
+                    <a class="set-link" href="{{ url_for('auth_blueprint.users_new') }}">{{ arrow_right("w-3 h-3") }} Tambah Pengguna</a>
+                    {% endif %}
+                </div>
+                <div class="set-box" data-settings-box>
+                    <div class="set-title">
+                        {{ data.active_users }} Pengguna Aktif
+                        <span class="app-help" title="Pengguna dengan status Aktif yang bisa masuk ke portal">?</span>
+                    </div>
+                    <a class="set-link" href="{{ url_for('auth_blueprint.users') }}">{{ arrow_right("w-3 h-3") }} Kelola Pengguna</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="set-section" data-settings-section>
+            <h2 class="set-section-head">Hak Akses</h2>
+            <div class="set-grid">
+                <div class="set-box" data-settings-box>
+                    <div class="set-title">{{ data.access_area_count }} Area Hak Akses</div>
+                    <p class="set-muted">Atur siapa yang boleh melihat, menambah, mengubah, dan menghapus data Pengaturan, Kontak, dan Akuntansi. Hak akses Operasional menyusul.</p>
+                    <a class="set-link" href="{{ url_for('auth_blueprint.users') }}">{{ arrow_right("w-3 h-3") }} Atur per Pengguna</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="set-section" data-settings-section>
+            <h2 class="set-section-head">Perusahaan</h2>
+            <div class="set-grid">
+                <div class="set-box" data-settings-box>
+                    <div class="set-title">{{ data.site_name }}</div>
+                    <div class="set-muted">Indonesia</div>
+                </div>
+            </div>
+        </section>
+
+        <p class="set-empty" data-settings-empty hidden>Tidak ada pengaturan yang cocok.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var input = document.querySelector("[data-settings-search]");
+    var empty = document.querySelector("[data-settings-empty]");
+    if (!input) {
+        return;
+    }
+    input.addEventListener("input", function () {
+        var q = input.value.trim().toLowerCase();
+        var shown = 0;
+        document.querySelectorAll("[data-settings-section]").forEach(function (section) {
+            var visible = 0;
+            section.querySelectorAll("[data-settings-box]").forEach(function (box) {
+                var match = q === "" || box.textContent.toLowerCase().indexOf(q) !== -1 || section.querySelector(".set-section-head").textContent.toLowerCase().indexOf(q) !== -1;
+                box.hidden = !match;
+                if (match) {
+                    visible = visible + 1;
+                }
+            });
+            section.hidden = visible === 0;
+            shown = shown + visible;
+        });
+        empty.hidden = shown !== 0;
+    });
+});
+</script>
+{% endblock %}

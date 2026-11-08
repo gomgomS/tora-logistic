@@ -1,0 +1,615 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import close, cloud_upload, plus %}
+{% from "_record_log.html" import record_log %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{% block title %}{% if data.invoice %}{{ data.invoice.number }}{% else %}Faktur Baru{% endif %} — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set inv = data.invoice or {} -%}
+{%- set is_edit = data.invoice != None -%}
+{%- set editable = data.current_user.can('accounting', 'create') and (not is_edit or inv.state == 'DRAFT') -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.invoice_new') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb">
+            <a class="app-crumb-link" href="{{ url_for('accounting_blueprint.invoices') }}">Faktur</a>
+            <span class="app-crumb-sep">/</span>
+            <span class="app-crumb-current">
+                {% if is_edit %}{{ inv.number }}{% else %}Baru{% endif %}{% if inv.customer_ref %} ({{ inv.customer_ref }}){% endif %}
+            </span>
+            <span class="app-crumb-actions">
+                {% if editable %}
+                <button type="submit" form="invoiceForm" class="app-icon-action app-icon-action-save" title="Simpan" aria-label="Simpan">
+                    {{ cloud_upload("w-4 h-4") }}
+                </button>
+                {% endif %}
+                <a class="app-icon-action" href="{{ url_for('accounting_blueprint.invoices') }}" title="Buang perubahan" aria-label="Buang perubahan">
+                    {{ close("w-4 h-4") }}
+                </a>
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set inv = data.invoice or {} -%}
+{%- set is_edit = data.invoice != None -%}
+{%- set state = inv.state or 'DRAFT' -%}
+{%- set can_update = data.current_user.can('accounting', 'update') -%}
+{#- A Draft is editable by anyone who may create invoices; confirming and
+    later actions need "ubah". -#}
+{%- set editable = data.current_user.can('accounting', 'create') and (not is_edit or state == 'DRAFT') -%}
+{%- set lines = inv.lines or [] -%}
+{%- set has_payments = (inv.payments or [])|length > 0 -%}
+
+{% if is_edit %}
+<form id="invResetForm" method="post" action="{{ url_for('accounting_blueprint.invoice_state', seq=inv.seq) }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="action" value="reset">
+</form>
+<form id="invCancelForm" method="post" action="{{ url_for('accounting_blueprint.invoice_state', seq=inv.seq) }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="action" value="cancel">
+</form>
+{% endif %}
+
+<div class="app-split">
+<div class="app-form-pane">
+
+    <!-- ——— Status bar ——— -->
+    <div class="inv-statusbar">
+        <div class="inv-statusbar-buttons">
+            {% if state == 'DRAFT' %}
+                {% if editable and can_update %}
+                <button type="submit" form="invoiceForm" name="action" value="confirm" class="app-btn-primary">Konfirmasi</button>
+                {% endif %}
+                {% if editable %}
+                <button type="submit" form="invoiceForm" class="app-btn-secondary">Simpan</button>
+                {% endif %}
+                {% if is_edit and can_update %}
+                <button type="submit" form="invCancelForm" class="app-btn-secondary" onclick="return confirm('Batalkan faktur ini?');">Batal</button>
+                {% endif %}
+                <span class="inv-dirty" data-dirty-flag hidden>● Perubahan belum disimpan</span>
+            {% elif state == 'POSTED' %}
+                {%- set mail_subject = "Faktur " ~ inv.number ~ " — " ~ data.site_name -%}
+                {%- set mail_body = "Yth. " ~ inv.partner_name ~ ",\n\nBerikut kami sampaikan faktur " ~ inv.number ~ " sebesar " ~ inv.total_fmt ~ " dengan jatuh tempo " ~ inv.due_date ~ ".\n\nLihat / unduh faktur: " ~ data.invoice_link ~ "\n\nTerima kasih,\n" ~ data.site_name -%}
+                <a class="app-btn-primary" href="mailto:{{ data.partner_email }}?subject={{ mail_subject|urlencode }}&body={{ mail_body|urlencode }}" title="{% if data.partner_email %}Kirim ke {{ data.partner_email }}{% else %}Email pelanggan belum diisi di Kontak{% endif %}">Kirim</a>
+                <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.invoice_print', seq=inv.seq, print=1) }}" target="_blank" rel="noopener">Cetak</a>
+                {% if can_update and inv.residual > 0 %}
+                <button type="button" class="app-btn-primary" data-pay-open>Bayar</button>
+                {% endif %}
+                <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.invoice_print', seq=inv.seq) }}" target="_blank" rel="noopener">Pratinjau</a>
+                <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.page', slug='credit-notes') }}">Nota Kredit</a>
+                {% if can_update and not has_payments %}
+                <button type="submit" form="invResetForm" class="app-btn-secondary">Reset ke Draft</button>
+                {% endif %}
+            {% elif state == 'CANCEL' and can_update %}
+                <button type="submit" form="invResetForm" class="app-btn-secondary">Reset ke Draft</button>
+            {% endif %}
+        </div>
+        <div class="inv-pills" aria-label="Status faktur">
+            <span class="inv-pill {% if state == 'DRAFT' %}inv-pill-active{% endif %}">Draft</span>
+            {% if state == 'CANCEL' %}
+            <span class="inv-pill inv-pill-active inv-pill-cancel">Batal</span>
+            {% else %}
+            <span class="inv-pill {% if state == 'POSTED' %}inv-pill-active{% endif %}">Terekam</span>
+            {% endif %}
+        </div>
+    </div>
+
+<form id="invoiceForm" class="app-form-sheet {% if editable %}inv-editable{% endif %}" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.invoice_update', seq=inv.seq) }}{% else %}{{ url_for('accounting_blueprint.invoice_create') }}{% endif %}" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <fieldset class="app-fieldset" {% if not editable %}disabled{% endif %}>
+
+    {% if state == 'POSTED' and inv.payment_state in ['paid', 'partial'] %}
+    <div class="inv-ribbon inv-ribbon-{{ inv.payment_state }}">{% if inv.payment_state == 'paid' %}LUNAS{% else %}DIBAYAR SEBAGIAN{% endif %}</div>
+    {% endif %}
+    <div class="inv-title">
+        <span class="inv-title-label">Faktur Pelanggan</span>
+        {% if is_edit and editable %}
+        {#- Draft: only the trailing sequence (00004) can change; the prefix stays. -#}
+        <h1 class="inv-number-edit">
+            <span class="inv-number-prefix">{{ inv.number_prefix }}</span><input class="inv-number-input" type="text" name="number_seq" value="{{ inv.number_digits }}" inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" size="{{ (inv.number_digits|length) + 1 }}" required aria-label="Nomor urut faktur" title="Hanya nomor urut yang bisa diubah" data-number-input data-original="{{ inv.number_digits }}" data-check-url="{{ url_for('accounting_blueprint.invoice_check_number', seq=inv.seq) }}">
+        </h1>
+        <div class="inv-number-warn" data-number-warn hidden></div>
+        {% elif is_edit %}
+        <h1>{{ inv.number }}</h1>
+        {% else %}
+        <h1>{{ data.next_number }} <span class="inv-title-hint" title="Nomor final diberikan saat disimpan">nomor berikutnya</span></h1>
+        {% endif %}
+    </div>
+
+    <div class="app-sheet-grid">
+        <div class="app-group">
+            <label class="app-label" for="partnerSearch">Pelanggan <span class="app-req">*</span></label>
+            <div class="inv-ac" data-partner-picker>
+                <input class="app-input" type="text" id="partnerSearch" value="{{ inv.partner_name or '' }}" placeholder="Cari klien ..." aria-autocomplete="list" aria-controls="partnerMenu" data-partner-input>
+                <input type="hidden" name="partner_id" value="{{ inv.partner_id or '' }}" data-partner-id>
+                <div class="app-dropdown inv-ac-menu" id="partnerMenu" role="listbox" data-partner-menu></div>
+            </div>
+        </div>
+        <div class="app-group">
+            <label class="app-label" for="invoiceDate">Tanggal Faktur</label>
+            <input class="app-input" type="date" id="invoiceDate" name="invoice_date" value="{{ inv.invoice_date or data.today }}" data-invoice-date>
+
+            <label class="app-label" for="paymentTerm">Termin pembayaran</label>
+            <select class="app-input app-select" id="paymentTerm" name="payment_term" data-payment-term>
+                <option value="">— atur batas waktu manual —</option>
+                {% for term in data.payment_terms %}
+                <option value="{{ term }}" {% if inv.payment_term == term %}selected{% endif %}>{{ term }}</option>
+                {% endfor %}
+            </select>
+
+            <label class="app-label" for="dueDate">Batas Waktu</label>
+            <input class="app-input" type="date" id="dueDate" name="due_date" value="{{ inv.due_date or data.today }}" data-due-date>
+        </div>
+    </div>
+    </fieldset>
+
+    <!-- ——— Tabs ——— -->
+    <div class="app-tabs" role="tablist">
+        <button type="button" class="app-tab app-tab-active" role="tab" aria-selected="true" data-tab="lines">Baris Faktur</button>
+        <button type="button" class="app-tab" role="tab" aria-selected="false" data-tab="journal">Item Jurnal</button>
+        <button type="button" class="app-tab" role="tab" aria-selected="false" data-tab="info">Info Lainnya</button>
+    </div>
+
+    <!-- Baris Faktur -->
+    <div class="app-tab-panel" role="tabpanel" data-panel="lines">
+        <fieldset class="app-fieldset" {% if not editable %}disabled{% endif %}>
+        <div class="inv-lines-wrap">
+        <table class="inv-lines" data-lines>
+            <thead>
+                <tr>
+                    <th class="inv-col-product">Produk</th>
+                    <th class="inv-col-account">Akun</th>
+                    <th class="inv-col-num">Kuantitas</th>
+                    <th class="inv-col-num">Harga</th>
+                    <th class="inv-col-tax">Pajak</th>
+                    <th class="inv-col-num">Jumlah</th>
+                    <th class="inv-col-del"></th>
+                </tr>
+            </thead>
+            <tbody data-lines-body>
+                {% for line in lines %}
+                <tr data-line>
+                    <td><input class="app-input" type="text" name="line_product" value="{{ line.product }}" placeholder="Produk / layanan" aria-label="Produk"></td>
+                    <td>
+                        <select class="app-input app-select" name="line_account" aria-label="Akun">
+                            {% for acc in data.accounts %}
+                            <option value="{{ acc.key }}" {% if line.account == acc.key %}selected{% endif %}>{{ acc.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td><input class="app-input app-num" type="number" name="line_quantity" value="{{ '%g'|format(line.quantity) }}" min="0" step="any" aria-label="Kuantitas" data-qty></td>
+                    <td><input class="app-input app-num" type="number" name="line_price" value="{{ '%.2f'|format(line.price_unit) }}" min="0" step="0.01" aria-label="Harga" data-price></td>
+                    <td>
+                        <select class="app-input app-select" name="line_tax" aria-label="Pajak" data-tax>
+                            <option value="" data-rate="0" {% if not line.tax %}selected{% endif %}>Tanpa pajak</option>
+                            {% for tax in data.taxes %}
+                            <option value="{{ tax.code }}" data-rate="{{ tax.rate }}" title="{{ tax.description }}" {% if line.tax == tax.code %}selected{% endif %}>{{ tax.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="app-num" data-subtotal>{{ line.subtotal_fmt }}</td>
+                    <td class="inv-col-del"><button type="button" class="app-icon-action" title="Hapus baris" aria-label="Hapus baris" data-line-remove>{{ close("w-3.5 h-3.5") }}</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% if editable %}
+        <button type="button" class="inv-add-line" data-line-add>{{ plus("w-3.5 h-3.5") }} Tambahkan baris</button>
+        {% endif %}
+
+        <div class="inv-bottom">
+            <div class="inv-terms">
+                <label class="app-label" for="invNotes">Syarat dan Ketentuan</label>
+                <textarea class="app-notes" id="invNotes" name="notes" rows="4" maxlength="5000" placeholder="Contoh: pembayaran ke rekening BCA 123-456-789 a.n. PT Tora Expedition">{{ inv.notes or '' }}</textarea>
+            </div>
+            <div class="inv-totals">
+                <div class="inv-totals-row"><span>Jumlah Sebelum Pajak:</span><strong data-total-untaxed>{{ inv.untaxed_fmt or 'Rp 0,00' }}</strong></div>
+                <div class="inv-totals-row"><span>Pajak:</span><span data-total-tax>{{ inv.tax_fmt or 'Rp 0,00' }}</span></div>
+                <div class="inv-totals-row inv-totals-grand"><span>Total:</span><span data-total-grand>{{ inv.total_fmt or 'Rp 0,00' }}</span></div>
+                {% for pay in inv.payments or [] %}
+                <div class="inv-totals-row inv-totals-paid" title="{{ pay.memo }}">
+                    <span>Dibayar {{ pay.date_short }} ({{ pay.method }})</span><span>− {{ pay.amount_fmt }}</span>
+                </div>
+                {% endfor %}
+                <div class="inv-totals-row inv-totals-due"><span>Jumlah Belum Dibayar:</span><strong>{{ inv.residual_fmt or 'Rp 0,00' }}</strong></div>
+            </div>
+        </div>
+        </fieldset>
+    </div>
+
+    <!-- Item Jurnal -->
+    <div class="app-tab-panel" role="tabpanel" data-panel="journal" hidden>
+        {% if data.journal and data.journal.rows %}
+        <table class="inv-lines inv-journal">
+            <thead>
+                <tr><th>Akun</th><th>Deskripsi</th><th class="inv-col-num">Debit</th><th class="inv-col-num">Kredit</th></tr>
+            </thead>
+            <tbody>
+                {% for row in data.journal.rows %}
+                <tr>
+                    <td>{{ row.account }}</td>
+                    <td>{{ row.label }}</td>
+                    <td class="app-num">{{ row.debit_fmt }}</td>
+                    <td class="app-num">{{ row.credit_fmt }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="app-list-foot"><td></td><td></td><td class="app-num">{{ data.journal.debit_fmt }}</td><td class="app-num">{{ data.journal.credit_fmt }}</td></tr>
+            </tfoot>
+        </table>
+        <p class="app-tab-hint">Item jurnal dihitung dari baris faktur yang sudah disimpan.</p>
+        {% else %}
+        <p class="app-tab-hint">Simpan faktur dengan minimal satu baris untuk melihat item jurnalnya.</p>
+        {% endif %}
+    </div>
+
+    <!-- Info Lainnya -->
+    <div class="app-tab-panel" role="tabpanel" data-panel="info" hidden>
+        <fieldset class="app-fieldset" {% if not editable %}disabled{% endif %}>
+        <div class="app-sheet-grid">
+            <section>
+                <h3 class="app-section-title">Faktur</h3>
+                <div class="app-group">
+                    <label class="app-label" for="customerRef">Referensi Pelanggan</label>
+                    <input class="app-input" type="text" id="customerRef" name="customer_ref" value="{{ inv.customer_ref or '' }}" placeholder="No. PO / DO pelanggan">
+
+                    <label class="app-label" for="salesperson">Penjual</label>
+                    <select class="app-input app-select" id="salesperson" name="salesperson_id">
+                        <option value=""></option>
+                        {% for u in data.salespeople %}
+                        <option value="{{ u.id }}" {% if (inv.salesperson_id if is_edit else data.current_user.id) == u.id %}selected{% endif %}>{{ u.label }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="app-label" for="paymentRef">Referensi Pembayaran</label>
+                    <input class="app-input" type="text" id="paymentRef" name="payment_ref" value="{{ inv.payment_ref or '' }}" placeholder="Berita transfer yang diharapkan">
+
+                    <label class="app-label" for="deliveryDate">Tanggal Pengiriman</label>
+                    <input class="app-input" type="date" id="deliveryDate" name="delivery_date" value="{{ inv.delivery_date or '' }}">
+                </div>
+
+                <h3 class="app-section-title inv-section-gap">Pajak Elektronik</h3>
+                <div class="app-group">
+                    <label class="app-label" for="efaktur">Kode Transaksi</label>
+                    <select class="app-input app-select" id="efaktur" name="efaktur_code">
+                        <option value=""></option>
+                        {% for code in data.efaktur_codes %}
+                        <option value="{{ code.key }}" {% if inv.efaktur_code == code.key %}selected{% endif %}>{{ code.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="app-section-title">Akuntansi</h3>
+                <div class="app-group">
+                    <label class="app-label" for="fiscal">Posisi Fiskal</label>
+                    <select class="app-input app-select" id="fiscal" name="fiscal_position">
+                        <option value=""></option>
+                        {% for opt in data.fiscal_positions %}
+                        <option value="{{ opt }}" {% if inv.fiscal_position == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <span class="app-label">Akun Piutang</span>
+                    <span class="inv-static">11210010 Piutang Dagang</span>
+                </div>
+            </section>
+        </div>
+        </fieldset>
+    </div>
+</form>
+</div>
+
+{{ record_log("invoice", inv.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
+</div>
+
+{% if is_edit and state == 'POSTED' and can_update and inv.residual > 0 %}
+<dialog class="inv-dialog" data-pay-dialog aria-labelledby="payTitle">
+    <form method="post" action="{{ url_for('accounting_blueprint.invoice_pay', seq=inv.seq) }}" class="inv-dialog-body">
+        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+        <h2 id="payTitle" class="inv-dialog-title">Catat Pembayaran</h2>
+        <p class="inv-dialog-sub">{{ inv.number }} — {{ inv.partner_name }} · Sisa {{ inv.residual_fmt }}</p>
+        <div class="app-group">
+            <label class="app-label" for="payAmount">Jumlah</label>
+            <input class="app-input app-input-boxed app-num" type="number" id="payAmount" name="amount" value="{{ '%.2f'|format(inv.residual) }}" min="0.01" max="{{ '%.2f'|format(inv.residual) }}" step="0.01" required>
+
+            <label class="app-label" for="payDate">Tanggal</label>
+            <input class="app-input app-input-boxed" type="date" id="payDate" name="date" value="{{ data.today }}" required>
+
+            <label class="app-label" for="payMethod">Metode</label>
+            <select class="app-input app-input-boxed app-select" id="payMethod" name="method" required>
+                {% for m in data.payment_methods %}
+                <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+            </select>
+
+            <label class="app-label" for="payMemo">Memo</label>
+            <input class="app-input app-input-boxed" type="text" id="payMemo" name="memo" value="{{ inv.number }}" maxlength="200">
+        </div>
+        <div class="inv-dialog-actions">
+            <button type="submit" class="app-btn-primary">Buat Pembayaran</button>
+            <button type="button" class="app-btn-secondary" data-pay-close>Batal</button>
+        </div>
+    </form>
+</dialog>
+{% endif %}
+
+<template id="invLineTemplate">
+    <tr data-line>
+        <td><input class="app-input" type="text" name="line_product" placeholder="Produk / layanan" aria-label="Produk"></td>
+        <td>
+            <select class="app-input app-select" name="line_account" aria-label="Akun">
+                {% for acc in data.accounts %}
+                <option value="{{ acc.key }}">{{ acc.label }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td><input class="app-input app-num" type="number" name="line_quantity" value="1" min="0" step="any" aria-label="Kuantitas" data-qty></td>
+        <td><input class="app-input app-num" type="number" name="line_price" value="0.00" min="0" step="0.01" aria-label="Harga" data-price></td>
+        <td>
+            <select class="app-input app-select" name="line_tax" aria-label="Pajak" data-tax>
+                <option value="" data-rate="0">Tanpa pajak</option>
+                {% for tax in data.taxes %}
+                {% if tax.active %}
+                <option value="{{ tax.code }}" data-rate="{{ tax.rate }}" title="{{ tax.description }}" {% if tax.code == data.default_tax %}selected{% endif %}>{{ tax.name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </td>
+        <td class="app-num" data-subtotal>Rp 0,00</td>
+        <td class="inv-col-del"><button type="button" class="app-icon-action" title="Hapus baris" aria-label="Hapus baris" data-line-remove>{{ close("w-3.5 h-3.5") }}</button></td>
+    </tr>
+</template>
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function rupiah(value) {
+        return "Rp " + value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function num(input) {
+        var v = parseFloat(input.value);
+        return isNaN(v) ? 0 : v;
+    }
+
+    // ——— Lines: add / remove / live totals (the server recalculates on save) ———
+    var body = document.querySelector("[data-lines-body]");
+    var template = document.getElementById("invLineTemplate");
+    function recalc() {
+        var untaxed = 0;
+        var tax = 0;
+        body.querySelectorAll("[data-line]").forEach(function (row) {
+            var sub = Math.round(num(row.querySelector("[data-qty]")) * num(row.querySelector("[data-price]")) * 100) / 100;
+            var opt = row.querySelector("[data-tax]").selectedOptions[0];
+            var rate = opt ? parseFloat(opt.getAttribute("data-rate")) || 0 : 0;
+            untaxed = untaxed + sub;
+            tax = tax + Math.round(sub * rate * 100) / 100;
+            row.querySelector("[data-subtotal]").textContent = rupiah(sub);
+        });
+        document.querySelector("[data-total-untaxed]").textContent = rupiah(untaxed);
+        document.querySelector("[data-total-tax]").textContent = rupiah(tax);
+        document.querySelector("[data-total-grand]").textContent = rupiah(untaxed + tax);
+    }
+    if (body) {
+        body.addEventListener("input", recalc);
+        body.addEventListener("change", recalc);
+        body.addEventListener("click", function (e) {
+            var btn = e.target.closest("[data-line-remove]");
+            if (btn) {
+                btn.closest("[data-line]").remove();
+                recalc();
+            }
+        });
+        var addBtn = document.querySelector("[data-line-add]");
+        if (addBtn) {
+            addBtn.addEventListener("click", function () {
+                var row = template.content.firstElementChild.cloneNode(true);
+                body.appendChild(row);
+                row.querySelector("input[name=line_product]").focus();
+                recalc();
+            });
+            if (body.querySelectorAll("[data-line]").length === 0) {
+                addBtn.click();
+            }
+        }
+    }
+
+    // ——— Termin -> Batas Waktu ———
+    var dateInput = document.querySelector("[data-invoice-date]");
+    var termSelect = document.querySelector("[data-payment-term]");
+    var dueInput = document.querySelector("[data-due-date]");
+    function syncDue() {
+        var term = termSelect.value;
+        if (term === "") {
+            dueInput.readOnly = false;
+            return;
+        }
+        dueInput.readOnly = true;
+        var days = term === "Langsung" ? 0 : parseInt(term, 10) || 0;
+        var d = new Date(dateInput.value + "T00:00:00");
+        if (isNaN(d.getTime())) {
+            return;
+        }
+        d.setDate(d.getDate() + days);
+        var mm = String(d.getMonth() + 1).padStart(2, "0");
+        var dd = String(d.getDate()).padStart(2, "0");
+        dueInput.value = d.getFullYear() + "-" + mm + "-" + dd;
+    }
+    if (dateInput && termSelect && dueInput) {
+        dateInput.addEventListener("change", syncDue);
+        termSelect.addEventListener("change", syncDue);
+        syncDue();
+    }
+
+    // ——— Nomor faktur (Draft): warn while typing if the number is taken ———
+    var numInput = document.querySelector("[data-number-input]");
+    var numWarn = document.querySelector("[data-number-warn]");
+    if (numInput && numWarn) {
+        var numTimer = null;
+        function showWarn(html, kind) {
+            numWarn.innerHTML = html;
+            numWarn.className = "inv-number-warn inv-number-warn-" + kind;
+            numWarn.hidden = false;
+        }
+        function checkNumber() {
+            var value = numInput.value.trim();
+            numInput.size = Math.max(value.length, 3) + 1;
+            if (value === numInput.getAttribute("data-original")) {
+                numWarn.hidden = true;
+                numInput.setCustomValidity("");
+                return;
+            }
+            fetch(numInput.getAttribute("data-check-url") + "?n=" + encodeURIComponent(value), { credentials: "same-origin" })
+                .then(function (res) { return res.json(); })
+                .then(function (payload) {
+                    if (payload.status !== "SUCCESS") {
+                        showWarn("⚠ " + payload.desc, "error");
+                        return;
+                    }
+                    if (payload.exists) {
+                        var link = payload.url ? ' <a href="' + payload.url + '" target="_blank" rel="noopener">Lihat faktur itu</a>' : "";
+                        showWarn("⚠ Nomor <strong>" + payload.number + "</strong> sudah dipakai faktur lain." + link + " Simpan akan ditolak.", "error");
+                    } else {
+                        showWarn("Nomor akan menjadi <strong>" + payload.number + "</strong>.", "info");
+                    }
+                })
+                .catch(function () {
+                    numWarn.hidden = true;
+                });
+        }
+        numInput.addEventListener("input", function () {
+            clearTimeout(numTimer);
+            numTimer = setTimeout(checkNumber, 250);
+        });
+    }
+
+    // ——— Bayar dialog ———
+    var payDialog = document.querySelector("[data-pay-dialog]");
+    var payOpen = document.querySelector("[data-pay-open]");
+    if (payDialog && payOpen) {
+        payOpen.addEventListener("click", function () {
+            payDialog.showModal();
+        });
+        payDialog.querySelector("[data-pay-close]").addEventListener("click", function () {
+            payDialog.close();
+        });
+    }
+
+    // ——— Unsaved changes marker (Draft) ———
+    var invForm = document.getElementById("invoiceForm");
+    var dirtyFlag = document.querySelector("[data-dirty-flag]");
+    var dirty = false;
+    function markDirty() {
+        if (dirty || !dirtyFlag) {
+            return;
+        }
+        dirty = true;
+        dirtyFlag.hidden = false;
+        document.querySelectorAll(".app-icon-action-save").forEach(function (btn) {
+            btn.classList.add("app-icon-action-dirty");
+        });
+    }
+    if (invForm && dirtyFlag) {
+        invForm.addEventListener("input", markDirty);
+        invForm.addEventListener("change", markDirty);
+        document.querySelectorAll("[data-line-add], [data-line-remove]").forEach(function (btn) {
+            btn.addEventListener("click", markDirty);
+        });
+        invForm.addEventListener("submit", function () {
+            dirty = false;
+        });
+        window.addEventListener("beforeunload", function (e) {
+            if (dirty) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        });
+    }
+
+    // ——— Pelanggan autocomplete (uses /api/contacts) ———
+    var picker = document.querySelector("[data-partner-picker]");
+    if (picker) {
+        var input = picker.querySelector("[data-partner-input]");
+        var hidden = picker.querySelector("[data-partner-id]");
+        var menu = picker.querySelector("[data-partner-menu]");
+        var timer = null;
+        var lastLabel = input.value;
+        function closeMenu() {
+            menu.classList.remove("app-dropdown-open");
+        }
+        function choose(item) {
+            hidden.value = item.id;
+            input.value = item.name;
+            lastLabel = item.name;
+            closeMenu();
+        }
+        function search() {
+            var q = input.value.trim();
+            fetch("{{ url_for('contacts_blueprint.api_search') }}?category=CLIENT&q=" + encodeURIComponent(q), { credentials: "same-origin" })
+                .then(function (res) { return res.json(); })
+                .then(function (payload) {
+                    menu.innerHTML = "";
+                    var results = payload.results || [];
+                    if (results.length === 0) {
+                        var empty = document.createElement("div");
+                        empty.className = "inv-ac-empty";
+                        empty.textContent = "Tidak ada klien yang cocok";
+                        menu.appendChild(empty);
+                    }
+                    results.forEach(function (item) {
+                        var opt = document.createElement("button");
+                        opt.type = "button";
+                        opt.className = "app-dropdown-item inv-ac-item";
+                        opt.setAttribute("role", "option");
+                        opt.textContent = item.text;
+                        opt.addEventListener("click", function () {
+                            choose(item);
+                        });
+                        menu.appendChild(opt);
+                    });
+                    menu.classList.add("app-dropdown-open");
+                })
+                .catch(function () {
+                    closeMenu();
+                });
+        }
+        input.addEventListener("input", function () {
+            if (input.value !== lastLabel) {
+                hidden.value = "";
+            }
+            clearTimeout(timer);
+            timer = setTimeout(search, 200);
+        });
+        input.addEventListener("focus", function () {
+            if (!input.disabled) {
+                search();
+            }
+        });
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") {
+                closeMenu();
+            }
+        });
+        document.addEventListener("click", function (e) {
+            if (!picker.contains(e.target)) {
+                closeMenu();
+                if (hidden.value === "") {
+                    input.value = "";
+                    lastLabel = "";
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

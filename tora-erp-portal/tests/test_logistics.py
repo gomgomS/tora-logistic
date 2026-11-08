@@ -128,7 +128,7 @@ def _shipment_doc(tracking_code):
 # ---------------------------------------------------------------------------
 
 def test_requires_login(client):
-    for path in ["/", "/shipments", "/manifests", "/hub", "/contacts", "/fleet"]:
+    for path in ["/", "/operations", "/shipments", "/manifests", "/hub", "/contacts", "/fleet"]:
         res = client.get(path)
         assert res.status_code == 302
         assert "/login" in res.headers.get("Location", "")
@@ -139,7 +139,18 @@ def test_requires_login(client):
 def test_login_and_dashboard(logged_in):
     res = logged_in["client"].get("/")
     assert res.status_code == 200
-    assert b"Dasbor" in res.data
+    html = res.data.decode("utf-8")
+    assert "Dasbor" in html
+    assert "Operasional" in html
+    assert "Kontak" in html
+    assert "Pengaturan" in html
+# end def
+
+
+def test_operations_overview(logged_in):
+    res = logged_in["client"].get("/operations")
+    assert res.status_code == 200
+    assert "Ringkasan Operasional" in res.data.decode("utf-8")
 # end def
 
 
@@ -150,15 +161,415 @@ def test_users_page_is_superadmin_only(logged_in):
 # end def
 
 
+def _login_as(username, password):
+    # Separate browser session for a second user.
+    other = server.app.test_client()
+    html = other.get("/login").data.decode("utf-8")
+    marker = 'name="csrf_token" value="'
+    start = html.find(marker) + len(marker)
+    token = html[start:html.find('"', start)]
+    res = other.post("/login", data={"csrf_token": token, "username": username, "password": password})
+    assert res.status_code == 302
+    return {"client": other, "token": token}
+# end def
+
+
+def _create_user(logged_in, username, extra):
+    data = {
+        "csrf_token": logged_in["token"], "username": username, "name": username.title(),
+        "role": "admin", "password": "Rahasia123", "password_confirm": "Rahasia123"
+    }
+    data.update(extra)
+    return logged_in["client"].post("/users/create", data=data)
+# end def
+
+
+def test_settings_and_user_pages_render(logged_in):
+    client = logged_in["client"]
+    assert client.get("/settings").status_code == 200
+    html = client.get("/users").data.decode("utf-8")
+    assert config.G_SUPERADMIN_USERNAME in html
+    assert client.get("/users/new").status_code == 200
+    me = str(_db().db_user.find_one({"username": config.G_SUPERADMIN_USERNAME})["_id"])
+    html = client.get("/users/" + me + "/edit").data.decode("utf-8")
+    assert "Hak Akses" in html
+    assert "Keamanan" in html
+    assert "Ubah Sandi" in html
+# end def
+
+
+def test_user_access_levels_are_enforced(logged_in):
+    res = _create_user(logged_in, "staf_lihat", {"perm_contacts": "read", "perm_users": "none"})
+    assert res.status_code == 302
+    doc = _db().db_user.find_one({"username": "staf_lihat"})
+    assert doc["permissions"]["contacts"] == "read"
+    assert _db().db_record_log.find_one({"model": "user", "record_id": str(doc["_id"]), "kind": "CREATE"}) != None
+    staf = _login_as("staf_lihat", "Rahasia123")
+    client = staf["client"]
+    assert client.get("/contacts").status_code == 200
+    res = client.get("/contacts/new")
+    assert res.status_code == 302
+    client.post("/contacts/create", data={"csrf_token": staf["token"], "name": "Tidak Boleh", "category": "CLIENT"})
+    assert _db().db_contact.find_one({"name": "Tidak Boleh"}) == None
+    assert client.get("/users").status_code == 302
+    assert client.get("/settings").status_code == 302
+    home = client.get("/").data.decode("utf-8")
+    assert "Pengaturan" not in home
+    assert "Kontak" in home
+# end def
+
+
+def test_user_password_confirmation(logged_in):
+    res = _create_user(logged_in, "staf_salah", {"password_confirm": "BedaSandi99"})
+    assert res.status_code == 302
+    assert _db().db_user.find_one({"username": "staf_salah"}) == None
+# end def
+
+
+def test_user_admin_cannot_escalate(logged_in):
+    _create_user(logged_in, "manajer", {"perm_users": "full", "perm_contacts": "read"})
+    mgr = _login_as("manajer", "Rahasia123")
+    client = mgr["client"]
+    base = {"csrf_token": mgr["token"], "password": "Rahasia123", "password_confirm": "Rahasia123"}
+    over = dict(base, username="lebih_tinggi", role="admin", perm_contacts="full", perm_users="none")
+    client.post("/users/create", data=over)
+    assert _db().db_user.find_one({"username": "lebih_tinggi"}) == None
+    boss = dict(base, username="jadi_super", role="superadmin")
+    client.post("/users/create", data=boss)
+    assert _db().db_user.find_one({"username": "jadi_super"}) == None
+    ok = dict(base, username="staf_baru", role="admin", perm_contacts="read", perm_users="none")
+    client.post("/users/create", data=ok)
+    assert _db().db_user.find_one({"username": "staf_baru"}) != None
+    me = str(_db().db_user.find_one({"username": "manajer"})["_id"])
+    client.post("/users/" + me + "/update", data={
+        "csrf_token": mgr["token"], "username": "manajer", "role": "admin",
+        "status": "ENABLE", "perm_contacts": "full", "perm_users": "full"
+    })
+    assert _db().db_user.find_one({"username": "manajer"})["permissions"]["contacts"] == "read"
+# end def
+
+
+def test_user_bulk_delete_protects_self(logged_in):
+    client = logged_in["client"]
+    me = str(_db().db_user.find_one({"username": config.G_SUPERADMIN_USERNAME})["_id"])
+    _create_user(logged_in, "staf_hapus", {})
+    other = str(_db().db_user.find_one({"username": "staf_hapus"})["_id"])
+    client.post("/users/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [me, other]})
+    assert _db().db_user.find_one({"_id": _db().db_user.find_one({"username": "staf_hapus"})["_id"]})["is_deleted"] == False
+    client.post("/users/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [other]})
+    assert _db().db_user.find_one({"username": "staf_hapus"})["is_deleted"] == True
+    assert _db().db_user.find_one({"username": config.G_SUPERADMIN_USERNAME})["is_deleted"] == False
+# end def
+
+
+def test_user_update_is_logged(logged_in):
+    client = logged_in["client"]
+    _create_user(logged_in, "staf_log", {"perm_contacts": "read"})
+    uid = str(_db().db_user.find_one({"username": "staf_log"})["_id"])
+    res = client.post("/users/" + uid + "/update", data={
+        "csrf_token": logged_in["token"], "username": "staf_log", "name": "Staf Gudang",
+        "role": "admin", "status": "ENABLE", "perm_contacts": "update", "perm_users": "none",
+        "password": "SandiBaru123", "password_confirm": "SandiBaru123"
+    })
+    assert res.status_code == 302
+    change = _db().db_record_log.find_one({"model": "user", "record_id": uid, "kind": "CHANGE"})
+    labels = [ch["label"] for ch in change["changes"]]
+    assert "Nama" in labels
+    assert "Hak akses Kontak" in labels
+    assert _db().db_record_log.find_one({"model": "user", "record_id": uid, "kind": "EVENT"}) != None
+    _login_as("staf_log", "SandiBaru123")
+# end def
+
+
+def test_accounting_dashboard_and_menus(logged_in):
+    client = logged_in["client"]
+    assert "Akuntansi" in client.get("/").data.decode("utf-8")
+    html = client.get("/accounting").data.decode("utf-8")
+    for text in ["Dasbor Akuntansi", "Faktur Pelanggan", "Tagihan Vendor", "Bank", "Kas",
+                 "Nota Kredit", "Pengembalian", "Entri Jurnal", "Rp 0,00"]:
+        assert text in html, text
+    for slug in ["credit-notes", "customer-payments", "sale-products", "bills",
+                 "refunds", "vendor-payments", "purchase-products", "journal-entries"]:
+        res = client.get("/accounting/" + slug)
+        assert res.status_code == 200, slug
+        assert "segera hadir" in res.data.decode("utf-8")
+    # end for
+    assert client.get("/accounting/invoices").status_code == 200
+    assert client.get("/accounting/invoices/new").status_code == 200
+    assert client.get("/accounting/tidak-ada").status_code == 302
+# end def
+
+
+def _invoice_payload(logged_in, partner_id, extra=None):
+    data = {
+        "csrf_token": logged_in["token"],
+        "partner_id": partner_id,
+        "invoice_date": "2026-11-06",
+        "payment_term": "30 Hari",
+        "customer_ref": "SP/SLN/2026/088",
+        "line_product": ["Jasa Trucking Jakarta - Surabaya", "Pallet kayu"],
+        "line_account": ["41000020", "41000010"],
+        "line_quantity": ["1", "2"],
+        "line_price": ["40000000", "1000000"],
+        "line_tax": ["ppn12_dpp", ""]
+    }
+    if extra != None:
+        data.update(extra)
+    # end if
+    return data
+# end def
+
+
+def _invoices():
+    return _db().db_invoice
+# end def
+
+
+def test_invoice_create_computes_totals_and_lists(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    res = client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur")))
+    assert res.status_code == 302
+    inv = _invoices().find_one({"customer_ref": "SP/SLN/2026/088"})
+    assert inv["state"] == "DRAFT"
+    assert inv["number"] == "INV/2026/00001"
+    assert inv["seq"] == 1
+    assert "/accounting/invoices/1?" in res.headers["Location"]
+    assert inv["partner_name"] == "PT Sumber Makmur"
+    assert inv["amount_untaxed"] == 42000000
+    assert inv["amount_tax"] == 4400000
+    assert inv["amount_total"] == 46400000
+    assert inv["due_date"] == "2026-12-06"
+    assert len(inv["lines"]) == 2
+    html = client.get("/accounting/invoices").data.decode("utf-8")
+    assert "PT Sumber Makmur" in html
+    assert "Rp 46.400.000,00" in html
+    html = client.get("/accounting/invoices/1").data.decode("utf-8")
+    assert "Baris Faktur" in html
+    assert "Piutang Dagang" in html
+    assert "PPN Keluaran" in html
+    assert "Simpan" in html
+    assert "Rancangan" not in html
+    assert _db().db_record_log.find_one({"model": "invoice", "record_id": str(inv["_id"]), "kind": "CREATE"}) != None
+    # old links (internal id or invoice number) redirect to the running number
+    res = client.get("/accounting/invoices/" + str(inv["_id"]))
+    assert res.status_code == 302
+    assert res.headers["Location"].endswith("/accounting/invoices/1")
+    res = client.get("/accounting/invoices/INV/2026/00001")
+    assert res.headers["Location"].endswith("/accounting/invoices/1")
+    # a draft stays editable: change a line and the totals follow
+    client.post("/accounting/invoices/1/update", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+        "line_quantity": ["2", "2"]
+    }))
+    assert _invoices().find_one({"_id": inv["_id"]})["amount_untaxed"] == 82000000
+# end def
+
+
+def test_invoice_confirm_numbering_and_lock(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    partner = _contact_id("PT Sumber Makmur")
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "A1", "action": "confirm"}))
+    first = _invoices().find_one({"customer_ref": "A1"})
+    assert first["state"] == "POSTED"
+    assert first["number"] == "INV/2026/00001"
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "A2"}))
+    second = _invoices().find_one({"customer_ref": "A2"})
+    assert second["number"] == "INV/2026/00002"
+    assert second["state"] == "DRAFT"
+    client.post("/accounting/invoices/" + str(second["seq"]) + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "A2", "action": "confirm"}))
+    confirmed = _invoices().find_one({"_id": second["_id"]})
+    assert confirmed["state"] == "POSTED"
+    assert confirmed["number"] == "INV/2026/00002"
+    # posted invoices cannot be edited
+    client.post("/accounting/invoices/" + str(first["seq"]) + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "DIUBAH"}))
+    assert _invoices().find_one({"_id": first["_id"]})["customer_ref"] == "A1"
+    # invoices that were ever confirmed are never deleted, reset keeps the number
+    client.post("/accounting/invoices/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [str(first["_id"])]})
+    assert _invoices().find_one({"_id": first["_id"]})["is_deleted"] == False
+    client.post("/accounting/invoices/" + str(first["seq"]) + "/state", data={"csrf_token": logged_in["token"], "action": "reset"})
+    reset = _invoices().find_one({"_id": first["_id"]})
+    assert reset["state"] == "DRAFT"
+    assert reset["number"] == "INV/2026/00001"
+    assert "Rp 46.400.000,00" in client.get("/accounting").data.decode("utf-8")
+    events = _db().db_record_log.find_one({"model": "invoice", "record_id": str(first["_id"]), "kind": "EVENT"})
+    assert events["body"] == "Faktur telah divalidasi"
+# end def
+
+
+def test_invoice_payment_print_and_buttons(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    partner = _contact_id("PT Sumber Makmur")
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "BAYAR", "action": "confirm"}))
+    inv = _invoices().find_one({"customer_ref": "BAYAR"})
+    url = "/accounting/invoices/" + str(inv["seq"])
+    html = client.get(url).data.decode("utf-8")
+    for label in ["Kirim", "Cetak", "Bayar", "Pratinjau", "Nota Kredit", "Reset ke Draft"]:
+        assert label in html, label
+    assert client.get(url + "/print").status_code == 200
+    # overpaying is refused
+    client.post(url + "/pay", data={"csrf_token": logged_in["token"], "amount": "99999999999", "method": "Transfer Bank"})
+    assert _invoices().find_one({"_id": inv["_id"]})["amount_residual"] == 46400000
+    # partial, then the rest
+    client.post(url + "/pay", data={"csrf_token": logged_in["token"], "amount": "6400000", "method": "Transfer Bank", "date": "2026-11-10"})
+    part = _invoices().find_one({"_id": inv["_id"]})
+    assert part["amount_residual"] == 40000000
+    assert part["payment_state"] == "partial"
+    client.post(url + "/pay", data={"csrf_token": logged_in["token"], "amount": "40000000", "method": "Tunai"})
+    paid = _invoices().find_one({"_id": inv["_id"]})
+    assert paid["amount_residual"] == 0
+    assert paid["payment_state"] == "paid"
+    assert len(paid["payments"]) == 2
+    assert "Lunas" in client.get("/accounting/invoices").data.decode("utf-8")
+    html = client.get(url).data.decode("utf-8")
+    assert "LUNAS" in html
+    # a paid invoice cannot go back to Draft
+    client.post(url + "/state", data={"csrf_token": logged_in["token"], "action": "reset"})
+    assert _invoices().find_one({"_id": inv["_id"]})["state"] == "POSTED"
+# end def
+
+
+def test_invoice_number_edit_on_draft(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    partner = _contact_id("PT Sumber Makmur")
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "N1"}))
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "N2"}))
+    second = _invoices().find_one({"customer_ref": "N2"})
+    url = "/accounting/invoices/" + str(second["seq"])
+    # live check warns about a number that is already used
+    check = client.get(url + "/check-number?n=00001").get_json()
+    assert check["exists"] == True
+    assert check["number"] == "INV/2026/00001"
+    # saving a duplicate is refused
+    client.post(url + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "N2", "number_seq": "00001"}))
+    assert _invoices().find_one({"_id": second["_id"]})["number"] == "INV/2026/00002"
+    # a free number is accepted; short input is zero-padded, the prefix stays
+    assert client.get(url + "/check-number?n=7").get_json()["exists"] == False
+    client.post(url + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "N2", "number_seq": "7"}))
+    assert _invoices().find_one({"_id": second["_id"]})["number"] == "INV/2026/00007"
+    change = _db().db_record_log.find_one({"model": "invoice", "record_id": str(second["_id"]), "kind": "CHANGE"})
+    assert "Nomor" in [ch["label"] for ch in change["changes"]]
+    # once confirmed the number is fixed
+    client.post(url + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "N2", "number_seq": "00007", "action": "confirm"}))
+    client.post(url + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "N2", "number_seq": "00009"}))
+    assert _invoices().find_one({"_id": second["_id"]})["number"] == "INV/2026/00007"
+# end def
+
+
+def test_invoice_draft_editable_with_create_access(logged_in):
+    _seed(logged_in)
+    _create_user(logged_in, "staf_faktur", {"perm_accounting": "create", "perm_contacts": "read"})
+    staf = _login_as("staf_faktur", "Rahasia123")
+    client = staf["client"]
+    partner = _contact_id("PT Sumber Makmur")
+    payload = _invoice_payload({"token": staf["token"]}, partner, {"customer_ref": "STAF"})
+    client.post("/accounting/invoices/create", data=payload)
+    inv = _invoices().find_one({"customer_ref": "STAF"})
+    url = "/accounting/invoices/" + str(inv["seq"])
+    client.post(url + "/update", data=dict(payload, customer_ref="STAF-2"))
+    assert _invoices().find_one({"_id": inv["_id"]})["customer_ref"] == "STAF-2"
+    # confirming needs "ubah"
+    client.post(url + "/update", data=dict(payload, customer_ref="STAF-2", action="confirm"))
+    assert _invoices().find_one({"_id": inv["_id"]})["state"] == "DRAFT"
+# end def
+
+
+def test_invoice_validation_and_draft_delete(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    partner = _contact_id("PT Sumber Makmur")
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "PAJAK-SALAH", "line_tax": ["pajak-palsu", ""]}))
+    assert _invoices().find_one({"customer_ref": "PAJAK-SALAH"}) == None
+    client.post("/accounting/invoices/create", data={
+        "csrf_token": logged_in["token"], "partner_id": partner, "customer_ref": "KOSONG", "action": "confirm"
+    })
+    empty = _invoices().find_one({"customer_ref": "KOSONG"})
+    assert empty["state"] == "DRAFT"
+    client.post("/accounting/invoices/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [str(empty["_id"])]})
+    assert _invoices().find_one({"_id": empty["_id"]})["is_deleted"] == True
+# end def
+
+
+def test_accounting_sequence_settings(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    html = client.get("/accounting/settings").data.decode("utf-8")
+    assert "Nomor Dokumen" in html
+    assert "Pajak" in html
+    form = {
+        "csrf_token": logged_in["token"],
+        "prefix_out_invoice": "FK/{THN}/{BULAN}/", "padding_out_invoice": "4",
+        "prefix_out_refund": "RINV/{TAHUN}/", "padding_out_refund": "5",
+        "prefix_in_invoice": "BILL/{TAHUN}/{BULAN}/", "padding_in_invoice": "4"
+    }
+    client.post("/accounting/settings/save", data=form)
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {"customer_ref": "PREFIX-BARU"}))
+    assert _invoices().find_one({"customer_ref": "PREFIX-BARU"})["number"] == "FK/26/11/0001"
+    bad = dict(form, prefix_out_invoice="INV {SALAH}")
+    client.post("/accounting/settings/save", data=bad)
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {"customer_ref": "PREFIX-TETAP"}))
+    assert _invoices().find_one({"customer_ref": "PREFIX-TETAP"})["number"] == "FK/26/11/0002"
+# end def
+
+
+def test_accounting_taxes_list_toggle_and_create(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    html = client.get("/accounting/taxes").data.decode("utf-8")
+    assert "12% (Non-Luxury Good)" in html
+    assert "Pembelian" in html
+    assert "Penjualan" in client.get("/accounting/taxes?tax_use=sale").data.decode("utf-8")
+    res = client.post("/accounting/taxes/ppn11/toggle", data={"csrf_token": logged_in["token"]}, headers={"X-Requested-With": "fetch"})
+    assert res.get_json()["active"] == False
+    # an inactive tax can no longer be used on a new invoice line
+    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+        "customer_ref": "PAJAK-NONAKTIF", "line_tax": ["ppn11", ""]
+    }))
+    assert _invoices().find_one({"customer_ref": "PAJAK-NONAKTIF"}) == None
+    client.post("/accounting/taxes/create", data={
+        "csrf_token": logged_in["token"], "name": "PPh 23", "tax_use": "purchase",
+        "amount": "2", "base": "full", "scope": "service", "description": "Jasa", "active": "1"
+    })
+    tax = _db().db_tax.find_one({"name": "PPh 23"})
+    assert tax["tax_use"] == "purchase"
+    assert tax["invoice_label"] == "2%"
+    assert client.get("/accounting/taxes/" + tax["code"]).status_code == 200
+# end def
+
+
+def test_invoices_need_accounting_access(logged_in):
+    _create_user(logged_in, "staf_tanpa_akun", {"perm_contacts": "full"})
+    staf = _login_as("staf_tanpa_akun", "Rahasia123")
+    assert staf["client"].get("/accounting/invoices").status_code == 302
+    staf["client"].post("/accounting/invoices/create", data={"csrf_token": staf["token"], "customer_ref": "TIDAK-BOLEH"})
+    assert _invoices().find_one({"customer_ref": "TIDAK-BOLEH"}) == None
+# end def
+
+
+def test_accounting_needs_access(logged_in):
+    _create_user(logged_in, "staf_kontak", {"perm_contacts": "full"})
+    staf = _login_as("staf_kontak", "Rahasia123")
+    assert staf["client"].get("/accounting").status_code == 302
+    assert "Akuntansi" not in staf["client"].get("/").data.decode("utf-8")
+    _create_user(logged_in, "staf_akun", {"perm_accounting": "read"})
+    akun = _login_as("staf_akun", "Rahasia123")
+    assert akun["client"].get("/accounting").status_code == 200
+# end def
+
+
 def test_all_pages_render(logged_in):
     # Smoke-renders every GET page (catches template syntax errors).
     _seed(logged_in)
     _create_shipment(logged_in, "Malang")
     client = logged_in["client"]
     paths = [
-        "/", "/shipments", "/shipments/create", "/manifests",
+        "/", "/operations", "/shipments", "/shipments/create", "/manifests",
         "/manifests/create", "/hub?hub=Surabaya", "/contacts",
-        "/contacts?category=CLIENT", "/fleet", "/users", "/track"
+        "/contacts?category=CLIENT", "/fleet", "/users", "/users/new", "/settings", "/accounting", "/accounting/invoices",
+        "/accounting/invoices/new", "/accounting/settings", "/accounting/taxes",
+        "/accounting/taxes/new", "/track"
     ]
     for path in paths:
         res = client.get(path)
@@ -196,6 +607,132 @@ def test_api_contacts_search(logged_in):
     assert payload["results"][0]["name"] == "PT Sumber Makmur"
     res = logged_in["client"].get("/api/contacts?category=DRIVER&q=zzz-no-match")
     assert res.get_json()["results"] == []
+# end def
+
+
+def test_contacts_list_pager_and_search(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    html = client.get("/contacts").data.decode("utf-8")
+    assert "1-4" in html
+    assert "PT Sumber Makmur" in html
+    html = client.get("/contacts?q=malang").data.decode("utf-8")
+    assert "Toko Jaya Malang" in html
+    assert "PT Sumber Makmur" not in html
+    res = client.get("/contacts?page=99&per_page=999999")
+    assert res.status_code == 200
+    assert "1-4" in res.data.decode("utf-8")
+# end def
+
+
+def test_contact_form_saves_sales_and_notes(logged_in):
+    client = logged_in["client"]
+    res = client.post("/contacts/create", data={
+        "csrf_token": logged_in["token"],
+        "name": "PT Lintas Toba", "category": "CLIENT",
+        "street2": "Blok B", "province": "Sumatera Utara", "postal_code": "22312",
+        "tax_id": "01.234.567.8-901.000", "job_title": "Direktur",
+        "sale_payment_term": "30 Hari", "sale_payment_method": "Transfer Bank",
+        "fiscal_position": "PKP", "industry": "Logistik & Transportasi",
+        "notes": "Tagihan dikirim tiap akhir bulan"
+    })
+    assert res.status_code == 302
+    rec = _db().db_contact.find_one({"name": "PT Lintas Toba"})
+    assert rec["sale_payment_term"] == "30 Hari"
+    assert rec["fiscal_position"] == "PKP"
+    assert rec["country"] == "Indonesia"
+    assert rec["notes"] == "Tagihan dikirim tiap akhir bulan"
+    res = client.get("/contacts/" + str(rec["_id"]) + "/edit")
+    assert res.status_code == 200
+    assert "Sales &amp; Purchase" in res.data.decode("utf-8")
+# end def
+
+
+def test_contact_form_rejects_unknown_choice(logged_in):
+    client = logged_in["client"]
+    client.post("/contacts/create", data={
+        "csrf_token": logged_in["token"],
+        "name": "CV Salah Termin", "category": "CLIENT",
+        "sale_payment_term": "999 Hari"
+    })
+    assert _db().db_contact.find_one({"name": "CV Salah Termin"}) == None
+# end def
+
+
+def test_contact_edit_shows_related_contacts(logged_in):
+    client = logged_in["client"]
+    token = logged_in["token"]
+    client.post("/contacts/create", data={"csrf_token": token, "name": "PT Danau Biru", "category": "CLIENT"})
+    client.post("/contacts/create", data={
+        "csrf_token": token, "name": "Rina Siregar", "category": "CLIENT",
+        "company_name": "PT Danau Biru", "job_title": "Finance"
+    })
+    html = client.get("/contacts/" + _contact_id("PT Danau Biru") + "/edit").data.decode("utf-8")
+    assert "Rina Siregar" in html
+    assert "Finance" in html
+# end def
+
+
+def test_record_log_create_and_change(logged_in):
+    client = logged_in["client"]
+    token = logged_in["token"]
+    client.post("/contacts/create", data={
+        "csrf_token": token, "name": "CV Log Danau", "category": "CLIENT", "city": "Medan"
+    })
+    contact_id = _contact_id("CV Log Danau")
+    logs = list(_db().db_record_log.find({"model": "contact", "record_id": contact_id}))
+    assert len(logs) == 1
+    assert logs[0]["kind"] == "CREATE"
+    client.post("/contacts/" + contact_id + "/update", data={
+        "csrf_token": token, "name": "CV Log Danau", "category": "VENDOR", "city": "Balige"
+    })
+    change = _db().db_record_log.find_one({"record_id": contact_id, "kind": "CHANGE"})
+    labels = [ch["label"] for ch in change["changes"]]
+    assert "Kota" in labels
+    assert "Kategori" in labels
+    city = [ch for ch in change["changes"] if ch["label"] == "Kota"][0]
+    assert city["old"] == "Medan"
+    assert city["new"] == "Balige"
+    html = client.get("/contacts/" + contact_id + "/edit").data.decode("utf-8")
+    assert "Balige" in html
+    assert "Log catatan" in html
+# end def
+
+
+def test_record_log_add_note(logged_in):
+    client = logged_in["client"]
+    token = logged_in["token"]
+    client.post("/contacts/create", data={"csrf_token": token, "name": "PT Catatan", "category": "CLIENT"})
+    contact_id = _contact_id("PT Catatan")
+    url = "/log/contact/" + contact_id + "/note"
+    res = client.post(url, data={"body": "tanpa token"}, headers={"X-Requested-With": "fetch"})
+    assert res.status_code == 400
+    res = client.post(url, data={"csrf_token": token, "body": "Klien minta invoice via email"}, headers={"X-Requested-With": "fetch"})
+    payload = res.get_json()
+    assert payload["status"] == "SUCCESS"
+    assert "Klien minta invoice via email" in payload["html"]
+    note = _db().db_record_log.find_one({"record_id": contact_id, "kind": "NOTE"})
+    assert note["author_name"] == config.G_SUPERADMIN_USERNAME
+    res = client.post("/log/unknown/" + contact_id + "/note", data={"csrf_token": token, "body": "x"}, headers={"X-Requested-With": "fetch"})
+    assert res.status_code == 400
+    html = client.get("/contacts/" + contact_id + "/edit").data.decode("utf-8")
+    assert "Klien minta invoice via email" in html
+# end def
+
+
+def test_contacts_bulk_delete(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    ids = [_contact_id("Toko Jaya Malang"), _contact_id("UD Sidoarjo")]
+    res = client.post("/contacts/bulk-delete", data={"ids": ids})
+    assert res.status_code == 302
+    assert _db().db_contact.count_documents({"category": "RECEIVER", "is_deleted": False}) == 2
+    res = client.post("/contacts/bulk-delete", data={
+        "csrf_token": logged_in["token"], "ids": ids
+    })
+    assert res.status_code == 302
+    assert _db().db_contact.count_documents({"category": "RECEIVER", "is_deleted": False}) == 0
+    assert _db().db_contact.count_documents({"category": "CLIENT", "is_deleted": False}) == 1
 # end def
 
 

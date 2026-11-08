@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_icons.html" import dashboard, box, clipboard, swap, users, truck, shield, search, logout, menu, close, globe, plus, arrow_right %}
+{% from "_icons.html" import dashboard, layers, box, clipboard, swap, users, truck, shield, search, logout, menu, close, globe, plus, arrow_right %}
 {% from "_ui.html" import role_label %}
 
 {% block shell %}
@@ -7,18 +7,22 @@
 
     <!-- ——— Sidebar ——— -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
+        <a class="sidebar-brand" href="{{ url_for('auth_blueprint.dashboard') }}">
             <span class="brand-mark">T</span>
             <span>
                 <span class="brand-name">Tora Expedition</span>
                 <span class="brand-sub">Portal ERP</span>
             </span>
-        </div>
+        </a>
 
         <nav class="sidebar-nav">
+            <a class="side-link" href="{{ url_for('auth_blueprint.dashboard') }}">
+                {{ dashboard("w-[18px] h-[18px]") }} <span>Semua Aplikasi</span>
+            </a>
+
             <div class="side-section">Operasional</div>
-            <a class="side-link {% if request.path == '/' %}side-link-active{% endif %}" href="{{ url_for('auth_blueprint.dashboard') }}">
-                {{ dashboard("w-[18px] h-[18px]") }} <span>Dasbor</span>
+            <a class="side-link {% if request.path.startswith('/operations') %}side-link-active{% endif %}" href="{{ url_for('auth_blueprint.operations') }}">
+                {{ layers("w-[18px] h-[18px]") }} <span>Ringkasan</span>
             </a>
             <a class="side-link {% if request.path.startswith('/shipments') %}side-link-active{% endif %}" href="{{ url_for('shipments_blueprint.index') }}">
                 {{ box("w-[18px] h-[18px]") }} <span>Order</span>
@@ -36,17 +40,19 @@
             </a>
 
             <div class="side-section">Data Master</div>
+            {% if data.current_user.can('contacts', 'read') %}
             <a class="side-link {% if request.path.startswith('/contacts') %}side-link-active{% endif %}" href="{{ url_for('contacts_blueprint.index') }}">
                 {{ users("w-[18px] h-[18px]") }} <span>Kontak</span>
             </a>
+            {% endif %}
             <a class="side-link {% if request.path.startswith('/fleet') %}side-link-active{% endif %}" href="{{ url_for('fleet_blueprint.index') }}">
                 {{ truck("w-[18px] h-[18px]") }} <span>Armada</span>
             </a>
 
-            {% if data.current_user.role == 'superadmin' %}
+            {% if data.current_user.can('users', 'read') %}
             <div class="side-section">Sistem</div>
-            <a class="side-link {% if request.path.startswith('/users') %}side-link-active{% endif %}" href="{{ url_for('auth_blueprint.users') }}">
-                {{ shield("w-[18px] h-[18px]") }} <span>Pengguna</span>
+            <a class="side-link" href="{{ url_for('settings_blueprint.index') }}">
+                {{ shield("w-[18px] h-[18px]") }} <span>Pengaturan</span>
             </a>
             {% endif %}
         </nav>

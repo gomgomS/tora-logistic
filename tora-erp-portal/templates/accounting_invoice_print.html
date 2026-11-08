@@ -1,0 +1,105 @@
+<!doctype html>
+{#- Printable invoice for Cetak (?print=1 opens the print dialog) and
+    Pratinjau. Standalone page: no app navbar, A4-friendly. -#}
+{%- set inv = data.invoice -%}
+{%- set p = data.partner -%}
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ inv.number }} — {{ data.site_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='v2/app.output.css') }}">
+</head>
+<body class="print-body">
+<div class="print-toolbar">
+    <button type="button" class="app-btn-primary" onclick="window.print()">Cetak</button>
+    <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.invoice_edit', seq=inv.seq) }}">Kembali ke faktur</a>
+</div>
+
+<article class="print-sheet">
+    <header class="print-head">
+        <div>
+            <div class="print-company">{{ data.site_name }}</div>
+            <div class="print-muted">Indonesia</div>
+        </div>
+        <div class="print-doc">
+            <div class="print-doc-type">{% if inv.state == 'DRAFT' %}Draft Faktur{% else %}Faktur{% endif %}</div>
+            <div class="print-doc-number">{{ inv.number }}</div>
+            {% if inv.state == 'POSTED' and inv.payment_state == 'paid' %}<div class="print-paid">LUNAS</div>{% endif %}
+            {% if inv.state == 'CANCEL' %}<div class="print-cancel">BATAL</div>{% endif %}
+        </div>
+    </header>
+
+    <section class="print-meta">
+        <div>
+            <div class="print-label">Kepada</div>
+            <div class="print-strong">{{ inv.partner_name or "—" }}</div>
+            {% if p.company_name %}<div>{{ p.company_name }}</div>{% endif %}
+            {% if p.address %}<div>{{ p.address }}</div>{% endif %}
+            {% if p.street2 %}<div>{{ p.street2 }}</div>{% endif %}
+            <div>{{ [p.city, p.province, p.postal_code]|select|join(", ") }}</div>
+            {% if p.tax_id %}<div>NPWP/NIK: {{ p.tax_id }}</div>{% endif %}
+        </div>
+        <div class="print-dates">
+            <div><span class="print-label">Tanggal Faktur</span> {{ inv.date_short }}</div>
+            <div><span class="print-label">Jatuh Tempo</span> {{ inv.due_date }}</div>
+            {% if inv.payment_term %}<div><span class="print-label">Termin</span> {{ inv.payment_term }}</div>{% endif %}
+            {% if inv.customer_ref %}<div><span class="print-label">Referensi</span> {{ inv.customer_ref }}</div>{% endif %}
+        </div>
+    </section>
+
+    <table class="print-lines">
+        <thead>
+            <tr>
+                <th>Deskripsi</th>
+                <th class="app-num">Kuantitas</th>
+                <th class="app-num">Harga Satuan</th>
+                <th>Pajak</th>
+                <th class="app-num">Jumlah</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in inv.lines %}
+            <tr>
+                <td>{{ line.product }}</td>
+                <td class="app-num">{{ '%g'|format(line.quantity) }}</td>
+                <td class="app-num">{{ line.price_fmt }}</td>
+                <td>{{ line.tax_label }}</td>
+                <td class="app-num">{{ line.subtotal_fmt }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="print-bottom">
+        <div class="print-terms">
+            {% if inv.payment_ref or inv.number %}
+            <div class="print-label">Referensi pembayaran</div>
+            <div>{{ inv.payment_ref or inv.number }}</div>
+            {% endif %}
+            {% if inv.notes %}
+            <div class="print-label print-gap">Syarat dan Ketentuan</div>
+            <div class="print-notes">{{ inv.notes }}</div>
+            {% endif %}
+        </div>
+        <div class="print-totals">
+            <div class="inv-totals-row"><span>Jumlah Sebelum Pajak</span><strong>{{ inv.untaxed_fmt }}</strong></div>
+            <div class="inv-totals-row"><span>Pajak</span><span>{{ inv.tax_fmt }}</span></div>
+            <div class="inv-totals-row inv-totals-grand"><span>Total</span><span>{{ inv.total_fmt }}</span></div>
+            {% for pay in inv.payments or [] %}
+            <div class="inv-totals-row inv-totals-paid"><span>Dibayar {{ pay.date_short }}</span><span>− {{ pay.amount_fmt }}</span></div>
+            {% endfor %}
+            <div class="inv-totals-row inv-totals-due"><span>Jumlah Belum Dibayar</span><strong>{{ inv.residual_fmt }}</strong></div>
+        </div>
+    </div>
+</article>
+
+{% if data.auto_print %}
+<script>
+window.addEventListener("load", function () {
+    window.print();
+});
+</script>
+{% endif %}
+</body>
+</html>

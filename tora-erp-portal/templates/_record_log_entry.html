@@ -1,0 +1,35 @@
+{# One activity-log entry.
+   - imported as a macro by _record_log.html
+   - rendered directly (render_template(..., entry=...)) for the
+     "Log catatan" fetch response in view_record_log.html_add_note #}
+{% from "_icons.html" import arrow_right %}
+
+{% macro log_entry(entry) %}
+<div class="log-entry log-entry-{{ entry.kind|lower }}">
+    <span class="log-avatar log-avatar-{{ entry.author_name|length % 6 }}">{{ (entry.author_name or "S")[:1]|upper }}</span>
+    <div class="log-body">
+        <div class="log-meta">
+            <strong>{{ entry.author_name }}</strong>
+            <span>{{ entry.time }}</span>
+        </div>
+        {% if entry.kind == "CHANGE" %}
+        <ul class="log-changes">
+            {% for ch in entry.changes %}
+            <li>
+                <span class="log-old">{{ ch.old or "—" }}</span>
+                {{ arrow_right("w-3 h-3") }}
+                <span class="log-new">{{ ch.new or "—" }}</span>
+                <span class="log-field">({{ ch.label }})</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% elif entry.kind == "NOTE" %}
+        <div class="log-note">{{ entry.body }}</div>
+        {% else %}
+        <div class="log-text">{{ entry.body }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% if entry is defined %}{{ log_entry(entry) }}{% endif %}

@@ -1,0 +1,30 @@
+{% extends "app_base.html" %}
+{#- Akuntansi app shell: navbar with Dasbor + Pelanggan / Vendor / Akuntansi /
+    Konfigurasi dropdowns (accounting_proc.MENUS). Pages extend this and fill
+    app_control / app_content; data.page.menu + data.slug mark the active
+    menu and entry. -#}
+{% from "_icons.html" import chart_line, chevron_down %}
+{% block app_name %}Akuntansi{% endblock %}
+{% block app_home %}{{ url_for('accounting_blueprint.index') }}{% endblock %}
+{% block app_icon_class %}app-icon-accounting{% endblock %}
+{% block app_icon %}{{ chart_line("w-4 h-4") }}{% endblock %}
+
+{% block app_menu %}
+{%- set current_menu = data.page.menu if data.page else "" -%}
+<a class="app-nav-link {% if not data.page %}app-nav-link-active{% endif %}" href="{{ url_for('accounting_blueprint.index') }}">Dasbor</a>
+{% for menu in data.acc_menus %}
+<div class="app-nav-menu">
+    <button type="button" class="app-nav-link app-nav-menu-toggle {% if current_menu == menu.label %}app-nav-link-active{% endif %}" data-dropdown="accMenu{{ loop.index }}" aria-haspopup="true" aria-expanded="false">
+        {{ menu.label }} {{ chevron_down("w-3.5 h-3.5") }}
+    </button>
+    <div class="app-dropdown app-nav-dropdown" id="accMenu{{ loop.index }}" role="menu">
+        {% for entry in menu.entries %}
+            {% if not entry.area or data.current_user.can(entry.area, 'read') %}
+            {% if entry.divider %}<hr class="launcher-menu-sep">{% endif %}
+            <a class="app-dropdown-item {% if entry.key and data.slug == entry.key %}app-dropdown-item-active{% endif %}" href="{{ url_for(entry.endpoint, **entry.args) }}" role="menuitem">{{ entry.label }}</a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

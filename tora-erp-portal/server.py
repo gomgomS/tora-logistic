@@ -58,6 +58,9 @@ from shipments.shipments_blueprint import shipments_blueprint
 from manifests.manifests_blueprint import manifests_blueprint
 from tracking.tracking_blueprint import tracking_blueprint
 from ai.ai_blueprint import ai_blueprint
+from record_log.record_log_blueprint import record_log_blueprint
+from settings.settings_blueprint import settings_blueprint
+from accounting.accounting_blueprint import accounting_blueprint
 
 app.register_blueprint(sample_blueprint, url_prefix="/sample")
 app.register_blueprint(auth_blueprint, url_prefix="/")
@@ -67,6 +70,9 @@ app.register_blueprint(shipments_blueprint, url_prefix="/")
 app.register_blueprint(manifests_blueprint, url_prefix="/")
 app.register_blueprint(tracking_blueprint, url_prefix="/")
 app.register_blueprint(ai_blueprint, url_prefix="/")
+app.register_blueprint(record_log_blueprint, url_prefix="/")
+app.register_blueprint(settings_blueprint, url_prefix="/")
+app.register_blueprint(accounting_blueprint, url_prefix="/")
 
 if __name__ == "__main__":
     app.run(

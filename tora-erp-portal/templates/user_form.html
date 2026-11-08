@@ -1,57 +1,236 @@
-{% extends "erp_base.html" %}
-{% block title %}{% if data.user_rec %}Ubah Pengguna{% else %}Pengguna Baru{% endif %} — {{ data.site_name }}{% endblock %}
-{% block topbar_title %}{% if data.user_rec %}Ubah Pengguna{% else %}Pengguna Baru{% endif %}{% endblock %}
-{% block erp_content %}
-<div class="flat-page">
-<div class="cp">
-    <div class="cp-side crumb">
-        <a href="{{ url_for('auth_blueprint.users') }}">Pengguna</a>
-        <span>/</span>
-        <strong>{% if data.user_rec %}Ubah{% else %}Baru{% endif %}</strong>
-    </div>
-    <div></div>
-    <div class="cp-side cp-side-end page-actions">
-        <a class="btn-outline btn-sm" href="{{ url_for('auth_blueprint.users') }}">Buang</a>
-        <button class="btn-accent btn-sm" type="submit" form="user-form">Simpan</button>
+{% extends "app_base.html" %}
+{% from "_icons.html" import cog, users, mail, phone, close, cloud_upload, shield %}
+{% from "_record_log.html" import record_log %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{% block title %}{% if data.user_rec %}{{ data.user_rec.name or data.user_rec.username }}{% else %}Pengguna Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block app_name %}Pengaturan{% endblock %}
+{% block app_home %}{{ url_for('settings_blueprint.index') }}{% endblock %}
+{% block app_icon_class %}app-icon-settings{% endblock %}
+{% block app_icon %}{{ cog("w-4 h-4") }}{% endblock %}
+
+{% block app_menu %}
+<a class="app-nav-link" href="{{ url_for('settings_blueprint.index') }}">Pengaturan Umum</a>
+<a class="app-nav-link app-nav-link-active" href="{{ url_for('auth_blueprint.users') }}">Pengguna</a>
+{% endblock %}
+
+{% block app_control %}
+{%- set can_edit = data.current_user.can('users', 'update' if data.user_rec else 'create') -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('users', 'create') %}
+        <a class="app-btn-secondary" href="{{ url_for('auth_blueprint.users_new') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb">
+            <a class="app-crumb-link" href="{{ url_for('auth_blueprint.users') }}">Pengguna</a>
+            <span class="app-crumb-sep">/</span>
+            <span class="app-crumb-current">{% if data.user_rec %}{{ data.user_rec.name or data.user_rec.username }}{% else %}Baru{% endif %}</span>
+            <span class="app-crumb-actions">
+                {% if can_edit %}
+                <button type="submit" form="userForm" class="app-icon-action app-icon-action-save" title="Simpan" aria-label="Simpan">
+                    {{ cloud_upload("w-4 h-4") }}
+                </button>
+                {% endif %}
+                <a class="app-icon-action" href="{{ url_for('auth_blueprint.users') }}" title="Buang perubahan" aria-label="Buang perubahan">
+                    {{ close("w-4 h-4") }}
+                </a>
+            </span>
+        </div>
     </div>
 </div>
+{% endblock %}
 
-<form id="user-form" class="contact-sheet" method="post" action="{% if data.user_rec %}{{ url_for('auth_blueprint.users_update', user_id=data.user_rec.id) }}{% else %}{{ url_for('auth_blueprint.users_create') }}{% endif %}">
+{% block app_content %}
+{%- set u = data.user_rec or {} -%}
+{%- set is_edit = data.user_rec != None -%}
+{%- set is_self = is_edit and u.id == data.current_user.id -%}
+{%- set actor_super = data.current_user.role == 'superadmin' -%}
+{%- set can_edit = data.current_user.can('users', 'update' if is_edit else 'create') -%}
+{%- set role = u.role or 'admin' -%}
+{%- set display = u.name or u.username or '' -%}
+{%- set target_super = is_edit and u.role == 'superadmin' -%}
+{#- A non-superadmin may not touch superadmin accounts at all. -#}
+{%- set locked = (not can_edit) or (target_super and not actor_super) -%}
+<div class="app-split">
+<div class="app-form-pane">
+<form id="userForm" class="app-form-sheet" method="post" action="{% if is_edit %}{{ url_for('auth_blueprint.users_update', user_id=u.id) }}{% else %}{{ url_for('auth_blueprint.users_create') }}{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
-    <div class="contact-grid">
-        <div>
-            <div class="sheet-field">
-                <label class="lbl" for="username">Nama pengguna <span class="req">*</span></label>
-                <input class="fld" type="text" id="username" name="username" value="{{ data.user_rec.username if data.user_rec else '' }}" required minlength="3">
-            </div>
-            <div class="sheet-field">
-                <label class="lbl" for="password">Kata sandi {% if not data.user_rec %}<span class="req">*</span>{% endif %}</label>
-                <input class="fld" type="password" id="password" name="password" {% if not data.user_rec %}required{% endif %} minlength="8" placeholder="{% if data.user_rec %}Kosongkan kalau tidak diganti{% else %}Minimal 8 karakter{% endif %}">
-            </div>
-        </div>
-        <div>
-            <div class="sheet-field">
-                <label class="lbl" for="name">Nama tampilan</label>
-                <input class="fld" type="text" id="name" name="name" value="{{ data.user_rec.name if data.user_rec else '' }}">
-            </div>
-            <div class="sheet-field">
-                <label class="lbl" for="role">Peran <span class="req">*</span></label>
-                <select class="fld" id="role" name="role" required>
-                    <option value="admin" {% if not data.user_rec or data.user_rec.role == 'admin' %}selected{% endif %}>Admin</option>
-                    <option value="superadmin" {% if data.user_rec and data.user_rec.role == 'superadmin' %}selected{% endif %}>Superadmin</option>
-                </select>
-            </div>
-            {% if data.user_rec %}
-            <div class="sheet-field">
-                <label class="lbl" for="status">Status</label>
-                <select class="fld" id="status" name="status">
-                    <option value="ENABLE" {% if data.user_rec.status == 'ENABLE' %}selected{% endif %}>Aktif</option>
-                    <option value="DISABLE" {% if data.user_rec.status == 'DISABLE' %}selected{% endif %}>Nonaktif</option>
-                </select>
-            </div>
+    <fieldset class="app-fieldset" {% if locked %}disabled{% endif %}>
+
+    <!-- ——— Header: avatar + name + login / email / phone ——— -->
+    <div class="app-sheet-head">
+        <div class="app-sheet-avatar">
+            {% if is_edit %}
+            <span class="app-avatar app-avatar-lg app-avatar-{{ display|length % 6 }}">{{ display[:1]|upper }}</span>
+            {% else %}
+            {{ users("w-12 h-12") }}
             {% endif %}
         </div>
+        <div class="app-sheet-title">
+            <input class="app-input app-input-xl" type="text" name="name" value="{{ u.name or '' }}" placeholder="Nama lengkap" {% if not is_edit %}autofocus{% endif %} aria-label="Nama lengkap">
+            <div class="app-field-row" title="Nama pengguna untuk masuk ke portal">
+                {{ shield("w-4 h-4") }}
+                <input class="app-input" type="text" name="username" value="{{ u.username or '' }}" placeholder="Nama pengguna (login) *" required minlength="3" autocomplete="off" aria-label="Nama pengguna">
+            </div>
+            <div class="app-field-row">
+                {{ mail("w-4 h-4") }}
+                <input class="app-input" type="email" name="email" value="{{ u.email or '' }}" placeholder="Email" aria-label="Email">
+            </div>
+            <div class="app-field-row">
+                {{ phone("w-4 h-4") }}
+                <input class="app-input" type="tel" name="phone" value="{{ u.phone or '' }}" placeholder="Telepon" aria-label="Telepon">
+            </div>
+        </div>
+    </div>
+    </fieldset>
+
+    <!-- ——— Tabs ——— -->
+    <div class="app-tabs" role="tablist">
+        <button type="button" class="app-tab app-tab-active" role="tab" aria-selected="true" data-tab="access">Hak Akses</button>
+        <button type="button" class="app-tab" role="tab" aria-selected="false" data-tab="security">Keamanan</button>
+    </div>
+
+    <div class="app-tab-panel" role="tabpanel" data-panel="access">
+        <fieldset class="app-fieldset" {% if locked %}disabled{% endif %}>
+        <h3 class="app-section-title">Peran</h3>
+        <div class="app-group app-group-wide">
+            <span class="app-label">Peran</span>
+            <div class="app-radio-row">
+                <label class="app-radio">
+                    <input type="radio" name="role" value="admin" {% if role == 'admin' %}checked{% endif %} {% if is_self %}disabled{% endif %} data-role-radio>
+                    Admin <span class="app-radio-hint">— sesuai hak akses di bawah</span>
+                </label>
+                <label class="app-radio">
+                    <input type="radio" name="role" value="superadmin" {% if role == 'superadmin' %}checked{% endif %} {% if is_self or not actor_super %}disabled{% endif %} data-role-radio>
+                    Superadmin <span class="app-radio-hint">— semua akses</span>
+                </label>
+            </div>
+            {% if is_self %}
+            {# disabled radios are not submitted: send the current role #}
+            <input type="hidden" name="role" value="{{ role }}">
+            {% endif %}
+
+            <span class="app-label">Status</span>
+            <div class="app-radio-row">
+                <label class="app-radio">
+                    <input type="radio" name="status" value="ENABLE" {% if (u.status or 'ENABLE') == 'ENABLE' %}checked{% endif %} {% if is_self %}disabled{% endif %}>
+                    Aktif
+                </label>
+                <label class="app-radio">
+                    <input type="radio" name="status" value="DISABLE" {% if u.status == 'DISABLE' %}checked{% endif %} {% if is_self %}disabled{% endif %}>
+                    Nonaktif <span class="app-radio-hint">— tidak bisa masuk</span>
+                </label>
+            </div>
+            {% if is_self %}
+            <input type="hidden" name="status" value="ENABLE">
+            {% endif %}
+        </div>
+
+        <p class="app-access-note" data-super-note {% if role != 'superadmin' %}hidden{% endif %}>
+            Superadmin selalu punya akses penuh ke semua area. Hak akses di bawah hanya berlaku untuk peran Admin.
+        </p>
+        {% if is_self %}
+        <p class="app-access-note">Hak akses akun sendiri tidak bisa diubah. Minta Superadmin lain bila perlu.</p>
+        {% endif %}
+
+        <div class="app-sheet-grid" data-access-grid>
+            {% for section in data.access_sections %}
+            <section>
+                <h3 class="app-section-title">{{ section.title }}</h3>
+                <div class="app-group">
+                    {% for area in section.areas %}
+                    {%- set actor_level = data.current_user.level(area.key) -%}
+                    {%- set ns = namespace(max=0) -%}
+                    {%- for lv in data.access_levels -%}{%- if lv.key == actor_level -%}{%- set ns.max = loop.index0 -%}{%- endif -%}{%- endfor -%}
+                    <label class="app-label" for="perm_{{ area.key }}">{{ area.label }} <span class="app-help" title="{{ area.help }}">?</span></label>
+                    <select class="app-input app-select" id="perm_{{ area.key }}" name="perm_{{ area.key }}" {% if is_self %}disabled{% endif %} data-perm-select>
+                        {% for lv in data.access_levels %}
+                        <option value="{{ lv.key }}" {% if data.user_levels[area.key] == lv.key %}selected{% endif %} {% if loop.index0 > ns.max %}disabled{% endif %}>{{ lv.label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+        </fieldset>
+    </div>
+
+    <div class="app-tab-panel" role="tabpanel" data-panel="security" hidden>
+        <fieldset class="app-fieldset" {% if locked %}disabled{% endif %}>
+        <h3 class="app-section-title">Ubah Sandi</h3>
+        <div class="app-group app-group-narrow">
+            {% if is_self %}
+            <label class="app-label" for="currentPassword">Sandi saat ini</label>
+            <input class="app-input app-input-boxed" type="password" id="currentPassword" name="current_password" autocomplete="current-password">
+            {% endif %}
+
+            <label class="app-label" for="newPassword">Sandi baru {% if not is_edit %}<span class="app-req">*</span>{% endif %}</label>
+            <input class="app-input app-input-boxed" type="password" id="newPassword" name="password" minlength="8" autocomplete="new-password" {% if not is_edit %}required{% endif %}>
+
+            <label class="app-label" for="confirmPassword">Konfirmasi sandi {% if not is_edit %}<span class="app-req">*</span>{% endif %}</label>
+            <input class="app-input app-input-boxed" type="password" id="confirmPassword" name="password_confirm" minlength="8" autocomplete="new-password" {% if not is_edit %}required{% endif %}>
+        </div>
+        <p class="app-tab-hint">
+            Minimal 8 karakter.
+            {% if is_edit %}Kosongkan bila tidak ingin mengganti sandi.{% endif %}
+            {% if is_self %}Untuk mengganti sandi sendiri, isi juga sandi saat ini.{% endif %}
+        </p>
+        </fieldset>
     </div>
 </form>
 </div>
+
+{{ record_log("user", u.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
+</div>
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Superadmin ignores per-area access: grey the selects out while it is
+    // chosen (disabled selects are not submitted, the server keeps the old
+    // values).
+    var radios = document.querySelectorAll("[data-role-radio]");
+    var selects = document.querySelectorAll("[data-perm-select]");
+    var note = document.querySelector("[data-super-note]");
+    var selfLocked = {{ 'true' if is_self else 'false' }};
+    function sync() {
+        var isSuper = false;
+        radios.forEach(function (r) {
+            if (r.checked && r.value === "superadmin") {
+                isSuper = true;
+            }
+        });
+        selects.forEach(function (s) {
+            s.disabled = selfLocked || isSuper;
+        });
+        if (note) {
+            note.hidden = !isSuper;
+        }
+    }
+    radios.forEach(function (r) {
+        r.addEventListener("change", sync);
+    });
+    sync();
+
+    var form = document.getElementById("userForm");
+    var pw = document.getElementById("newPassword");
+    var confirmPw = document.getElementById("confirmPassword");
+    if (form && pw && confirmPw) {
+        form.addEventListener("submit", function (e) {
+            if (pw.value !== confirmPw.value) {
+                e.preventDefault();
+                confirmPw.setCustomValidity("Konfirmasi sandi tidak sama");
+                confirmPw.reportValidity();
+                document.querySelector('.app-tab[data-tab="security"]').click();
+            } else {
+                confirmPw.setCustomValidity("");
+            }
+        });
+        confirmPw.addEventListener("input", function () {
+            confirmPw.setCustomValidity("");
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -90,7 +90,11 @@ db = {
         "name": "",
         "phone": "",
         "email": "",
-        "status": "ENABLE"
+        "status": "ENABLE",
+        # Hak akses per area for role "admin": {"contacts": "full", ...}
+        # (level keys in auth_proc.ACCESS_LEVELS; superadmin ignores this)
+        "permissions": {},
+        "last_login": ""
     },
 
     "db_sample_item": {
@@ -127,7 +131,27 @@ db = {
         "email": "",
         "address": "",
         "city": "",
-        "category": "CLIENT"
+        "category": "CLIENT",
+        # Contact form (header + address)
+        "street2": "",
+        "province": "",
+        "postal_code": "",
+        "country": "Indonesia",
+        "tax_id": "",
+        "job_title": "",
+        "website": "",
+        "tags": "",
+        # Sales & Purchase tab
+        "salesperson_id": "",
+        "sale_payment_term": "",
+        "sale_payment_method": "",
+        "purchase_payment_term": "",
+        "purchase_payment_method": "",
+        "fiscal_position": "",
+        "reference": "",
+        "industry": "",
+        # Catatan tab
+        "notes": ""
     },
 
     "db_vehicle": {
@@ -215,6 +239,76 @@ db = {
     "db_code_counter": {
         "counter_key": "",
         "seq": 0
+    },
+
+    # Akuntansi — customer invoices (and later credit notes via move_type).
+    #   seq        running number 1, 2, 3 ... used in the URL
+    #              (/accounting/invoices/4), counter "SEQID:invoice"
+    #   number     assigned on create from the sequence in Konfigurasi >
+    #              Pengaturan (e.g. INV/2026/00004); shown to people
+    #   state      DRAFT / POSTED (Terekam) / CANCEL (Batal)
+    #   lines      [{product, account, quantity, price_unit, tax,
+    #                subtotal, tax_amount}] — amounts recomputed server-side
+    #   payments   [{date, amount, method, memo, author_name}] (Bayar)
+    #   payment_state  not_paid / partial / paid
+    "db_invoice": {
+        "move_type": "out_invoice",
+        "seq": 0,
+        "number": "",
+        "state": "DRAFT",
+        "partner_id": "",
+        "partner_name": "",
+        "invoice_date": "",
+        "payment_term": "",
+        "due_date": "",
+        "customer_ref": "",
+        "payment_ref": "",
+        "salesperson_id": "",
+        "delivery_date": "",
+        "efaktur_code": "",
+        "fiscal_position": "",
+        "notes": "",
+        "lines": [],
+        "amount_untaxed": 0,
+        "amount_tax": 0,
+        "amount_total": 0,
+        "amount_residual": 0,
+        "posted_at": "",
+        "payments": [],
+        "payment_state": "not_paid"
+    },
+
+    # Akuntansi > Konfigurasi > Pajak. Lines reference a tax by its code.
+    #   amount       percent (12 = 12%)
+    #   base         "full" or "dpp_11_12" (PPN on DPP Nilai Lain 11/12)
+    #   tax_use      "sale" / "purchase"; scope "" / "goods" / "service"
+    "db_tax": {
+        "code": "",
+        "name": "",
+        "description": "",
+        "tax_use": "sale",
+        "scope": "",
+        "amount": 0,
+        "base": "full",
+        "invoice_label": "",
+        "active": True,
+        "sequence": 0
+    },
+
+    # Activity log shown beside any record form (contacts today, other
+    # modules later). One collection for every module:
+    #   model      registry key from record_log_proc.LOG_MODELS ("contact")
+    #   record_id  str(_id) of the record
+    #   kind       CREATE / NOTE / CHANGE
+    #   changes    [{"label", "old", "new"}] for CHANGE entries
+    "db_record_log": {
+        "model": "",
+        "record_id": "",
+        "kind": "NOTE",
+        "body": "",
+        "changes": [],
+        "author_id": "",
+        "author_name": ""
     },
 
     "db_delivery": {

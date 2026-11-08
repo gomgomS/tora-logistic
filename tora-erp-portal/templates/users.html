@@ -1,46 +1,182 @@
-{% extends "erp_base.html" %}
-{% from "_icons.html" import plus %}
-{% from "_ui.html" import status_badge, role_label %}
+{% extends "app_base.html" %}
+{% from "_icons.html" import cog, search, sliders, chevron_down, funnel, close %}
+{% from "_ui.html" import empty_state %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
 {% block title %}Pengguna — {{ data.site_name }}{% endblock %}
-{% block topbar_title %}Pengguna{% endblock %}
-{% block erp_content %}
-<div class="flat-page">
-<div class="cp">
-    <div class="cp-side">
-        <a class="btn-accent btn-sm" href="{{ url_for('auth_blueprint.users_new') }}">{{ plus("w-4 h-4") }} Baru</a>
-        <span class="cp-name">Pengguna</span>
-        {% if data.users|length %}
-        <span class="list-count">{{ data.users|length }}</span>
+{% block app_name %}Pengaturan{% endblock %}
+{% block app_home %}{{ url_for('settings_blueprint.index') }}{% endblock %}
+{% block app_icon_class %}app-icon-settings{% endblock %}
+{% block app_icon %}{{ cog("w-4 h-4") }}{% endblock %}
+
+{% block app_menu %}
+<a class="app-nav-link" href="{{ url_for('settings_blueprint.index') }}">Pengaturan Umum</a>
+<a class="app-nav-link app-nav-link-active" href="{{ url_for('auth_blueprint.users') }}">Pengguna</a>
+{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('users', 'create') %}
+        <a class="app-btn-primary" href="{{ url_for('auth_blueprint.users_new') }}">Baru</a>
         {% endif %}
+        <div class="app-crumb-stack">
+            <a class="app-crumb-parent" href="{{ url_for('settings_blueprint.index') }}">Pengaturan</a>
+            <span class="app-cp-title">Pengguna</span>
+        </div>
+        {% if data.current_user.can('users', 'delete') %}
+        <div class="app-cp-selection" id="usersSelection" hidden>
+            <span><strong data-select-count>0</strong> dipilih</span>
+            <button type="submit" form="usersBulkForm" class="app-btn-secondary" onclick="return confirm('Hapus pengguna yang dipilih?');">Hapus</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <form class="app-cp-middle" method="get" action="{{ url_for('auth_blueprint.users') }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            {% if data.role %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ data.role_labels[data.role] }}
+                <a href="{{ url_for('auth_blueprint.users', status=data.status, q=data.q) }}" title="Hapus filter" aria-label="Hapus filter peran">{{ close("w-3 h-3") }}</a>
+            </span>
+            <input type="hidden" name="role" value="{{ data.role }}">
+            {% endif %}
+            {% if data.status %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ data.status_labels[data.status] }}
+                <a href="{{ url_for('auth_blueprint.users', role=data.role, q=data.q) }}" title="Hapus filter" aria-label="Hapus filter status">{{ close("w-3 h-3") }}</a>
+            </span>
+            <input type="hidden" name="status" value="{{ data.status }}">
+            {% endif %}
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari nama, login, atau email ..." aria-label="Cari pengguna">
+            <div class="app-search-filter">
+                <button type="button" class="app-search-toggle" data-dropdown="usersFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
+                    {{ chevron_down("w-4 h-4") }}
+                </button>
+                <div class="app-dropdown app-filter-menu" id="usersFilterMenu">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Peran</div>
+                    <a class="app-dropdown-item {% if not data.role %}app-dropdown-item-active{% endif %}" href="{{ url_for('auth_blueprint.users', status=data.status, q=data.q) }}">Semua</a>
+                    {% for role in data.roles %}
+                    <a class="app-dropdown-item {% if data.role == role %}app-dropdown-item-active{% endif %}" href="{{ url_for('auth_blueprint.users', role=role, status=data.status, q=data.q) }}">{{ data.role_labels[role] }}</a>
+                    {% endfor %}
+                    <hr class="launcher-menu-sep">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Status</div>
+                    <a class="app-dropdown-item {% if not data.status %}app-dropdown-item-active{% endif %}" href="{{ url_for('auth_blueprint.users', role=data.role, q=data.q) }}">Semua</a>
+                    {% for key, label in data.status_labels.items() %}
+                    <a class="app-dropdown-item {% if data.status == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('auth_blueprint.users', role=data.role, status=key, q=data.q) }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, "auth_blueprint.users", data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{%- set can_delete = data.current_user.can('users', 'delete') -%}
+{%- set columns = [
+    {"key": "login", "label": "Login", "default": true},
+    {"key": "email", "label": "Email", "default": false},
+    {"key": "phone", "label": "Telepon", "default": false},
+    {"key": "role", "label": "Peran", "default": true},
+    {"key": "status", "label": "Status", "default": true},
+    {"key": "last_login", "label": "Terakhir masuk", "default": true},
+    {"key": "created", "label": "Dibuat pada", "default": false}
+] -%}
+{%- set hidden_cols = columns|rejectattr("default")|map(attribute="key")|list -%}
+{% if pager.total == 0 %}
+    <div class="app-empty">
+    {% if data.q or data.role or data.status %}
+        {{ empty_state("Tidak ada pengguna yang cocok", "Ubah kata kunci atau hapus filter.", url_for('auth_blueprint.users'), "Hapus pencarian") }}
+    {% else %}
+        {{ empty_state("Belum ada pengguna", "Buat akun untuk staf Anda.", url_for('auth_blueprint.users_new'), "Baru") }}
+    {% endif %}
+    </div>
+{% else %}
+{% if can_delete %}
+<form id="usersBulkForm" method="post" action="{{ url_for('auth_blueprint.users_bulk_delete') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="role" value="{{ data.role }}">
+    <input type="hidden" name="status" value="{{ data.status }}">
+    <input type="hidden" name="q" value="{{ data.q }}">
+</form>
+{% endif %}
+
+<div class="app-list-area">
+    <div class="app-list-wrap">
+        <table class="app-list" id="usersList" data-table-key="users" {% if can_delete %}data-select-bar="usersSelection"{% endif %}>
+            <thead>
+                <tr>
+                    {% if can_delete %}
+                    <th class="app-list-check"><input type="checkbox" class="app-check" data-check-all aria-label="Pilih semua"></th>
+                    {% endif %}
+                    <th data-key="name" data-width="240">Nama</th>
+                    <th data-col="login" data-width="180" {% if 'login' in hidden_cols %}class="app-col-hidden"{% endif %}>Login</th>
+                    <th data-col="email" data-width="220" {% if 'email' in hidden_cols %}class="app-col-hidden"{% endif %}>Email</th>
+                    <th data-col="phone" data-width="130" {% if 'phone' in hidden_cols %}class="app-col-hidden"{% endif %}>Telepon</th>
+                    <th data-col="role" data-width="120" {% if 'role' in hidden_cols %}class="app-col-hidden"{% endif %}>Peran</th>
+                    <th data-col="status" data-width="110" {% if 'status' in hidden_cols %}class="app-col-hidden"{% endif %}>Status</th>
+                    <th data-col="last_login" data-width="140" {% if 'last_login' in hidden_cols %}class="app-col-hidden"{% endif %}>Terakhir masuk</th>
+                    <th data-col="created" data-width="130" {% if 'created' in hidden_cols %}class="app-col-hidden"{% endif %}>Dibuat pada</th>
+                    <th class="app-list-optional">
+                        <button type="button" class="app-col-toggle" data-dropdown="usersColMenu" title="Pilih kolom" aria-haspopup="true" aria-expanded="false">
+                            {{ sliders("w-4 h-4") }}
+                        </button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in data.users %}
+                {%- set display = u.name or u.username -%}
+                <tr data-href="{{ url_for('auth_blueprint.users_edit', user_id=u.id) }}">
+                    {% if can_delete %}
+                    <td class="app-list-check">
+                        <input type="checkbox" class="app-check" name="ids" value="{{ u.id }}" form="usersBulkForm" aria-label="Pilih {{ display }}" {% if u.id == data.current_user.id %}disabled title="Akun yang sedang dipakai tidak bisa dihapus"{% endif %}>
+                    </td>
+                    {% endif %}
+                    <td>
+                        <a class="app-list-name" href="{{ url_for('auth_blueprint.users_edit', user_id=u.id) }}" title="{{ display }}">
+                            <span class="app-avatar app-avatar-{{ display|length % 6 }}">{{ display[:1]|upper }}</span>
+                            <span class="app-list-name-text">{{ display }}</span>
+                        </a>
+                    </td>
+                    <td data-col="login" title="{{ u.username }}" {% if 'login' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ u.username }}</td>
+                    <td data-col="email" title="{{ u.email or '' }}" {% if 'email' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ u.email or "" }}</td>
+                    <td data-col="phone" {% if 'phone' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ u.phone or "" }}</td>
+                    <td data-col="role" {% if 'role' in hidden_cols %}class="app-col-hidden"{% endif %}><span class="app-badge">{{ data.role_labels.get(u.role, u.role) }}</span></td>
+                    <td data-col="status" {% if 'status' in hidden_cols %}class="app-col-hidden"{% endif %}>
+                        <span class="app-badge {% if u.status == 'ENABLE' %}app-badge-success{% endif %}">{{ data.status_labels.get(u.status, u.status) }}</span>
+                    </td>
+                    <td data-col="last_login" {% if 'last_login' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ u.last_login or "—" }}</td>
+                    <td data-col="created" {% if 'created' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ (u.rec_timestamp_str or "")[:16] }}</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="app-dropdown app-col-menu" id="usersColMenu" data-col-menu-for="usersList">
+        {% for col in columns %}
+        <label class="app-dropdown-check">
+            <input type="checkbox" class="app-check" value="{{ col.key }}" {% if col.default %}checked{% endif %}>
+            <span>{{ col.label }}</span>
+        </label>
+        {% endfor %}
+        <hr class="launcher-menu-sep">
+        <button type="button" class="app-dropdown-action" data-col-reset>Reset lebar kolom</button>
     </div>
 </div>
 
-<table class="tbl odoo-tbl">
-    <thead>
-        <tr><th>Nama pengguna</th><th>Peran</th><th>Nama</th><th>Status</th><th>Dibuat</th><th></th></tr>
-    </thead>
-    <tbody>
-        {% for user in data.users %}
-        <tr>
-            <td class="cell-strong font-mono">{{ user.username }}</td>
-            <td class="mute">{{ role_label(user.role) }}</td>
-            <td>{{ user.name }}</td>
-            <td>{{ status_badge(user.status) }}</td>
-            <td class="mute">{{ user.rec_timestamp_str }}</td>
-            <td>
-                <div class="row-actions">
-                    <a class="btn-outline btn-sm" href="{{ url_for('auth_blueprint.users_edit', user_id=user.id) }}">Ubah</a>
-                    {% if user.id != data.current_user.id %}
-                    <form method="post" action="{{ url_for('auth_blueprint.users_delete', user_id=user.id) }}" onsubmit="return confirm('Hapus pengguna ini?');">
-                        <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
-                        <button class="btn-outline btn-sm" type="submit">Hapus</button>
-                    </form>
-                    {% endif %}
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
+{{ pager_bar(pager, "auth_blueprint.users", data.page_args) }}
+{% endif %}
 {% endblock %}

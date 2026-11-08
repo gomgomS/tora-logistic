@@ -15,6 +15,9 @@ from view.auth import view_auth
 
 # ---------------------------------------------------------------------------
 # AUTH MODULE — route layer (login / logout / dashboard / user management).
+#
+# /             app launcher (Operasional, Kontak, Pengaturan)
+# /operations   operational overview (KPIs, recent orders, status spread)
 # ---------------------------------------------------------------------------
 
 auth_blueprint = Blueprint("auth_blueprint", __name__)
@@ -23,6 +26,16 @@ auth_blueprint = Blueprint("auth_blueprint", __name__)
 def dashboard():
     try:
         return view_auth.html_dashboard()
+    except Exception as e:
+        print(traceback.format_exc())
+        return "An error occurred", 500
+    # end try
+# end def
+
+@auth_blueprint.route("/operations", methods=["GET"])
+def operations():
+    try:
+        return view_auth.html_operations()
     except Exception as e:
         print(traceback.format_exc())
         return "An error occurred", 500
@@ -93,6 +106,16 @@ def users_update(user_id):
 def users_delete(user_id):
     try:
         return view_auth.html_delete_user(user_id)
+    except Exception as e:
+        print(traceback.format_exc())
+        return "An error occurred", 500
+    # end try
+# end def
+
+@auth_blueprint.route("/users/bulk-delete", methods=["POST"])
+def users_bulk_delete():
+    try:
+        return view_auth.html_bulk_delete_users()
     except Exception as e:
         print(traceback.format_exc())
         return "An error occurred", 500

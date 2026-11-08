@@ -1,68 +1,253 @@
-{% extends "erp_base.html" %}
-{% from "_icons.html" import users %}
+{% extends "app_base.html" %}
+{% from "_icons.html" import users, building, mail, phone, plus, close, cloud_upload %}
 {% from "_ui.html" import category_label %}
-{% block title %}{% if data.contact %}Ubah Kontak{% else %}Kontak Baru{% endif %} — {{ data.site_name }}{% endblock %}
-{% block topbar_title %}{% if data.contact %}Ubah Kontak{% else %}Kontak Baru{% endif %}{% endblock %}
-{% block erp_content %}
+{% from "_record_log.html" import record_log %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{% block title %}{% if data.contact %}{{ data.contact.name }}{% else %}Kontak Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block app_name %}Kontak{% endblock %}
+{% block app_home %}{{ url_for('contacts_blueprint.index') }}{% endblock %}
+{% block app_icon_class %}app-icon-contacts{% endblock %}
+{% block app_icon %}{{ users("w-4 h-4") }}{% endblock %}
 
-<div class="flat-page">
-<div class="cp">
-    <div class="cp-side crumb">
-        <a href="{{ url_for('contacts_blueprint.index') }}">Kontak</a>
-        <span>/</span>
-        <strong>{% if data.contact %}Ubah{% else %}Baru{% endif %}</strong>
-    </div>
-    <div></div>
-    <div class="cp-side cp-side-end page-actions">
-        <a class="btn-outline btn-sm" href="{{ url_for('contacts_blueprint.index') }}">Buang</a>
-        <button class="btn-accent btn-sm" type="submit" form="contact-form">Simpan</button>
+{% block app_menu %}
+<a class="app-nav-link app-nav-link-active" href="{{ url_for('contacts_blueprint.index') }}">Kontak</a>
+{% endblock %}
+
+{% block app_control %}
+{%- set can_edit = data.current_user.can('contacts', 'update' if data.contact else 'create') -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('contacts', 'create') %}
+        <a class="app-btn-secondary" href="{{ url_for('contacts_blueprint.new_contact') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb">
+            <a class="app-crumb-link" href="{{ url_for('contacts_blueprint.index') }}">Kontak</a>
+            <span class="app-crumb-sep">/</span>
+            <span class="app-crumb-current">{% if data.contact %}{{ data.contact.name }}{% else %}Baru{% endif %}</span>
+            <span class="app-crumb-actions">
+                {% if can_edit %}
+                <button type="submit" form="contactForm" class="app-icon-action app-icon-action-save" title="Simpan" aria-label="Simpan">
+                    {{ cloud_upload("w-4 h-4") }}
+                </button>
+                {% endif %}
+                <a class="app-icon-action" href="{{ url_for('contacts_blueprint.index') }}" title="Buang perubahan" aria-label="Buang perubahan">
+                    {{ close("w-4 h-4") }}
+                </a>
+            </span>
+        </div>
     </div>
 </div>
+{% endblock %}
 
-<form id="contact-form" class="contact-sheet" method="post" action="{% if data.contact %}{{ url_for('contacts_blueprint.update_contact', contact_id=data.contact.id) }}{% else %}{{ url_for('contacts_blueprint.create') }}{% endif %}">
+{% block app_content %}
+{%- set c = data.contact or {} -%}
+{%- set is_edit = data.contact != None -%}
+{%- set selected_seller = c.salesperson_id if is_edit else (data.current_user.id|string) -%}
+{%- set can_edit = data.current_user.can('contacts', 'update' if is_edit else 'create') -%}
+<div class="app-split">
+<div class="app-form-pane">
+<form id="contactForm" class="app-form-sheet" method="post" action="{% if is_edit %}{{ url_for('contacts_blueprint.update_contact', contact_id=c.id) }}{% else %}{{ url_for('contacts_blueprint.create') }}{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
-    <input type="hidden" name="next" value="{{ url_for('contacts_blueprint.index') }}">
+    <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
 
-    <div class="contact-hero">
-        <span class="who-mark who-navy contact-hero-mark">{{ users("w-5 h-5") }}</span>
-        <div class="contact-hero-fields">
-            <input class="sheet-name" type="text" name="name" value="{{ data.contact.name if data.contact else '' }}" placeholder="Nama (perusahaan atau perorangan)" required autofocus>
-            <input class="fld sheet-line" type="text" name="company_name" value="{{ data.contact.company_name if data.contact else '' }}" placeholder="Perusahaan">
-            <input class="fld sheet-line" type="email" name="email" value="{{ data.contact.email if data.contact else '' }}" placeholder="Email">
-            <input class="fld sheet-line" type="text" name="phone" value="{{ data.contact.phone if data.contact else '' }}" placeholder="Telepon">
+    <!-- ——— Header: avatar + name + company / email / phone ——— -->
+    <div class="app-sheet-head">
+        <div class="app-sheet-avatar">
+            {% if is_edit %}
+            <span class="app-avatar app-avatar-lg app-avatar-{{ c.name|length % 6 }}">{{ c.name[:1]|upper }}</span>
+            {% else %}
+            {{ building("w-12 h-12") }}
+            {% endif %}
+        </div>
+        <div class="app-sheet-title">
+            <input class="app-input app-input-xl" type="text" name="name" value="{{ c.name or '' }}" placeholder="Nama (perusahaan atau perorangan)" required {% if not is_edit %}autofocus{% endif %} aria-label="Nama">
+            <div class="app-field-row">
+                {{ building("w-4 h-4") }}
+                <input class="app-input" type="text" name="company_name" value="{{ c.company_name or data.prefill_company or '' }}" placeholder="Perusahaan" aria-label="Perusahaan">
+            </div>
+            <div class="app-field-row">
+                {{ mail("w-4 h-4") }}
+                <input class="app-input" type="email" name="email" value="{{ c.email or '' }}" placeholder="Email" aria-label="Email">
+            </div>
+            <div class="app-field-row">
+                {{ phone("w-4 h-4") }}
+                <input class="app-input" type="tel" name="phone" value="{{ c.phone or '' }}" placeholder="Telepon" aria-label="Telepon">
+            </div>
         </div>
     </div>
 
-    <div class="contact-grid">
-        <div>
-            <div class="sheet-field">
-                <label class="lbl" for="address">Alamat</label>
-                <input class="fld" type="text" id="address" name="address" value="{{ data.contact.address if data.contact else '' }}" placeholder="Jalan">
-            </div>
-            <div class="sheet-field">
-                <label class="lbl" for="city">Kota</label>
-                <input class="fld" type="text" id="city" name="city" value="{{ data.contact.city if data.contact else '' }}" list="city-list" placeholder="Kota">
-            </div>
-        </div>
-        <div>
-            <div class="sheet-field">
-                <label class="lbl">Kategori <span class="req">*</span></label>
-                <div class="radio-row">
-                    {% for cat in data.categories %}
-                    <label class="radio-pill">
-                        <input type="radio" name="category" value="{{ cat }}" {% if data.contact and data.contact.category == cat %}checked{% elif not data.contact and cat == 'CLIENT' %}checked{% endif %} required>
-                        {{ category_label(cat) }}
-                    </label>
-                    {% endfor %}
+    <!-- ——— Main fields ——— -->
+    <div class="app-sheet-grid">
+        <div class="app-group">
+            <label class="app-label">Alamat</label>
+            <div class="app-address">
+                <input class="app-input" type="text" name="address" value="{{ c.address or '' }}" placeholder="Jalan..." aria-label="Jalan">
+                <input class="app-input" type="text" name="street2" value="{{ c.street2 or '' }}" placeholder="Tambahan nama jalan..." aria-label="Tambahan nama jalan">
+                <div class="app-address-row">
+                    <input class="app-input" type="text" name="city" value="{{ c.city or '' }}" placeholder="Kota" list="cityList" aria-label="Kota">
+                    <input class="app-input" type="text" name="province" value="{{ c.province or '' }}" placeholder="Provinsi" aria-label="Provinsi">
+                    <input class="app-input" type="text" name="postal_code" value="{{ c.postal_code or '' }}" placeholder="Kode Pos" inputmode="numeric" pattern="\d{5}" maxlength="5" title="5 angka" aria-label="Kode pos">
                 </div>
+                <input class="app-input" type="text" name="country" value="{{ c.country or 'Indonesia' }}" placeholder="Negara" aria-label="Negara">
             </div>
+
+            <label class="app-label" for="taxId">NPWP/NIK <span class="app-help" title="Nomor Pokok Wajib Pajak perusahaan, atau NIK untuk perorangan">?</span></label>
+            <input class="app-input" type="text" id="taxId" name="tax_id" value="{{ c.tax_id or '' }}">
         </div>
+
+        <div class="app-group">
+            <span class="app-label">Kategori <span class="app-req">*</span></span>
+            <div class="app-radio-row">
+                {% for cat in data.categories %}
+                <label class="app-radio">
+                    <input type="radio" name="category" value="{{ cat }}" {% if (c.category or 'CLIENT') == cat %}checked{% endif %} required>
+                    {{ category_label(cat) }}
+                </label>
+                {% endfor %}
+            </div>
+
+            <label class="app-label" for="jobTitle">Jabatan Kerja</label>
+            <input class="app-input" type="text" id="jobTitle" name="job_title" value="{{ c.job_title or '' }}" placeholder="misalnya: Direktur Penjualan">
+
+            <label class="app-label" for="website">Website</label>
+            <input class="app-input" type="text" id="website" name="website" value="{{ c.website or '' }}" placeholder="contoh https://www.perusahaan.co.id">
+
+            <label class="app-label" for="tags">Label</label>
+            <input class="app-input" type="text" id="tags" name="tags" value="{{ c.tags or '' }}" placeholder='contohnya "B2B", "VIP", "Langganan", ...'>
+        </div>
+    </div>
+    </fieldset>
+
+    <!-- ——— Tabs ——— -->
+    <div class="app-tabs" role="tablist">
+        <button type="button" class="app-tab app-tab-active" role="tab" aria-selected="true" data-tab="contacts">Kontak</button>
+        <button type="button" class="app-tab" role="tab" aria-selected="false" data-tab="sales">Sales &amp; Purchase</button>
+        <button type="button" class="app-tab" role="tab" aria-selected="false" data-tab="notes">Catatan</button>
+    </div>
+
+    <div class="app-tab-panel" role="tabpanel" data-panel="contacts">
+        {% if is_edit %}
+        <div class="app-related">
+            {% for r in data.related %}
+            <a class="app-related-card" href="{{ url_for('contacts_blueprint.edit_contact', contact_id=r.id) }}">
+                <span class="app-avatar app-avatar-md app-avatar-{{ r.name|length % 6 }}">{{ r.name[:1]|upper }}</span>
+                <span class="app-related-text">
+                    <strong>{{ r.name }}</strong>
+                    {% if r.job_title %}<span>{{ r.job_title }}</span>{% endif %}
+                    {% if r.email %}<span>{{ r.email }}</span>{% elif r.phone %}<span>{{ r.phone }}</span>{% endif %}
+                </span>
+            </a>
+            {% endfor %}
+            {% if data.current_user.can('contacts', 'create') %}
+            <a class="app-related-add" href="{{ url_for('contacts_blueprint.new_contact', company=(c.company_name or c.name)) }}">
+                {{ plus("w-4 h-4") }} Tambah kontak terkait
+            </a>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="app-tab-hint">Simpan kontak ini terlebih dulu untuk menambahkan kontak terkait.</p>
+        {% endif %}
+    </div>
+
+    <div class="app-tab-panel" role="tabpanel" data-panel="sales" hidden>
+        <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
+        <div class="app-sheet-grid">
+            <section>
+                <h3 class="app-section-title">Penjualan</h3>
+                <div class="app-group">
+                    <label class="app-label" for="salesperson">Penjual <span class="app-help" title="Pengguna yang bertanggung jawab atas klien ini">?</span></label>
+                    <select class="app-input app-select" id="salesperson" name="salesperson_id">
+                        <option value=""></option>
+                        {% for u in data.salespeople %}
+                        <option value="{{ u.id }}" {% if selected_seller == u.id %}selected{% endif %}>{{ u.label }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="app-label" for="saleTerm">Termin Pembayaran</label>
+                    <select class="app-input app-select" id="saleTerm" name="sale_payment_term">
+                        <option value=""></option>
+                        {% for opt in data.payment_terms %}
+                        <option value="{{ opt }}" {% if c.sale_payment_term == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="app-label" for="saleMethod">Metode Pembayaran</label>
+                    <select class="app-input app-select" id="saleMethod" name="sale_payment_method">
+                        <option value=""></option>
+                        {% for opt in data.payment_methods %}
+                        <option value="{{ opt }}" {% if c.sale_payment_method == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="app-section-title">Pembelian</h3>
+                <div class="app-group">
+                    <label class="app-label" for="purchaseTerm">Termin Pembayaran</label>
+                    <select class="app-input app-select" id="purchaseTerm" name="purchase_payment_term">
+                        <option value=""></option>
+                        {% for opt in data.payment_terms %}
+                        <option value="{{ opt }}" {% if c.purchase_payment_term == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label class="app-label" for="purchaseMethod">Metode Pembayaran</label>
+                    <select class="app-input app-select" id="purchaseMethod" name="purchase_payment_method">
+                        <option value=""></option>
+                        {% for opt in data.payment_methods %}
+                        <option value="{{ opt }}" {% if c.purchase_payment_method == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="app-section-title">Informasi Fiskal</h3>
+                <div class="app-group">
+                    <label class="app-label" for="fiscal">Posisi Fiskal <span class="app-help" title="Status pajak kontak: PKP, Non-PKP, atau bebas pajak">?</span></label>
+                    <select class="app-input app-select" id="fiscal" name="fiscal_position">
+                        <option value=""></option>
+                        {% for opt in data.fiscal_positions %}
+                        <option value="{{ opt }}" {% if c.fiscal_position == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="app-section-title">Lain-lain</h3>
+                <div class="app-group">
+                    <label class="app-label" for="reference">Referensi</label>
+                    <input class="app-input" type="text" id="reference" name="reference" value="{{ c.reference or '' }}">
+
+                    <label class="app-label" for="industry">Industri</label>
+                    <input class="app-input" type="text" id="industry" name="industry" value="{{ c.industry or '' }}" list="industryList">
+                </div>
+            </section>
+        </div>
+        </fieldset>
+    </div>
+
+    <div class="app-tab-panel" role="tabpanel" data-panel="notes" hidden>
+        <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
+        <textarea class="app-notes" name="notes" rows="8" maxlength="5000" placeholder="Catatan internal tentang kontak ini..." aria-label="Catatan">{{ c.notes or '' }}</textarea>
+        </fieldset>
     </div>
 </form>
-<datalist id="city-list">
+</div>
+
+{{ record_log("contact", c.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
+</div>
+
+<datalist id="cityList">
     {% for city in ['Jakarta','Bandung','Semarang','Surabaya','Malang','Yogyakarta','Solo','Denpasar','Medan','Palembang','Pekanbaru','Makassar','Balikpapan','Banjarmasin','Pontianak','Lampung'] %}
     <option value="{{ city }}"></option>
     {% endfor %}
 </datalist>
-</div>
+<datalist id="industryList">
+    {% for opt in data.industries %}
+    <option value="{{ opt }}"></option>
+    {% endfor %}
+</datalist>
 {% endblock %}

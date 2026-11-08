@@ -27,7 +27,7 @@
 {% if data.manifests|length == 0 %}
     {{ empty_state("Belum ada manifest", "Buat manifest pertama: tugaskan kendaraan dan sopir, lalu konsolidasi kiriman.", url_for('manifests_blueprint.create'), "Baru") }}
 {% else %}
-<table class="tbl odoo-tbl">
+<table class="tbl list-tbl">
     <thead>
         <tr><th>Manifest</th><th>Rute</th><th>Kendaraan</th><th>Sopir</th><th>Kiriman</th><th>Status</th><th>Lokasi terakhir</th><th>Diperbarui</th><th></th></tr>
     </thead>

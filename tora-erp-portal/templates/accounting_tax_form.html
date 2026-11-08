@@ -1,0 +1,104 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import close, cloud_upload %}
+{% block title %}{% if data.tax %}{{ data.tax.name }}{% else %}Pajak Baru{% endif %} — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set can_edit = data.current_user.can('accounting', 'update' if data.tax else 'create') -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.tax_new') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb">
+            <a class="app-crumb-link" href="{{ url_for('accounting_blueprint.taxes') }}">Pajak</a>
+            <span class="app-crumb-sep">/</span>
+            <span class="app-crumb-current">{% if data.tax %}{{ data.tax.name }}{% else %}Baru{% endif %}</span>
+            <span class="app-crumb-actions">
+                {% if can_edit %}
+                <button type="submit" form="taxForm" class="app-icon-action app-icon-action-save" title="Simpan" aria-label="Simpan">{{ cloud_upload("w-4 h-4") }}</button>
+                {% endif %}
+                <a class="app-icon-action" href="{{ url_for('accounting_blueprint.taxes') }}" title="Buang perubahan" aria-label="Buang perubahan">{{ close("w-4 h-4") }}</a>
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set t = data.tax or {} -%}
+{%- set is_edit = data.tax != None -%}
+{%- set can_edit = data.current_user.can('accounting', 'update' if is_edit else 'create') -%}
+<div class="tax-page">
+<form id="taxForm" class="app-form-sheet tax-sheet" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.tax_update', code=t.code) }}{% else %}{{ url_for('accounting_blueprint.tax_create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
+    <div class="inv-title">
+        <span class="inv-title-label">Pajak</span>
+        <input class="app-input app-input-xl" type="text" name="name" value="{{ t.name or '' }}" placeholder="Nama pajak, contoh: 12% (Non-Luxury Good)" required {% if not is_edit %}autofocus{% endif %} aria-label="Nama pajak">
+    </div>
+
+    <div class="app-sheet-grid">
+        <div class="app-group">
+            <span class="app-label">Tipe Pajak</span>
+            <div class="app-radio-row">
+                {% for key, label in data.tax_uses.items() %}
+                <label class="app-radio"><input type="radio" name="tax_use" value="{{ key }}" {% if (t.tax_use or 'sale') == key %}checked{% endif %}> {{ label }}</label>
+                {% endfor %}
+            </div>
+
+            <label class="app-label" for="taxAmount">Persentase</label>
+            <div class="tax-amount">
+                <input class="app-input app-num" type="number" id="taxAmount" name="amount" value="{{ '%g'|format(t.amount or 0) }}" min="0" max="100" step="0.01" required data-tax-amount>
+                <span>%</span>
+            </div>
+
+            <label class="app-label" for="taxBase">Dasar pengenaan <span class="app-help" title="DPP Nilai Lain 11/12: PPN 12% dihitung dari 11/12 harga, jadi tarif efektifnya 11%">?</span></label>
+            <select class="app-input app-select" id="taxBase" name="base" data-tax-base>
+                {% for base in data.tax_bases %}
+                <option value="{{ base.key }}" data-factor="{{ base.factor }}" {% if (t.base or 'full') == base.key %}selected{% endif %}>{{ base.label }}</option>
+                {% endfor %}
+            </select>
+
+            <span class="app-label">Tarif efektif</span>
+            <span class="inv-static" data-tax-effective>{{ '%g'|format((t.rate or 0) * 100) }}%</span>
+        </div>
+
+        <div class="app-group">
+            <label class="app-label" for="taxScope">Lingkup pajak</label>
+            <select class="app-input app-select" id="taxScope" name="scope">
+                {% for key, label in data.tax_scopes.items() %}
+                <option value="{{ key }}" {% if (t.scope or '') == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <label class="app-label" for="taxLabel">Label pada Faktur</label>
+            <input class="app-input" type="text" id="taxLabel" name="invoice_label" value="{{ t.invoice_label or '' }}" placeholder="contoh: 12%" maxlength="40">
+
+            <label class="app-label" for="taxDesc">Deskripsi</label>
+            <input class="app-input" type="text" id="taxDesc" name="description" value="{{ t.description or '' }}" placeholder="contoh: Barang / jasa selain barang mewah" maxlength="200">
+
+            <span class="app-label">Aktif</span>
+            <label class="app-radio"><input type="checkbox" class="app-check" name="active" value="1" {% if not is_edit or t.active %}checked{% endif %}> Bisa dipilih di faktur</label>
+        </div>
+    </div>
+    </fieldset>
+</form>
+</div>
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var amount = document.querySelector("[data-tax-amount]");
+    var base = document.querySelector("[data-tax-base]");
+    var out = document.querySelector("[data-tax-effective]");
+    function update() {
+        var factor = parseFloat(base.selectedOptions[0].getAttribute("data-factor")) || 1;
+        var rate = (parseFloat(amount.value) || 0) * factor;
+        out.textContent = (Math.round(rate * 10000) / 10000).toLocaleString("id-ID") + "%";
+    }
+    amount.addEventListener("input", update);
+    base.addEventListener("change", update);
+});
+</script>
+{% endblock %}

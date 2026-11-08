@@ -22,7 +22,7 @@
 {% if data.vehicles|length == 0 %}
     {{ empty_state("Belum ada kendaraan", "Daftarkan truk pertama — nomor polisi harus unik.", url_for('fleet_blueprint.vehicle_new'), "Baru") }}
 {% else %}
-<table class="tbl odoo-tbl">
+<table class="tbl list-tbl">
     <thead><tr><th>Nomor polisi</th><th>Jenis</th><th>Kepemilikan</th><th>Vendor</th><th></th></tr>
     <tbody>
         {% for vehicle in data.vehicles %}
@@ -58,7 +58,7 @@
 {% if data.drivers|length == 0 %}
     {{ empty_state("Belum ada sopir", "Hubungkan kontak sopir untuk mendaftarkan sopir.", url_for('fleet_blueprint.driver_new'), "Baru") }}
 {% else %}
-<table class="tbl odoo-tbl">
+<table class="tbl list-tbl">
     <thead><tr><th>Nama</th><th>SIM</th><th>Tipe</th><th>Telepon</th><th></th></tr>
     <tbody>
         {% for driver in data.drivers %}

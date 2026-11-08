@@ -1,0 +1,115 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import chart_line, arrow_right %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{% block title %}Pengaturan Akuntansi — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.can_edit %}
+        <button type="submit" form="accSettingsForm" class="app-btn-primary">Simpan</button>
+        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.settings') }}">Buang</a>
+        {% endif %}
+        <div class="app-crumb-stack">
+            <a class="app-crumb-parent" href="{{ url_for('accounting_blueprint.index') }}">Akuntansi</a>
+            <span class="app-cp-title">Pengaturan</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+<div class="set-layout">
+    <nav class="set-sidebar" aria-label="Kelompok pengaturan">
+        <a class="set-menu-item set-menu-item-active" href="{{ url_for('accounting_blueprint.settings') }}">
+            {{ chart_line("w-[18px] h-[18px]") }} <span>Akuntansi</span>
+        </a>
+    </nav>
+
+    <div class="set-main">
+        <form id="accSettingsForm" method="post" action="{{ url_for('accounting_blueprint.settings_save') }}">
+            <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+            <fieldset class="app-fieldset" {% if not data.can_edit %}disabled{% endif %}>
+            <section class="set-section">
+                <h2 class="set-section-head">Nomor Dokumen</h2>
+                <div class="set-block">
+                    <p class="set-muted">
+                        Prefix dipakai untuk nomor dokumen baru, diikuti nomor urut. Token:
+                        <code>{TAHUN}</code> = {{ data.today[:4] }}, <code>{THN}</code> = {{ data.today[2:4] }}, <code>{BULAN}</code> = {{ data.today[5:7] }}.
+                        Mengubah prefix memulai urutan baru; nomor yang sudah dipakai tidak pernah dipakai ulang.
+                    </p>
+                    <table class="seq-table">
+                        <thead>
+                            <tr>
+                                <th>Dokumen</th>
+                                <th>Prefix</th>
+                                <th>Digit</th>
+                                <th>Nomor berikutnya</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for seq in data.sequences %}
+                            <tr>
+                                <td class="seq-doc">{{ seq.label }}</td>
+                                <td><input class="app-input app-input-boxed" type="text" name="prefix_{{ seq.key }}" value="{{ seq.prefix }}" maxlength="30" required pattern="[A-Za-z0-9/_.\-{}]+" aria-label="Prefix {{ seq.label }}" data-seq-prefix></td>
+                                <td><input class="app-input app-input-boxed seq-digits" type="number" name="padding_{{ seq.key }}" value="{{ seq.padding }}" min="3" max="8" step="1" required aria-label="Jumlah digit {{ seq.label }}" data-seq-padding></td>
+                                <td class="seq-preview" data-seq-preview>{{ seq.preview }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <p class="set-muted seq-note">Faktur Pelanggan sudah memakai pengaturan ini. Nota Kredit dan Tagihan Vendor akan memakainya saat halamannya tersedia.</p>
+                </div>
+            </section>
+            </fieldset>
+        </form>
+
+        <section class="set-section">
+            <h2 class="set-section-head">Pajak</h2>
+            <div class="set-grid">
+                <div class="set-box">
+                    <div class="set-title">Pajak Penjualan &amp; Pembelian</div>
+                    <p class="set-muted">Atur tarif PPN, dasar pengenaan (DPP Nilai Lain 11/12), dan label di faktur.</p>
+                    <a class="set-link" href="{{ url_for('accounting_blueprint.taxes') }}">{{ arrow_right("w-3 h-3") }} Kelola Pajak</a>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Live preview while editing; the saved number continues the counter.
+    var now = new Date();
+    var tokens = {
+        "{TAHUN}": String(now.getFullYear()),
+        "{THN}": String(now.getFullYear()).slice(2),
+        "{BULAN}": String(now.getMonth() + 1).padStart(2, "0")
+    };
+    document.querySelectorAll(".seq-table tbody tr").forEach(function (row) {
+        var prefix = row.querySelector("[data-seq-prefix]");
+        var padding = row.querySelector("[data-seq-padding]");
+        var preview = row.querySelector("[data-seq-preview]");
+        var saved = preview.textContent.trim();
+        var savedPrefix = prefix.value;
+        var savedPadding = padding.value;
+        function update() {
+            if (prefix.value === savedPrefix && padding.value === savedPadding) {
+                preview.textContent = saved;
+                return;
+            }
+            var text = prefix.value;
+            Object.keys(tokens).forEach(function (t) {
+                text = text.split(t).join(tokens[t]);
+            });
+            var digits = Math.min(8, Math.max(3, parseInt(padding.value, 10) || 5));
+            preview.textContent = text + "1".padStart(digits, "0") + " (urutan baru)";
+        }
+        prefix.addEventListener("input", update);
+        padding.addEventListener("input", update);
+    });
+});
+</script>
+{% endblock %}

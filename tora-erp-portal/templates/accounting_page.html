@@ -1,0 +1,23 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import chart_line, arrow_right %}
+{% block title %}{{ data.page.title }} — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+<div class="app-cp">
+    <div class="app-cp-left">
+        <div class="app-crumb-stack">
+            <a class="app-crumb-parent" href="{{ url_for('accounting_blueprint.index') }}">Akuntansi</a>
+            <span class="app-cp-title">{{ data.page.title }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+<div class="acc-soon">
+    <span class="acc-soon-icon">{{ chart_line("w-8 h-8") }}</span>
+    <h1 class="acc-soon-title">{{ data.page.title }} segera hadir</h1>
+    <p class="acc-soon-text">{{ data.page.desc }}</p>
+    <a class="set-link" href="{{ url_for('accounting_blueprint.index') }}">{{ arrow_right("w-3 h-3") }} Kembali ke Dasbor Akuntansi</a>
+</div>
+{% endblock %}
