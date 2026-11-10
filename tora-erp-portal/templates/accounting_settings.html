@@ -58,15 +58,20 @@
                             {% endfor %}
                         </tbody>
                     </table>
-                    <p class="set-muted seq-note">Faktur Pelanggan sudah memakai pengaturan ini. Nota Kredit dan Tagihan Vendor akan memakainya saat halamannya tersedia.</p>
+                    <p class="set-muted seq-note">Faktur Pelanggan, Nota Kredit, dan Pembayaran Pelanggan sudah memakai pengaturan ini. Tagihan Vendor akan memakainya saat halamannya tersedia.</p>
                 </div>
             </section>
             </fieldset>
         </form>
 
         <section class="set-section">
-            <h2 class="set-section-head">Pajak</h2>
+            <h2 class="set-section-head">Akun &amp; Pajak</h2>
             <div class="set-grid">
+                <div class="set-box">
+                    <div class="set-title">Bagan Akun</div>
+                    <p class="set-muted">Daftar akun aset, liabilitas, ekuitas, penghasilan, dan beban. Akun Penghasilan yang aktif bisa dipilih di baris faktur.</p>
+                    <a class="set-link" href="{{ url_for('accounting_blueprint.accounts') }}">{{ arrow_right("w-3 h-3") }} Kelola Bagan Akun</a>
+                </div>
                 <div class="set-box">
                     <div class="set-title">Pajak Penjualan &amp; Pembelian</div>
                     <p class="set-muted">Atur tarif PPN, dasar pengenaan (DPP Nilai Lain 11/12), dan label di faktur.</p>

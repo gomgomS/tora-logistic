@@ -1,0 +1,78 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import close, cloud_upload %}
+{% from "_record_log.html" import record_log %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{% block title %}{% if data.account %}{{ data.account.label }}{% else %}Akun Baru{% endif %} — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set can_edit = data.current_user.can('accounting', 'update' if data.account else 'create') -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.account_new') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb">
+            <a class="app-crumb-link" href="{{ url_for('accounting_blueprint.accounts') }}">Bagan Akun</a>
+            <span class="app-crumb-sep">/</span>
+            <span class="app-crumb-current">{% if data.account %}{{ data.account.label }}{% else %}Baru{% endif %}</span>
+            <span class="app-crumb-actions">
+                {% if can_edit %}
+                <button type="submit" form="accountForm" class="app-icon-action app-icon-action-save" title="Simpan" aria-label="Simpan">{{ cloud_upload("w-4 h-4") }}</button>
+                {% endif %}
+                <a class="app-icon-action" href="{{ url_for('accounting_blueprint.accounts') }}" title="Buang perubahan" aria-label="Buang perubahan">{{ close("w-4 h-4") }}</a>
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set a = data.account or {} -%}
+{%- set is_edit = data.account != None -%}
+{%- set can_edit = data.current_user.can('accounting', 'update' if is_edit else 'create') -%}
+<div class="app-split">
+<div class="app-form-pane">
+<form id="accountForm" class="app-form-sheet" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.account_update', code=a.code) }}{% else %}{{ url_for('accounting_blueprint.account_create') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
+    <div class="inv-title">
+        <span class="inv-title-label">Akun</span>
+        <input class="app-input app-input-xl" type="text" name="name" value="{{ a.name or '' }}" placeholder="Nama akun, contoh: Penjualan" required {% if not is_edit %}autofocus{% endif %} maxlength="120" aria-label="Nama akun">
+    </div>
+
+    <div class="app-sheet-grid">
+        <div class="app-group">
+            <label class="app-label" for="accCode">Kode</label>
+            {% if is_edit %}
+            <span class="inv-static" id="accCode" title="Kode tidak bisa diubah karena dipakai di faktur dan jurnal">{{ a.code }}</span>
+            {% else %}
+            <input class="app-input" type="text" id="accCode" name="code" value="" placeholder="contoh: 41000010" required maxlength="20" pattern="[0-9A-Za-z.]{1,20}" title="Angka, huruf, dan titik">
+            {% endif %}
+
+            <label class="app-label" for="accType">Tipe</label>
+            <select class="app-input app-select" id="accType" name="account_type" required>
+                {% for gkey, glabel in data.account_groups.items() %}
+                <optgroup label="{{ glabel }}">
+                    {% for t in data.account_types if t.group == gkey %}
+                    <option value="{{ t.key }}" {% if (a.account_type or 'income') == t.key %}selected{% endif %}>{{ t.label }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="app-group">
+            <label class="app-label" for="accDesc">Deskripsi</label>
+            <input class="app-input" type="text" id="accDesc" name="description" value="{{ a.description or '' }}" placeholder="contoh: Pendapatan dari barang atau jasa yang dijual." maxlength="300">
+
+            <span class="app-label">Aktif</span>
+            <label class="app-radio"><input type="checkbox" class="app-check" name="active" value="1" {% if not is_edit or a.active %}checked{% endif %}> Bisa dipilih di faktur</label>
+        </div>
+    </div>
+    </fieldset>
+</form>
+</div>
+
+{{ record_log("account", a.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
+</div>
+{% endblock %}

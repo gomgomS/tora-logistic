@@ -1,0 +1,217 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import close, cloud_upload, plus %}
+{% from "_record_log.html" import record_log %}
+{% from "_combobox.html" import combobox, combobox_source %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{#- Produk detail, opened from Pelanggan > Produk or Vendor > Produk
+    (data.ps). Tabs: Informasi Umum and Stok Persediaan. -#}
+{% block title %}{% if data.product %}{{ data.product.display_name }}{% else %}Produk Baru{% endif %} — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set p = data.product or {} -%}
+{%- set is_edit = data.product != None -%}
+{%- set can_edit = data.current_user.can('accounting', 'update' if is_edit else 'create') -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.' ~ data.ps.ep ~ '_new') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb">
+            <a class="app-crumb-link" href="{{ url_for('accounting_blueprint.' ~ data.ps.list_ep) }}">Produk</a>
+            <span class="app-crumb-sep">/</span>
+            <span class="app-crumb-current">{% if is_edit %}{{ p.display_name }}{% else %}Baru{% endif %}</span>
+            <span class="app-crumb-actions">
+                {% if can_edit %}
+                <button type="submit" form="productForm" class="app-icon-action app-icon-action-save" title="Simpan" aria-label="Simpan">{{ cloud_upload("w-4 h-4") }}</button>
+                {% endif %}
+                <a class="app-icon-action" href="{{ url_for('accounting_blueprint.' ~ data.ps.list_ep) }}" title="Buang perubahan" aria-label="Buang perubahan">{{ close("w-4 h-4") }}</a>
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set p = data.product or {} -%}
+{%- set is_edit = data.product != None -%}
+{%- set can_edit = data.current_user.can('accounting', 'update' if is_edit else 'create') -%}
+{#- New products can be sold and bought, like the reference. -#}
+{%- set sale_ok = p.sale_ok if is_edit else true -%}
+{%- set purchase_ok = p.purchase_ok if is_edit else true -%}
+{%- set product_type = p.product_type or 'service' -%}
+<div class="app-split">
+<div class="app-form-pane">
+<form id="productForm" class="app-form-sheet {% if can_edit %}inv-editable{% endif %}" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.' ~ data.ps.ep ~ '_update', seq=p.seq) }}{% else %}{{ url_for('accounting_blueprint.' ~ data.ps.ep ~ '_create') }}{% endif %}" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
+
+    <div class="prod-head">
+        <div class="prod-head-main">
+            <div class="prod-title">
+                <label class="prod-star" title="Favorit">
+                    <input type="checkbox" name="is_favorite" value="1" {% if p.is_favorite %}checked{% endif %} aria-label="Favorit">
+                    <span aria-hidden="true">★</span>
+                </label>
+                <input class="app-input app-input-xl" type="text" name="name" value="{{ p.name or '' }}" placeholder="contoh: Jasa Trucking FTL Tronton (Jakarta - Surabaya)" required maxlength="200" {% if not is_edit %}autofocus{% endif %} aria-label="Nama produk">
+            </div>
+            <div class="prod-flags">
+                <label class="app-radio"><input type="checkbox" class="app-check" name="sale_ok" value="1" {% if sale_ok %}checked{% endif %}> Penjualan</label>
+                <label class="app-radio"><input type="checkbox" class="app-check" name="purchase_ok" value="1" {% if purchase_ok %}checked{% endif %}> Pembelian</label>
+            </div>
+        </div>
+        <div class="prod-image" title="Gambar produk (segera hadir)">{{ plus("w-6 h-6") }}</div>
+    </div>
+    </fieldset>
+
+    <!-- ——— Tabs (outside the disabled fieldsets) ——— -->
+    <div class="app-tabs" role="tablist">
+        <button type="button" class="app-tab app-tab-active" role="tab" aria-selected="true" data-tab="general">Informasi Umum</button>
+        <button type="button" class="app-tab" role="tab" aria-selected="false" data-tab="stock">Stok Persediaan</button>
+    </div>
+
+    <div class="app-tab-panel" role="tabpanel" data-panel="general">
+        <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
+        <div class="app-sheet-grid">
+            <div class="app-group">
+                <span class="app-label">Tipe Produk <span class="app-help" title="Barang: punya stok fisik. Layanan: jasa seperti trucking. Kombo: paket barang + layanan.">?</span></span>
+                <div class="app-radio-row">
+                    {% for key, label in data.product_types.items() %}
+                    <label class="app-radio"><input type="radio" name="product_type" value="{{ key }}" {% if product_type == key %}checked{% endif %} data-product-type> {{ label }}</label>
+                    {% endfor %}
+                </div>
+
+                <span class="app-label">Lacak Inventaris <span class="app-help" title="Hanya untuk Barang: stok dihitung per unit">?</span></span>
+                <label class="app-radio"><input type="checkbox" class="app-check" name="is_storable" value="1" {% if p.is_storable %}checked{% endif %} {% if product_type != 'goods' %}disabled{% endif %} data-storable> Lacak stok barang ini</label>
+            </div>
+
+            <div class="app-group">
+                <label class="app-label" for="listPrice">Harga Jual <span class="app-help" title="Harga per unit sebelum pajak">?</span></label>
+                <div class="prod-price">
+                    <input class="app-input app-num" type="number" id="listPrice" name="list_price" value="{{ '%.2f'|format(p.list_price or 0) }}" min="0" step="0.01" data-list-price>
+                    <span class="app-muted">per {{ p.uom or 'Unit' }}</span>
+                </div>
+
+                <span class="app-label">Pajak Penjualan</span>
+                <div>
+                    {{ combobox("sale_tax", p.sale_tax or '', p.sale_tax_name or 'Tanpa pajak', "saleTaxOptions", placeholder="Pilih pajak ...", aria_label="Pajak Penjualan", attrs="data-sale-tax") }}
+                    <span class="prod-incl app-muted" data-price-incl>{% if p.price_incl_fmt %}(= {{ p.price_incl_fmt }} Termasuk Pajak){% endif %}</span>
+                </div>
+
+                <label class="app-label" for="standardPrice">Modal <span class="app-help" title="Biaya per unit untuk menghitung margin">?</span></label>
+                <input class="app-input app-num" type="number" id="standardPrice" name="standard_price" value="{{ '%.2f'|format(p.standard_price or 0) }}" min="0" step="0.01">
+
+                <span class="app-label">Pajak Pembelian</span>
+                {{ combobox("purchase_tax", p.purchase_tax or '', p.purchase_tax_name or 'Tanpa pajak', "purchaseTaxOptions", placeholder="Pilih pajak ...", aria_label="Pajak Pembelian") }}
+
+                <label class="app-label" for="category">Kategori</label>
+                <input class="app-input" type="text" id="category" name="category" value="{{ p.category or '' }}" maxlength="120" placeholder="contoh: Jasa Angkutan, Material, Sparepart">
+
+                <label class="app-label" for="defaultCode">Referensi</label>
+                <input class="app-input" type="text" id="defaultCode" name="default_code" value="{{ p.default_code or '' }}" maxlength="40" placeholder="contoh: SRV-TRK-JKTSBY">
+
+                <label class="app-label" for="barcode">Barcode</label>
+                <input class="app-input" type="text" id="barcode" name="barcode" value="{{ p.barcode or '' }}" maxlength="40">
+
+                <label class="app-label" for="label">Label</label>
+                <input class="app-input" type="text" id="label" name="label" value="{{ p.label or '' }}" maxlength="120" placeholder='contoh: "FTL", "Ekspor"'>
+            </div>
+        </div>
+
+        <h3 class="app-section-title">Catatan Internal</h3>
+        <textarea class="app-notes" name="notes" rows="4" maxlength="5000" placeholder="Catatan ini hanya untuk keperluan internal." aria-label="Catatan internal">{{ p.notes or '' }}</textarea>
+        </fieldset>
+    </div>
+
+    <div class="app-tab-panel" role="tabpanel" data-panel="stock" hidden>
+        <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
+        <div class="app-sheet-grid">
+            <section>
+                <h3 class="app-section-title">Logistik</h3>
+                <div class="app-group">
+                    <label class="app-label" for="weight">Berat</label>
+                    <div class="prod-price">
+                        <input class="app-input app-num" type="number" id="weight" name="weight" value="{{ '%g'|format(p.weight or 0) }}" min="0" step="0.01">
+                        <span class="app-muted">kg</span>
+                    </div>
+
+                    <label class="app-label" for="volume">Volume</label>
+                    <div class="prod-price">
+                        <input class="app-input app-num" type="number" id="volume" name="volume" value="{{ '%g'|format(p.volume or 0) }}" min="0" step="0.01">
+                        <span class="app-muted">m³</span>
+                    </div>
+
+                    <label class="app-label" for="saleDelay">Waktu Tunggu Pelanggan <span class="app-help" title="Hari antara pesanan dan pengiriman ke pelanggan">?</span></label>
+                    <div class="prod-price">
+                        <input class="app-input app-num" type="number" id="saleDelay" name="sale_delay" value="{{ p.sale_delay or 0 }}" min="0" step="1">
+                        <span class="app-muted">hari</span>
+                    </div>
+                </div>
+            </section>
+            <section>
+                <h3 class="app-section-title">Deskripsi</h3>
+                <div class="app-group">
+                    <label class="app-label" for="pickIn">Untuk Penerimaan</label>
+                    <textarea class="app-notes" id="pickIn" name="description_pickingin" rows="3" maxlength="1000" placeholder="Catatan saat barang diterima dari vendor">{{ p.description_pickingin or '' }}</textarea>
+
+                    <label class="app-label" for="pickOut">Untuk Pengiriman</label>
+                    <textarea class="app-notes" id="pickOut" name="description_pickingout" rows="3" maxlength="1000" placeholder="Catatan saat barang dikirim ke pelanggan">{{ p.description_pickingout or '' }}</textarea>
+                </div>
+            </section>
+        </div>
+        </fieldset>
+    </div>
+</form>
+</div>
+
+{{ record_log("product", p.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
+</div>
+
+{{ combobox_source("saleTaxOptions", data.sale_tax_options) }}
+{{ combobox_source("purchaseTaxOptions", data.purchase_tax_options) }}
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // "(= Rp ... Termasuk Pajak)" next to Pajak Penjualan, live.
+    var price = document.querySelector("[data-list-price]");
+    var taxBox = document.querySelector("[data-sale-tax]");
+    var incl = document.querySelector("[data-price-incl]");
+    function rupiah(value) {
+        return "Rp " + value.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function updateIncl() {
+        if (!price || !taxBox || !incl || !window.appCombo) {
+            return;
+        }
+        var code = taxBox.querySelector("[data-combo-value]").value;
+        var rate = 0;
+        window.appCombo.options(taxBox).forEach(function (o) {
+            if (o.value === code) {
+                rate = parseFloat(o.rate) || 0;
+            }
+        });
+        var value = parseFloat(price.value) || 0;
+        incl.textContent = code ? "(= " + rupiah(Math.round(value * (1 + rate) * 100) / 100) + " Termasuk Pajak)" : "";
+    }
+    if (price && taxBox) {
+        price.addEventListener("input", updateIncl);
+        taxBox.querySelector("[data-combo-value]").addEventListener("change", updateIncl);
+    }
+
+    // Lacak Inventaris only for Barang.
+    var storable = document.querySelector("[data-storable]");
+    document.querySelectorAll("[data-product-type]").forEach(function (radio) {
+        radio.addEventListener("change", function () {
+            if (!storable) {
+                return;
+            }
+            storable.disabled = radio.value !== "goods";
+            if (storable.disabled) {
+                storable.checked = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

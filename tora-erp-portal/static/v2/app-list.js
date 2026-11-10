@@ -287,6 +287,25 @@
         }, true);
     }
 
+    // Side panel (account-code tree): [data-side-toggle] hides / shows it;
+    // the choice is kept per page in localStorage.
+    function initSidePanel(layout) {
+        var key = "appSide:" + (layout.getAttribute("data-side-layout") || "default");
+        try {
+            if (localStorage.getItem(key) === "collapsed") {
+                layout.classList.add("app-side-collapsed");
+            }
+        } catch (e) { /* storage blocked: start open */ }
+        layout.querySelectorAll("[data-side-toggle]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var collapsed = layout.classList.toggle("app-side-collapsed");
+                try {
+                    localStorage.setItem(key, collapsed ? "collapsed" : "open");
+                } catch (e) { /* ignore */ }
+            });
+        });
+    }
+
     window.AppList = { init: init, refresh: refresh, reset: reset };
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -296,5 +315,6 @@
         document.querySelectorAll("table[data-select-bar]").forEach(initSelection);
         document.querySelectorAll("table.app-list").forEach(initRowLinks);
         document.querySelectorAll(".app-tabs").forEach(initTabs);
+        document.querySelectorAll("[data-side-layout]").forEach(initSidePanel);
     });
 })();

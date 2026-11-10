@@ -1,5 +1,7 @@
 {% extends "accounting_base.html" %}
 {% from "_icons.html" import close, cloud_upload %}
+{% from "_record_log.html" import record_log %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
 {% block title %}{% if data.tax %}{{ data.tax.name }}{% else %}Pajak Baru{% endif %} — {{ data.site_name }}{% endblock %}
 
 {% block app_control %}
@@ -28,8 +30,9 @@
 {%- set t = data.tax or {} -%}
 {%- set is_edit = data.tax != None -%}
 {%- set can_edit = data.current_user.can('accounting', 'update' if is_edit else 'create') -%}
-<div class="tax-page">
-<form id="taxForm" class="app-form-sheet tax-sheet" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.tax_update', code=t.code) }}{% else %}{{ url_for('accounting_blueprint.tax_create') }}{% endif %}">
+<div class="app-split">
+<div class="app-form-pane">
+<form id="taxForm" class="app-form-sheet" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.tax_update', code=t.code) }}{% else %}{{ url_for('accounting_blueprint.tax_create') }}{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
     <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
     <div class="inv-title">
@@ -83,6 +86,9 @@
     </div>
     </fieldset>
 </form>
+</div>
+
+{{ record_log("tax", t.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
 </div>
 {% endblock %}
 

@@ -1,0 +1,131 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import search, sliders, funnel, close %}
+{% from "_ui.html" import empty_state %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
+{% from "_code_tree.html" import code_tree %}
+{#- Kontrol > Item Jurnal: ledger lines (db_journal_item) of every Terekam
+    document. Side panel = account-code tree (1 > 11, 12 ...). -#}
+{% block title %}Item Jurnal — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        <span class="app-cp-title">Item Jurnal</span>
+    </div>
+
+    <form class="app-cp-middle" method="get" action="{{ url_for('accounting_blueprint.journal_items') }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            {#- Only Terekam documents have ledger lines, so this filter is fixed. -#}
+            <span class="app-search-facet" title="Hanya entri yang sudah Terekam">{{ funnel("w-3.5 h-3.5") }} Terekam</span>
+            {% if data.prefix %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} Akun {{ data.prefix }}…
+                <a href="{{ url_for('accounting_blueprint.journal_items', q=data.q) }}" title="Hapus filter" aria-label="Hapus filter akun">{{ close("w-3 h-3") }}</a>
+            </span>
+            <input type="hidden" name="prefix" value="{{ data.prefix }}">
+            {% endif %}
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari ..." aria-label="Cari item jurnal">
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, 'accounting_blueprint.journal_items', data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{%- set columns = [
+    {"key": "date", "label": "Tanggal", "default": true},
+    {"key": "account", "label": "Akun", "default": true},
+    {"key": "partner", "label": "Rekanan", "default": true},
+    {"key": "label", "label": "Deskripsi", "default": true},
+    {"key": "debit", "label": "Debit", "default": true},
+    {"key": "credit", "label": "Kredit", "default": true}
+] -%}
+{%- set hidden_cols = columns|rejectattr("default")|map(attribute="key")|list -%}
+<div class="app-side-layout" data-side-layout="journal_items">
+    {{ code_tree(data.tree, data.prefix, "accounting_blueprint.journal_items", data.page_args) }}
+
+    <div class="app-side-main">
+    {% if pager.total == 0 %}
+        <div class="app-empty">
+        {% if data.q or data.prefix %}
+            {{ empty_state("Tidak ada item jurnal yang cocok", "Ubah kata kunci atau pilih grup akun lain.", url_for('accounting_blueprint.journal_items'), "Hapus pencarian") }}
+        {% else %}
+            {{ empty_state("Belum ada item jurnal", "Item jurnal muncul saat faktur, nota kredit, tagihan, atau pengembalian dikonfirmasi.", url_for('accounting_blueprint.journal_entries'), "Lihat Entri Jurnal") }}
+        {% endif %}
+        </div>
+    {% else %}
+    <div class="app-list-area">
+        <div class="app-list-wrap">
+            <table class="app-list" id="journalItemsList" data-table-key="journal_items">
+                <thead>
+                    <tr>
+                        <th data-col="date" data-width="90" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>Tanggal</th>
+                        <th data-key="move" data-width="160">Entri Jurnal</th>
+                        <th data-col="account" data-width="200" {% if 'account' in hidden_cols %}class="app-col-hidden"{% endif %}>Akun</th>
+                        <th data-col="partner" data-width="180" {% if 'partner' in hidden_cols %}class="app-col-hidden"{% endif %}>Rekanan</th>
+                        <th data-col="label" data-width="340" {% if 'label' in hidden_cols %}class="app-col-hidden"{% endif %}>Deskripsi</th>
+                        <th data-col="debit" data-width="150" class="app-num{% if 'debit' in hidden_cols %} app-col-hidden{% endif %}">Debit</th>
+                        <th data-col="credit" data-width="150" class="app-num{% if 'credit' in hidden_cols %} app-col-hidden{% endif %}">Kredit</th>
+                        <th class="app-list-optional">
+                            <button type="button" class="app-col-toggle" data-dropdown="journalItemsColMenu" title="Pilih kolom" aria-haspopup="true" aria-expanded="false">
+                                {{ sliders("w-4 h-4") }}
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in data.lines %}
+                    {%- set entry_url = url_for('accounting_blueprint.journal_entry', slug=line.move_slug, seq=line.move_seq) if line.move_seq else '' -%}
+                    <tr {% if entry_url %}data-href="{{ entry_url }}"{% endif %}>
+                        <td data-col="date" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ line.date_short }}</td>
+                        <td>{% if entry_url %}<a class="app-list-name" href="{{ entry_url }}"><span class="app-list-name-text">{{ line.move_number }}</span></a>{% else %}{{ line.move_number }}{% endif %}</td>
+                        <td data-col="account" title="{{ line.account_label }}" {% if 'account' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ line.account_label }}</td>
+                        <td data-col="partner" title="{{ line.partner_name }}" {% if 'partner' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ line.partner_name }}</td>
+                        <td data-col="label" title="{{ line.label }}" {% if 'label' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ line.label }}</td>
+                        <td data-col="debit" class="app-num{% if not line.debit %} app-muted{% endif %}{% if 'debit' in hidden_cols %} app-col-hidden{% endif %}">{{ line.debit_fmt }}</td>
+                        <td data-col="credit" class="app-num{% if not line.credit %} app-muted{% endif %}{% if 'credit' in hidden_cols %} app-col-hidden{% endif %}">{{ line.credit_fmt }}</td>
+                        <td></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="app-list-foot">
+                        <td data-col="date" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                        <td></td>
+                        <td data-col="account" {% if 'account' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                        <td data-col="partner" {% if 'partner' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                        <td data-col="label" {% if 'label' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                        <td data-col="debit" class="app-num{% if 'debit' in hidden_cols %} app-col-hidden{% endif %}">{{ pager.sum_debit }}</td>
+                        <td data-col="credit" class="app-num{% if 'credit' in hidden_cols %} app-col-hidden{% endif %}">{{ pager.sum_credit }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="app-dropdown app-col-menu" id="journalItemsColMenu" data-col-menu-for="journalItemsList">
+            {% for col in columns %}
+            <label class="app-dropdown-check">
+                <input type="checkbox" class="app-check" value="{{ col.key }}" {% if col.default %}checked{% endif %}>
+                <span>{{ col.label }}</span>
+            </label>
+            {% endfor %}
+            <hr class="launcher-menu-sep">
+            <button type="button" class="app-dropdown-action" data-col-reset>Reset lebar kolom</button>
+        </div>
+    </div>
+
+    {{ pager_bar(pager, 'accounting_blueprint.journal_items', data.page_args) }}
+    {% endif %}
+    </div>
+</div>
+{% endblock %}

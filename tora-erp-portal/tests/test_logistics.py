@@ -288,14 +288,8 @@ def test_accounting_dashboard_and_menus(logged_in):
     for text in ["Dasbor Akuntansi", "Faktur Pelanggan", "Tagihan Vendor", "Bank", "Kas",
                  "Nota Kredit", "Pengembalian", "Entri Jurnal", "Rp 0,00"]:
         assert text in html, text
-    for slug in ["credit-notes", "customer-payments", "sale-products", "bills",
-                 "refunds", "vendor-payments", "purchase-products", "journal-entries"]:
-        res = client.get("/accounting/" + slug)
-        assert res.status_code == 200, slug
-        assert "segera hadir" in res.data.decode("utf-8")
-    # end for
-    assert client.get("/accounting/invoices").status_code == 200
-    assert client.get("/accounting/invoices/new").status_code == 200
+    assert client.get("/accounting/client-invoices").status_code == 200
+    assert client.get("/accounting/client-invoices/new").status_code == 200
     assert client.get("/accounting/tidak-ada").status_code == 302
 # end def
 
@@ -328,23 +322,23 @@ def _invoices():
 def test_invoice_create_computes_totals_and_lists(logged_in):
     _seed(logged_in)
     client = logged_in["client"]
-    res = client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur")))
+    res = client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur")))
     assert res.status_code == 302
     inv = _invoices().find_one({"customer_ref": "SP/SLN/2026/088"})
     assert inv["state"] == "DRAFT"
     assert inv["number"] == "INV/2026/00001"
     assert inv["seq"] == 1
-    assert "/accounting/invoices/1?" in res.headers["Location"]
+    assert "/accounting/client-invoices/1?" in res.headers["Location"]
     assert inv["partner_name"] == "PT Sumber Makmur"
     assert inv["amount_untaxed"] == 42000000
     assert inv["amount_tax"] == 4400000
     assert inv["amount_total"] == 46400000
     assert inv["due_date"] == "2026-12-06"
     assert len(inv["lines"]) == 2
-    html = client.get("/accounting/invoices").data.decode("utf-8")
+    html = client.get("/accounting/client-invoices").data.decode("utf-8")
     assert "PT Sumber Makmur" in html
     assert "Rp 46.400.000,00" in html
-    html = client.get("/accounting/invoices/1").data.decode("utf-8")
+    html = client.get("/accounting/client-invoices/1").data.decode("utf-8")
     assert "Baris Faktur" in html
     assert "Piutang Dagang" in html
     assert "PPN Keluaran" in html
@@ -352,16 +346,47 @@ def test_invoice_create_computes_totals_and_lists(logged_in):
     assert "Rancangan" not in html
     assert _db().db_record_log.find_one({"model": "invoice", "record_id": str(inv["_id"]), "kind": "CREATE"}) != None
     # old links (internal id or invoice number) redirect to the running number
-    res = client.get("/accounting/invoices/" + str(inv["_id"]))
+    res = client.get("/accounting/client-invoices/" + str(inv["_id"]))
     assert res.status_code == 302
-    assert res.headers["Location"].endswith("/accounting/invoices/1")
-    res = client.get("/accounting/invoices/INV/2026/00001")
-    assert res.headers["Location"].endswith("/accounting/invoices/1")
+    assert res.headers["Location"].endswith("/accounting/client-invoices/1")
+    res = client.get("/accounting/client-invoices/INV/2026/00001")
+    assert res.headers["Location"].endswith("/accounting/client-invoices/1")
     # a draft stays editable: change a line and the totals follow
-    client.post("/accounting/invoices/1/update", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+    client.post("/accounting/client-invoices/1/update", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
         "line_quantity": ["2", "2"]
     }))
     assert _invoices().find_one({"_id": inv["_id"]})["amount_untaxed"] == 82000000
+    # every saved field lands in the log, including each changed line
+    client.post("/accounting/client-invoices/1/update", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+        "line_quantity": ["2", "2"], "payment_ref": "TRF-001", "notes": "Bayar 30 hari",
+        "fiscal_position": "PKP", "delivery_date": "2026-11-07", "efaktur_code": "04"
+    }))
+    change = _db().db_record_log.find({"model": "invoice", "record_id": str(inv["_id"]), "kind": "CHANGE"}).sort("_id", -1).limit(1)[0]
+    labels = [ch["label"] for ch in change["changes"]]
+    for label in ["Referensi Pembayaran", "Syarat dan Ketentuan", "Posisi Fiskal", "Tanggal Pengiriman", "Kode Transaksi"]:
+        assert label in labels, label
+    client.post("/accounting/client-invoices/1/update", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+        "line_quantity": ["2", "3"], "payment_ref": "TRF-001", "notes": "Bayar 30 hari",
+        "fiscal_position": "PKP", "delivery_date": "2026-11-07", "efaktur_code": "04"
+    }))
+    change = _db().db_record_log.find({"model": "invoice", "record_id": str(inv["_id"]), "kind": "CHANGE"}).sort("_id", -1).limit(1)[0]
+    labels = [ch["label"] for ch in change["changes"]]
+    # only the edited field of the edited row, plus the totals it moved
+    assert "Kuantitas (Baris 2)" in labels
+    assert "Produk (Baris 2)" not in labels
+    assert not any("Baris 1" in label for label in labels)
+    assert "Jumlah Sebelum Pajak" in labels
+    qty = [ch for ch in change["changes"] if ch["label"] == "Kuantitas (Baris 2)"][0]
+    assert qty["old"] == "2"
+    assert qty["new"] == "3"
+    client.post("/accounting/client-invoices/1/update", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+        "line_product": ["Jasa Trucking Jakarta - Surabaya"], "line_account": ["41000020"],
+        "line_quantity": ["2"], "line_price": ["40000000"], "line_tax": ["ppn12_dpp"],
+        "payment_ref": "TRF-001", "notes": "Bayar 30 hari",
+        "fiscal_position": "PKP", "delivery_date": "2026-11-07", "efaktur_code": "04"
+    }))
+    change = _db().db_record_log.find({"model": "invoice", "record_id": str(inv["_id"]), "kind": "CHANGE"}).sort("_id", -1).limit(1)[0]
+    assert "Baris 2 dihapus" in [ch["label"] for ch in change["changes"]]
 # end def
 
 
@@ -369,25 +394,25 @@ def test_invoice_confirm_numbering_and_lock(logged_in):
     _seed(logged_in)
     client = logged_in["client"]
     partner = _contact_id("PT Sumber Makmur")
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "A1", "action": "confirm"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "A1", "action": "confirm"}))
     first = _invoices().find_one({"customer_ref": "A1"})
     assert first["state"] == "POSTED"
     assert first["number"] == "INV/2026/00001"
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "A2"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "A2"}))
     second = _invoices().find_one({"customer_ref": "A2"})
     assert second["number"] == "INV/2026/00002"
     assert second["state"] == "DRAFT"
-    client.post("/accounting/invoices/" + str(second["seq"]) + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "A2", "action": "confirm"}))
+    client.post("/accounting/client-invoices/" + str(second["seq"]) + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "A2", "action": "confirm"}))
     confirmed = _invoices().find_one({"_id": second["_id"]})
     assert confirmed["state"] == "POSTED"
     assert confirmed["number"] == "INV/2026/00002"
     # posted invoices cannot be edited
-    client.post("/accounting/invoices/" + str(first["seq"]) + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "DIUBAH"}))
+    client.post("/accounting/client-invoices/" + str(first["seq"]) + "/update", data=_invoice_payload(logged_in, partner, {"customer_ref": "DIUBAH"}))
     assert _invoices().find_one({"_id": first["_id"]})["customer_ref"] == "A1"
     # invoices that were ever confirmed are never deleted, reset keeps the number
-    client.post("/accounting/invoices/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [str(first["_id"])]})
+    client.post("/accounting/client-invoices/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [str(first["_id"])]})
     assert _invoices().find_one({"_id": first["_id"]})["is_deleted"] == False
-    client.post("/accounting/invoices/" + str(first["seq"]) + "/state", data={"csrf_token": logged_in["token"], "action": "reset"})
+    client.post("/accounting/client-invoices/" + str(first["seq"]) + "/state", data={"csrf_token": logged_in["token"], "action": "reset"})
     reset = _invoices().find_one({"_id": first["_id"]})
     assert reset["state"] == "DRAFT"
     assert reset["number"] == "INV/2026/00001"
@@ -401,9 +426,9 @@ def test_invoice_payment_print_and_buttons(logged_in):
     _seed(logged_in)
     client = logged_in["client"]
     partner = _contact_id("PT Sumber Makmur")
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "BAYAR", "action": "confirm"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "BAYAR", "action": "confirm"}))
     inv = _invoices().find_one({"customer_ref": "BAYAR"})
-    url = "/accounting/invoices/" + str(inv["seq"])
+    url = "/accounting/client-invoices/" + str(inv["seq"])
     html = client.get(url).data.decode("utf-8")
     for label in ["Kirim", "Cetak", "Bayar", "Pratinjau", "Nota Kredit", "Reset ke Draft"]:
         assert label in html, label
@@ -421,12 +446,75 @@ def test_invoice_payment_print_and_buttons(logged_in):
     assert paid["amount_residual"] == 0
     assert paid["payment_state"] == "paid"
     assert len(paid["payments"]) == 2
-    assert "Lunas" in client.get("/accounting/invoices").data.decode("utf-8")
+    assert "Lunas" in client.get("/accounting/client-invoices").data.decode("utf-8")
     html = client.get(url).data.decode("utf-8")
     assert "LUNAS" in html
     # a paid invoice cannot go back to Draft
     client.post(url + "/state", data={"csrf_token": logged_in["token"], "action": "reset"})
     assert _invoices().find_one({"_id": inv["_id"]})["state"] == "POSTED"
+    # every Bayar is a Pembayaran record (PAY00001, PAY00002), Lunas
+    pays = list(_db().db_payment.find({"invoice_id": str(inv["_id"])}).sort("seq", 1))
+    assert [p["number"] for p in pays] == ["PAY00001", "PAY00002"]
+    assert pays[0]["state"] == "PAID"
+    assert pays[1]["journal"] == "CSH1"
+    assert paid["payments"][0]["payment_id"] == str(pays[0]["_id"])
+# end def
+
+
+def test_customer_payment_flow(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    token = logged_in["token"]
+    partner = _contact_id("PT Sumber Makmur")
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "PAY-FLOW", "action": "confirm"}))
+    inv = _invoices().find_one({"customer_ref": "PAY-FLOW"})
+    assert client.get("/accounting/client-payments").status_code == 200
+    html = client.get("/accounting/client-payments/new?invoice=" + str(inv["_id"])).data.decode("utf-8")
+    assert inv["number"] in html
+    assert "PAY00001" in html
+    # Draft first: nothing is settled yet
+    client.post("/accounting/client-payments/create", data={
+        "csrf_token": token, "payment_type": "inbound", "partner_id": partner, "amount": "10000000",
+        "date": "2026-11-06", "memo": "Pelunasan sebagian", "journal": "BNK1", "method": "Transfer Bank",
+        "bank_account": "BCA 123", "invoice_id": str(inv["_id"])
+    })
+    pay = _db().db_payment.find_one({"memo": "Pelunasan sebagian"})
+    assert pay["state"] == "DRAFT"
+    assert pay["seq"] == 1
+    assert _invoices().find_one({"_id": inv["_id"]})["amount_residual"] == 46400000
+    # edit the draft: change is logged
+    client.post("/accounting/client-payments/1/update", data={
+        "csrf_token": token, "payment_type": "inbound", "partner_id": partner, "amount": "12000000",
+        "date": "2026-11-06", "memo": "Pelunasan sebagian", "journal": "BNK1", "method": "Transfer Bank",
+        "bank_account": "BCA 123", "invoice_id": str(inv["_id"]), "action": "confirm"
+    })
+    change = _db().db_record_log.find_one({"model": "payment", "record_id": str(pay["_id"]), "kind": "CHANGE"})
+    assert "Jumlah" in [ch["label"] for ch in change["changes"]]
+    # Konfirmasi settles the faktur
+    pay = _db().db_payment.find_one({"_id": pay["_id"]})
+    assert pay["state"] == "PAID"
+    assert pay["applied"] == 12000000
+    after = _invoices().find_one({"_id": inv["_id"]})
+    assert after["amount_residual"] == 34400000
+    assert after["payment_state"] == "partial"
+    html = client.get("/accounting/client-payments").data.decode("utf-8")
+    assert "Lunas" in html
+    assert "Rp 12.000.000,00" in html
+    # Tandai sebagai Terkirim, then Reset ke Draft gives the amount back
+    client.post("/accounting/client-payments/1/state", data={"csrf_token": token, "action": "sent"})
+    assert _db().db_payment.find_one({"_id": pay["_id"]})["is_sent"] == True
+    client.post("/accounting/client-payments/1/state", data={"csrf_token": token, "action": "reset"})
+    back = _invoices().find_one({"_id": inv["_id"]})
+    assert back["amount_residual"] == 46400000
+    assert back["payment_state"] == "not_paid"
+    assert back["payments"] == []
+    assert _db().db_payment.find_one({"_id": pay["_id"]})["state"] == "DRAFT"
+    # a payment for another customer's faktur is refused
+    client.post("/accounting/client-payments/create", data={
+        "csrf_token": token, "payment_type": "inbound", "partner_id": _contact_id("Toko Jaya Malang"), "amount": "1000",
+        "memo": "SALAH", "journal": "BNK1", "method": "Tunai", "invoice_id": str(inv["_id"])
+    })
+    assert _db().db_payment.find_one({"memo": "SALAH"}) == None
 # end def
 
 
@@ -434,10 +522,10 @@ def test_invoice_number_edit_on_draft(logged_in):
     _seed(logged_in)
     client = logged_in["client"]
     partner = _contact_id("PT Sumber Makmur")
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "N1"}))
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "N2"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "N1"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "N2"}))
     second = _invoices().find_one({"customer_ref": "N2"})
-    url = "/accounting/invoices/" + str(second["seq"])
+    url = "/accounting/client-invoices/" + str(second["seq"])
     # live check warns about a number that is already used
     check = client.get(url + "/check-number?n=00001").get_json()
     assert check["exists"] == True
@@ -458,6 +546,50 @@ def test_invoice_number_edit_on_draft(logged_in):
 # end def
 
 
+def test_credit_note_from_invoice_and_apply(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    token = logged_in["token"]
+    partner = _contact_id("PT Sumber Makmur")
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "ASAL", "action": "confirm"}))
+    inv = _invoices().find_one({"customer_ref": "ASAL"})
+    assert client.get("/accounting/client-credit-notes").status_code == 200
+    # the faktur's Nota Kredit button prefills customer + origin
+    html = client.get("/accounting/client-credit-notes/new?invoice=" + str(inv["seq"])).data.decode("utf-8")
+    assert inv["number"] in html
+    assert "RINV/" in html
+    client.post("/accounting/client-credit-notes/create", data={
+        "csrf_token": token, "partner_id": partner, "invoice_date": "2026-11-08",
+        "customer_ref": "Klaim kemasan", "reversed_entry_id": str(inv["_id"]),
+        "line_product": ["Klaim ganti rugi kerusakan kemasan"], "line_account": ["41000010"],
+        "line_quantity": ["1"], "line_price": ["2000000"], "line_tax": [""], "action": "confirm"
+    })
+    cn = _invoices().find_one({"customer_ref": "Klaim kemasan"})
+    assert cn["move_type"] == "out_refund"
+    assert cn["number"] == "RINV/2026/00001"
+    assert cn["seq"] == 1
+    assert cn["state"] == "POSTED"
+    assert cn["reversed_entry_number"] == inv["number"]
+    # lists stay separate; credit notes read negative
+    assert "Klaim kemasan" not in client.get("/accounting/client-invoices?q=Klaim").data.decode("utf-8")
+    assert "Rp -2.000.000,00" in client.get("/accounting/client-credit-notes").data.decode("utf-8")
+    # form: reverse journal + open debit of the same customer
+    html = client.get("/accounting/client-credit-notes/1").data.decode("utf-8")
+    assert "Nota Kredit Pelanggan" in html
+    assert "Debet belum lunas" in html
+    assert inv["number"] in html
+    # Tambah: settle the faktur with the credit note
+    client.post("/accounting/client-credit-notes/1/apply", data={"csrf_token": token, "invoice_id": str(inv["_id"])})
+    inv_after = _invoices().find_one({"_id": inv["_id"]})
+    cn_after = _invoices().find_one({"_id": cn["_id"]})
+    assert inv_after["amount_residual"] == 44400000
+    assert inv_after["payment_state"] == "partial"
+    assert cn_after["amount_residual"] == 0
+    assert cn_after["payment_state"] == "paid"
+    assert _db().db_record_log.find_one({"model": "credit_note", "record_id": str(cn["_id"]), "kind": "EVENT"}) != None
+# end def
+
+
 def test_invoice_draft_editable_with_create_access(logged_in):
     _seed(logged_in)
     _create_user(logged_in, "staf_faktur", {"perm_accounting": "create", "perm_contacts": "read"})
@@ -465,9 +597,9 @@ def test_invoice_draft_editable_with_create_access(logged_in):
     client = staf["client"]
     partner = _contact_id("PT Sumber Makmur")
     payload = _invoice_payload({"token": staf["token"]}, partner, {"customer_ref": "STAF"})
-    client.post("/accounting/invoices/create", data=payload)
+    client.post("/accounting/client-invoices/create", data=payload)
     inv = _invoices().find_one({"customer_ref": "STAF"})
-    url = "/accounting/invoices/" + str(inv["seq"])
+    url = "/accounting/client-invoices/" + str(inv["seq"])
     client.post(url + "/update", data=dict(payload, customer_ref="STAF-2"))
     assert _invoices().find_one({"_id": inv["_id"]})["customer_ref"] == "STAF-2"
     # confirming needs "ubah"
@@ -480,14 +612,14 @@ def test_invoice_validation_and_draft_delete(logged_in):
     _seed(logged_in)
     client = logged_in["client"]
     partner = _contact_id("PT Sumber Makmur")
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "PAJAK-SALAH", "line_tax": ["pajak-palsu", ""]}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "PAJAK-SALAH", "line_tax": ["pajak-palsu", ""]}))
     assert _invoices().find_one({"customer_ref": "PAJAK-SALAH"}) == None
-    client.post("/accounting/invoices/create", data={
+    client.post("/accounting/client-invoices/create", data={
         "csrf_token": logged_in["token"], "partner_id": partner, "customer_ref": "KOSONG", "action": "confirm"
     })
     empty = _invoices().find_one({"customer_ref": "KOSONG"})
     assert empty["state"] == "DRAFT"
-    client.post("/accounting/invoices/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [str(empty["_id"])]})
+    client.post("/accounting/client-invoices/bulk-delete", data={"csrf_token": logged_in["token"], "ids": [str(empty["_id"])]})
     assert _invoices().find_one({"_id": empty["_id"]})["is_deleted"] == True
 # end def
 
@@ -502,14 +634,17 @@ def test_accounting_sequence_settings(logged_in):
         "csrf_token": logged_in["token"],
         "prefix_out_invoice": "FK/{THN}/{BULAN}/", "padding_out_invoice": "4",
         "prefix_out_refund": "RINV/{TAHUN}/", "padding_out_refund": "5",
-        "prefix_in_invoice": "BILL/{TAHUN}/{BULAN}/", "padding_in_invoice": "4"
+        "prefix_customer_payment": "PAY", "padding_customer_payment": "5",
+        "prefix_in_invoice": "BILL/{TAHUN}/{BULAN}/", "padding_in_invoice": "4",
+        "prefix_in_refund": "RBILL/{TAHUN}/{BULAN}/", "padding_in_refund": "4",
+        "prefix_vendor_payment": "VPAY", "padding_vendor_payment": "5"
     }
     client.post("/accounting/settings/save", data=form)
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {"customer_ref": "PREFIX-BARU"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {"customer_ref": "PREFIX-BARU"}))
     assert _invoices().find_one({"customer_ref": "PREFIX-BARU"})["number"] == "FK/26/11/0001"
     bad = dict(form, prefix_out_invoice="INV {SALAH}")
     client.post("/accounting/settings/save", data=bad)
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {"customer_ref": "PREFIX-TETAP"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {"customer_ref": "PREFIX-TETAP"}))
     assert _invoices().find_one({"customer_ref": "PREFIX-TETAP"})["number"] == "FK/26/11/0002"
 # end def
 
@@ -524,7 +659,7 @@ def test_accounting_taxes_list_toggle_and_create(logged_in):
     res = client.post("/accounting/taxes/ppn11/toggle", data={"csrf_token": logged_in["token"]}, headers={"X-Requested-With": "fetch"})
     assert res.get_json()["active"] == False
     # an inactive tax can no longer be used on a new invoice line
-    client.post("/accounting/invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
         "customer_ref": "PAJAK-NONAKTIF", "line_tax": ["ppn11", ""]
     }))
     assert _invoices().find_one({"customer_ref": "PAJAK-NONAKTIF"}) == None
@@ -539,11 +674,276 @@ def test_accounting_taxes_list_toggle_and_create(logged_in):
 # end def
 
 
+def test_accounting_accounts_list_toggle_and_create(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    token = logged_in["token"]
+    html = client.get("/accounting/accounts").data.decode("utf-8")
+    assert "41000010" in html
+    assert "Piutang Dagang" in html
+    assert "Piutang Dagang" not in client.get("/accounting/accounts?group=income").data.decode("utf-8")
+    assert "Penjualan" in client.get("/accounting/accounts?q=4100").data.decode("utf-8")
+    # code tree on the left: ?prefix=41 shows only 41xxxxxx
+    assert "prefix=41" in html
+    by_prefix = client.get("/accounting/accounts?prefix=41").data.decode("utf-8")
+    assert "41000010" in by_prefix
+    assert "11210010" not in by_prefix
+    client.post("/accounting/accounts/create", data={
+        "csrf_token": token, "code": "42000070", "name": "Diskon Penjualan",
+        "account_type": "income", "description": "Diskon yang diberikan kepada pelanggan.", "active": "1"
+    })
+    assert _db().db_account.find_one({"code": "42000070"})["name"] == "Diskon Penjualan"
+    # duplicate code is refused
+    client.post("/accounting/accounts/create", data={"csrf_token": token, "code": "42000070", "name": "Lagi", "account_type": "income", "active": "1"})
+    assert _db().db_account.count_documents({"code": "42000070"}) == 1
+    client.post("/accounting/accounts/create", data={
+        "csrf_token": token, "code": "61000010", "name": "Beban Gaji", "account_type": "expense", "active": "1"
+    })
+    # every active account except Piutang / Utang is offered on invoice lines
+    html = client.get("/accounting/client-invoices/new").data.decode("utf-8")
+    assert "42000070 Diskon Penjualan" in html
+    assert "61000010 Beban Gaji" in html
+    assert 'id="accountOptions"' in html
+    client.post("/accounting/accounts/42000070/update", data={"csrf_token": token, "name": "Potongan Penjualan", "account_type": "income", "active": "1"})
+    acc = _db().db_account.find_one({"code": "42000070"})
+    assert acc["name"] == "Potongan Penjualan"
+    assert _db().db_record_log.find_one({"model": "account", "record_id": str(acc["_id"]), "kind": "CHANGE"}) != None
+    assert "Log catatan" in client.get("/accounting/accounts/42000070").data.decode("utf-8")
+    res = client.post("/accounting/accounts/42000070/toggle", data={"csrf_token": token}, headers={"X-Requested-With": "fetch"})
+    assert res.get_json()["active"] == False
+    # an inactive account can no longer be used on a new invoice line
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, _contact_id("PT Sumber Makmur"), {
+        "customer_ref": "AKUN-NONAKTIF", "line_account": ["42000070", "41000010"]
+    }))
+    assert _invoices().find_one({"customer_ref": "AKUN-NONAKTIF"}) == None
+    assert client.get("/accounting/accounts/42000070").status_code == 200
+# end def
+
+
+def test_vendor_bill_refund_and_payment(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    token = logged_in["token"]
+    client.post("/contacts/create", data={"csrf_token": token, "name": "PT Armada Lintas Nusantara", "category": "VENDOR"})
+    vendor = _contact_id("PT Armada Lintas Nusantara")
+    assert client.get("/accounting/vendor-bills").status_code == 200
+    html = client.get("/accounting/vendor-bills/new").data.decode("utf-8")
+    for text in ["Tagihan Vendor", "Vendor", "Tanggal Tagihan", "Tanggal Akuntansi", "Bank Penerima", "Referensi Tagihan"]:
+        assert text in html, text
+    # bill: expense lines + PPN Masukan 12% (DPP 11/12) = 11%
+    bill_payload = {
+        "csrf_token": token, "partner_id": vendor, "invoice_date": "2026-11-06", "payment_term": "Langsung",
+        "customer_ref": "PO/TRK/0045 - SJ/ALN/8891", "payment_ref": "Sewa truk subcon", "partner_bank": "BCA 123",
+        "line_product": ["Sewa Truk Tronton Subcon JKT-SBY", "Penggantian Ban & Terpal"],
+        "line_account": ["51000010", "51000010"], "line_quantity": ["1", "1"],
+        "line_price": ["15000000", "2000000"], "line_tax": ["ppn12_dpp_in", "ppn12_dpp_in"], "action": "confirm"
+    }
+    client.post("/accounting/vendor-bills/create", data=bill_payload)
+    bill = _invoices().find_one({"move_type": "in_invoice"})
+    assert bill["state"] == "POSTED"
+    assert bill["number"] == "BILL/2026/11/0001"
+    assert bill["amount_tax"] == 1870000
+    assert bill["amount_total"] == 18870000
+    assert bill["partner_bank"] == "BCA 123"
+    page = client.get("/accounting/vendor-bills/1").data.decode("utf-8")
+    assert "Hutang Usaha" in page
+    assert "PPN Masukan" in page
+    assert "Pengembalian" in page
+    # sales taxes are not allowed on a bill
+    bad = dict(bill_payload, customer_ref="SALAH-PAJAK", line_tax=["ppn12_dpp", ""])
+    client.post("/accounting/vendor-bills/create", data=bad)
+    assert _invoices().find_one({"customer_ref": "SALAH-PAJAK"}) == None
+    # vendor refund from the bill, then Tambah against it
+    assert "BILL/2026/11/0001" in client.get("/accounting/vendor-refunds/new?invoice=1").data.decode("utf-8")
+    client.post("/accounting/vendor-refunds/create", data={
+        "csrf_token": token, "partner_id": vendor, "invoice_date": "2026-11-08", "customer_ref": "Potongan ban",
+        "reversed_entry_id": str(bill["_id"]), "line_product": ["Potongan klaim ban"], "line_account": ["51000010"],
+        "line_quantity": ["1"], "line_price": ["1000000"], "line_tax": [""], "action": "confirm"
+    })
+    refund = _invoices().find_one({"move_type": "in_refund"})
+    assert refund["number"] == "RBILL/2026/11/0001"
+    assert refund["reversed_entry_number"] == "BILL/2026/11/0001"
+    assert "Kredit belum lunas" in client.get("/accounting/vendor-refunds/1").data.decode("utf-8")
+    client.post("/accounting/vendor-refunds/1/apply", data={"csrf_token": token, "invoice_id": str(bill["_id"])})
+    assert _invoices().find_one({"_id": bill["_id"]})["amount_residual"] == 17870000
+    assert _db().db_record_log.find_one({"model": "vendor_refund", "record_id": str(refund["_id"]), "kind": "EVENT"}) != None
+    # Bayar on the bill -> Pembayaran Vendor (Kirim), VPAY numbering
+    client.post("/accounting/vendor-bills/1/pay", data={"csrf_token": token, "amount": "17870000", "method": "Transfer Bank", "date": "2026-11-10"})
+    assert _invoices().find_one({"_id": bill["_id"]})["payment_state"] == "paid"
+    pay = _db().db_payment.find_one({"partner_type": "supplier"})
+    assert pay["number"] == "VPAY00001"
+    assert pay["payment_type"] == "outbound"
+    assert pay["seq"] == 1
+    html = client.get("/accounting/vendor-payments").data.decode("utf-8")
+    assert "Pembayaran Vendor" in html
+    assert "VPAY00001" in html
+    assert "Pembayaran Vendor" in client.get("/accounting/vendor-payments/1").data.decode("utf-8")
+    # customer and vendor payment lists stay separate
+    assert "VPAY00001" not in client.get("/accounting/client-payments").data.decode("utf-8")
+# end def
+
+
+def test_products_shared_catalogue(logged_in):
+    client = logged_in["client"]
+    token = logged_in["token"]
+    product = {
+        "csrf_token": token, "name": "Jasa Trucking FTL Tronton (Jakarta - Surabaya)", "sale_ok": "1",
+        "product_type": "service", "list_price": "18000000", "sale_tax": "ppn12_dpp", "standard_price": "0",
+        "purchase_tax": "", "default_code": "SRV-TRK-JKTSBY", "weight": "0", "volume": "0", "sale_delay": "0"
+    }
+    assert client.get("/accounting/client-products/new").status_code == 200
+    res = client.post("/accounting/client-products/create", data=product)
+    assert res.headers["Location"].split("?")[0].endswith("/accounting/client-products/1")
+    client.post("/accounting/vendor-products/create", data={
+        "csrf_token": token, "name": "Pallet Kayu Standar Ekspor & Wrapping", "sale_ok": "1", "purchase_ok": "1",
+        "product_type": "goods", "is_storable": "1", "list_price": "250000", "sale_tax": "ppn12_dpp",
+        "standard_price": "0", "purchase_tax": "ppn12_dpp_in", "default_code": "MAT-PLT-001",
+        "weight": "18.5", "volume": "0.2", "sale_delay": "1"
+    })
+    # Pelanggan > Produk = Penjualan (both); Vendor > Produk = Pembelian (pallet only)
+    client_html = client.get("/accounting/client-products").data.decode("utf-8")
+    assert "Jasa Trucking FTL Tronton" in client_html
+    assert "Pallet Kayu" in client_html
+    assert "Rp 18.000.000,00" in client_html
+    vendor_html = client.get("/accounting/vendor-products").data.decode("utf-8")
+    assert "Pallet Kayu" in vendor_html
+    assert "Jasa Trucking FTL Tronton" not in vendor_html
+    assert "Jasa Trucking FTL Tronton" in client.get("/accounting/vendor-products?filter=all").data.decode("utf-8")
+    # the same product opens under either route
+    page = client.get("/accounting/vendor-products/2").data.decode("utf-8")
+    for text in ["[MAT-PLT-001] Pallet Kayu", "Informasi Umum", "Stok Persediaan", "Termasuk Pajak", "Log catatan"]:
+        assert text in page, text
+    assert "Akuntansi</button>" not in page
+    assert client.get("/accounting/client-products/2").status_code == 200
+    # duplicate reference refused; changes are logged
+    client.post("/accounting/client-products/create", data=dict(product, name="Duplikat"))
+    assert _db().db_product.find_one({"name": "Duplikat"}) == None
+    client.post("/accounting/client-products/1/update", data=dict(product, list_price="19000000"))
+    doc = _db().db_product.find_one({"seq": 1})
+    assert doc["list_price"] == 19000000
+    change = _db().db_record_log.find_one({"model": "product", "record_id": str(doc["_id"]), "kind": "CHANGE"})
+    assert "Harga Jual" in [ch["label"] for ch in change["changes"]]
+# end def
+
+
+def test_control_journal_items_and_audit_trail(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    token = logged_in["token"]
+    partner = _contact_id("PT Sumber Makmur")
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, partner, {"customer_ref": "JI-INV", "action": "confirm"}))
+    inv = _invoices().find_one({"customer_ref": "JI-INV"})
+    # confirm writes the ledger: 2 revenue lines + PPN Keluaran + Piutang, balanced
+    lines = list(_db().db_journal_item.find({"move_id": str(inv["_id"]), "is_deleted": False}))
+    assert len(lines) == 4
+    assert round(sum(l["debit"] for l in lines), 2) == 46400000
+    assert round(sum(l["credit"] for l in lines), 2) == 46400000
+    html = client.get("/accounting/journal-items").data.decode("utf-8")
+    for text in ["Item Jurnal", "Terekam", inv["number"], "11210010", "Rp 46.400.000,00"]:
+        assert text in html, text
+    # account-code tree: 1 > 11, 2 > 21, 4 > 41; a node filters by prefix
+    assert "prefix=11" in html
+    assert "prefix=41" in html
+    assert "11210010" not in client.get("/accounting/journal-items?prefix=4").data.decode("utf-8")
+    assert "41000010" in client.get("/accounting/journal-items?prefix=41").data.decode("utf-8")
+    # reset to Draft removes the lines; posting again brings them back
+    client.post("/accounting/client-invoices/" + str(inv["seq"]) + "/state", data={"csrf_token": token, "action": "reset"})
+    assert _db().db_journal_item.count_documents({"move_id": str(inv["_id"]), "is_deleted": False}) == 0
+    # a Terekam document without lines (e.g. inserted by a script) is backfilled
+    _db().db_invoice.update_one({"_id": inv["_id"]}, {"$set": {"state": "POSTED", "items_posted": False}})
+    client.get("/accounting/journal-items")
+    assert _db().db_journal_item.count_documents({"move_id": str(inv["_id"]), "is_deleted": False}) == 4
+    # Log Catatan: every accounting log entry with the record name + link
+    html = client.get("/accounting/audit-trail").data.decode("utf-8")
+    assert "Log Catatan" in html
+    assert "Faktur " + inv["number"] in html
+    assert "telah divalidasi" in html
+    assert "/accounting/client-invoices/" + str(inv["seq"]) in html
+    assert "Faktur " + inv["number"] not in client.get("/accounting/audit-trail?model=bill").data.decode("utf-8")
+# end def
+
+
+def test_journal_entries_list_and_detail(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    token = logged_in["token"]
+    customer = _contact_id("PT Sumber Makmur")
+    client.post("/contacts/create", data={"csrf_token": token, "name": "PT Armada Lintas Nusantara", "category": "VENDOR"})
+    vendor = _contact_id("PT Armada Lintas Nusantara")
+    # faktur 46.400.000 (Terekam) + a draft faktur + tagihan 11.100.000 (Terekam)
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, customer, {"customer_ref": "JE-INV", "action": "confirm"}))
+    client.post("/accounting/client-invoices/create", data=_invoice_payload(logged_in, customer, {"customer_ref": "JE-DRAFT"}))
+    client.post("/accounting/vendor-bills/create", data={
+        "csrf_token": token, "partner_id": vendor, "invoice_date": "2026-11-06", "customer_ref": "JE-BILL",
+        "line_product": ["Sewa truk"], "line_account": ["51000010"], "line_quantity": ["1"],
+        "line_price": ["10000000"], "line_tax": ["ppn12_dpp_in"], "action": "confirm"
+    })
+    # default filter = Terekam; totals signed (faktur +, tagihan -)
+    html = client.get("/accounting/journal-entries").data.decode("utf-8")
+    assert "JE-INV" in html
+    assert "JE-BILL" in html
+    assert "JE-DRAFT" not in html
+    assert "Penjualan" in html
+    assert "Pembelian" in html
+    assert "Rp -11.100.000,00" in html
+    assert "Rp 35.300.000,00" in html
+    assert "JE-DRAFT" in client.get("/accounting/journal-entries?state=ALL").data.decode("utf-8")
+    assert "JE-INV" not in client.get("/accounting/journal-entries?journal=purchase").data.decode("utf-8")
+    # a row opens the document page under the Entri Jurnal breadcrumb
+    bill = _invoices().find_one({"customer_ref": "JE-BILL"})
+    page = client.get("/accounting/journal-entries/vendor-bills/" + str(bill["seq"])).data.decode("utf-8")
+    assert "Entri Jurnal" in page
+    assert bill["number"] in page
+    assert "Item Jurnal" in page
+    assert client.get("/accounting/journal-entries/unknown/1").status_code == 302
+# end def
+
+
+def test_accounting_old_urls_redirect(logged_in):
+    client = logged_in["client"]
+    res = client.get("/accounting/invoices")
+    assert res.status_code == 301
+    assert res.headers["Location"].endswith("/accounting/client-invoices")
+    res = client.get("/accounting/credit-notes/3?print=1")
+    assert res.headers["Location"].endswith("/accounting/client-credit-notes/3?print=1")
+    assert client.get("/accounting/customer-payments/new").headers["Location"].endswith("/accounting/client-payments/new")
+    assert client.get("/accounting/bills").headers["Location"].endswith("/accounting/vendor-bills")
+# end def
+
+
+def test_accounting_customer_and_vendor_lists(logged_in):
+    _seed(logged_in)
+    client = logged_in["client"]
+    token = logged_in["token"]
+    # Pelanggan > Pelanggan: the Kontak list inside Akuntansi, locked to Klien
+    html = client.get("/accounting/contact.CLIENT").data.decode("utf-8")
+    assert "Akuntansi" in html
+    assert "PT Sumber Makmur" in html
+    assert "UD Sidoarjo" not in html
+    assert "Klien" in html
+    assert "/accounting/contact.CLIENT/new" in html
+    assert "PT Sumber Makmur" not in client.get("/accounting/contact.VENDOR").data.decode("utf-8")
+    assert client.get("/accounting/contact.DRIVER").status_code == 302
+    # create + open + save stay in Akuntansi
+    res = client.post("/accounting/contact.CLIENT/create", data={"csrf_token": token, "name": "PT Pelanggan Akuntansi", "category": "CLIENT"})
+    assert "/accounting/contact.CLIENT/" in res.headers["Location"]
+    contact_id = str(_db().db_contact.find_one({"name": "PT Pelanggan Akuntansi"})["_id"])
+    page = client.get("/accounting/contact.CLIENT/" + contact_id).data.decode("utf-8")
+    assert "Log catatan" in page
+    assert "/accounting/contact.CLIENT/" + contact_id + "/update" in page
+    res = client.post("/accounting/contact.CLIENT/" + contact_id + "/update", data={"csrf_token": token, "name": "PT Pelanggan Akuntansi", "category": "CLIENT", "city": "Medan"})
+    assert res.headers["Location"].split("?")[0].endswith("/accounting/contact.CLIENT/" + contact_id)
+    assert _db().db_contact.find_one({"name": "PT Pelanggan Akuntansi"})["city"] == "Medan"
+    # the Kontak app itself is unchanged
+    assert "/contacts/new" in client.get("/contacts").data.decode("utf-8")
+# end def
+
+
 def test_invoices_need_accounting_access(logged_in):
     _create_user(logged_in, "staf_tanpa_akun", {"perm_contacts": "full"})
     staf = _login_as("staf_tanpa_akun", "Rahasia123")
-    assert staf["client"].get("/accounting/invoices").status_code == 302
-    staf["client"].post("/accounting/invoices/create", data={"csrf_token": staf["token"], "customer_ref": "TIDAK-BOLEH"})
+    assert staf["client"].get("/accounting/client-invoices").status_code == 302
+    staf["client"].post("/accounting/client-invoices/create", data={"csrf_token": staf["token"], "customer_ref": "TIDAK-BOLEH"})
     assert _invoices().find_one({"customer_ref": "TIDAK-BOLEH"}) == None
 # end def
 
@@ -567,8 +967,17 @@ def test_all_pages_render(logged_in):
     paths = [
         "/", "/operations", "/shipments", "/shipments/create", "/manifests",
         "/manifests/create", "/hub?hub=Surabaya", "/contacts",
-        "/contacts?category=CLIENT", "/fleet", "/users", "/users/new", "/settings", "/accounting", "/accounting/invoices",
-        "/accounting/invoices/new", "/accounting/settings", "/accounting/taxes",
+        "/contacts?category=CLIENT", "/fleet", "/users", "/users/new", "/settings", "/accounting", "/accounting/client-invoices",
+        "/accounting/client-invoices/new", "/accounting/client-credit-notes", "/accounting/client-credit-notes/new",
+        "/accounting/client-payments", "/accounting/client-payments/new",
+        "/accounting/vendor-bills", "/accounting/vendor-bills/new", "/accounting/vendor-refunds",
+        "/accounting/vendor-refunds/new", "/accounting/vendor-payments", "/accounting/vendor-payments/new",
+        "/accounting/journal-entries", "/accounting/journal-entries?state=ALL",
+        "/accounting/journal-items", "/accounting/audit-trail",
+        "/accounting/client-products", "/accounting/client-products/new",
+        "/accounting/vendor-products", "/accounting/vendor-products/new",
+        "/accounting/contact.CLIENT", "/accounting/contact.CLIENT/new", "/accounting/contact.VENDOR",
+        "/accounting/settings", "/accounting/accounts", "/accounting/accounts/new", "/accounting/taxes",
         "/accounting/taxes/new", "/track"
     ]
     for path in paths:

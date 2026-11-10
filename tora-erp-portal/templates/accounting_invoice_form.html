@@ -1,20 +1,29 @@
 {% extends "accounting_base.html" %}
-{% from "_icons.html" import close, cloud_upload, plus %}
+{% from "_icons.html" import close, cloud_upload, plus, sliders %}
 {% from "_record_log.html" import record_log %}
+{% from "_combobox.html" import combobox, combobox_source %}
 {% block app_shell_class %}app-shell-fixed{% endblock %}
-{% block title %}{% if data.invoice %}{{ data.invoice.number }}{% else %}Faktur Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{#- Shared by Faktur, Nota Kredit, Tagihan and Pengembalian vendor:
+    data.doc = accounting_proc.MOVE_TYPES[move_type] (labels, partner side,
+    endpoint prefix "invoice" / "credit_note" / "bill" / "vendor_refund",
+    is_purchase, is_refund, origin / reverse). Same layout for all four. -#}
+{% block title %}{% if data.invoice %}{{ data.invoice.number }}{% else %}{{ data.doc.label }} Baru{% endif %} — {{ data.site_name }}{% endblock %}
 
 {% block app_control %}
 {%- set inv = data.invoice or {} -%}
 {%- set is_edit = data.invoice != None -%}
 {%- set editable = data.current_user.can('accounting', 'create') and (not is_edit or inv.state == 'DRAFT') -%}
+{#- data.crumb: opened from another list (Entri Jurnal) — breadcrumb and
+    discard go back there. -#}
+{%- set back_label = data.crumb.label if data.crumb else data.doc.label -%}
+{%- set back_url = data.crumb.url if data.crumb else url_for('accounting_blueprint.' ~ data.doc.list_ep) -%}
 <div class="app-cp">
     <div class="app-cp-left">
         {% if data.current_user.can('accounting', 'create') %}
-        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.invoice_new') }}">Baru</a>
+        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_new') }}">Baru</a>
         {% endif %}
         <div class="app-crumb">
-            <a class="app-crumb-link" href="{{ url_for('accounting_blueprint.invoices') }}">Faktur</a>
+            <a class="app-crumb-link" href="{{ back_url }}">{{ back_label }}</a>
             <span class="app-crumb-sep">/</span>
             <span class="app-crumb-current">
                 {% if is_edit %}{{ inv.number }}{% else %}Baru{% endif %}{% if inv.customer_ref %} ({{ inv.customer_ref }}){% endif %}
@@ -25,18 +34,26 @@
                     {{ cloud_upload("w-4 h-4") }}
                 </button>
                 {% endif %}
-                <a class="app-icon-action" href="{{ url_for('accounting_blueprint.invoices') }}" title="Buang perubahan" aria-label="Buang perubahan">
+                <a class="app-icon-action" href="{{ back_url }}" title="Buang perubahan" aria-label="Buang perubahan">
                     {{ close("w-4 h-4") }}
                 </a>
             </span>
         </div>
     </div>
+    {% if is_edit %}
+    <div class="app-cp-right">
+        <button type="button" class="app-btn-secondary app-stat-btn" data-open-tab="journal" title="Lihat item jurnal">{{ sliders("w-4 h-4") }} Item Jurnal</button>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block app_content %}
 {%- set inv = data.invoice or {} -%}
 {%- set is_edit = data.invoice != None -%}
+{%- set origin = data.origin or {} -%}
+{%- set is_refund = data.doc.is_refund -%}
+{%- set is_purchase = data.doc.is_purchase -%}
 {%- set state = inv.state or 'DRAFT' -%}
 {%- set can_update = data.current_user.can('accounting', 'update') -%}
 {#- A Draft is editable by anyone who may create invoices; confirming and
@@ -46,14 +63,19 @@
 {%- set has_payments = (inv.payments or [])|length > 0 -%}
 
 {% if is_edit %}
-<form id="invResetForm" method="post" action="{{ url_for('accounting_blueprint.invoice_state', seq=inv.seq) }}">
+<form id="invResetForm" method="post" action="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_state', seq=inv.seq) }}">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
     <input type="hidden" name="action" value="reset">
 </form>
-<form id="invCancelForm" method="post" action="{{ url_for('accounting_blueprint.invoice_state', seq=inv.seq) }}">
+<form id="invCancelForm" method="post" action="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_state', seq=inv.seq) }}">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
     <input type="hidden" name="action" value="cancel">
 </form>
+{% if is_refund %}
+<form id="cnApplyForm" method="post" action="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_apply', seq=inv.seq) }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+</form>
+{% endif %}
 {% endif %}
 
 <div class="app-split">
@@ -70,19 +92,21 @@
                 <button type="submit" form="invoiceForm" class="app-btn-secondary">Simpan</button>
                 {% endif %}
                 {% if is_edit and can_update %}
-                <button type="submit" form="invCancelForm" class="app-btn-secondary" onclick="return confirm('Batalkan faktur ini?');">Batal</button>
+                <button type="submit" form="invCancelForm" class="app-btn-secondary" onclick="return confirm('Batalkan {{ data.doc.label|lower }} ini?');">Batal</button>
                 {% endif %}
                 <span class="inv-dirty" data-dirty-flag hidden>● Perubahan belum disimpan</span>
             {% elif state == 'POSTED' %}
-                {%- set mail_subject = "Faktur " ~ inv.number ~ " — " ~ data.site_name -%}
-                {%- set mail_body = "Yth. " ~ inv.partner_name ~ ",\n\nBerikut kami sampaikan faktur " ~ inv.number ~ " sebesar " ~ inv.total_fmt ~ " dengan jatuh tempo " ~ inv.due_date ~ ".\n\nLihat / unduh faktur: " ~ data.invoice_link ~ "\n\nTerima kasih,\n" ~ data.site_name -%}
-                <a class="app-btn-primary" href="mailto:{{ data.partner_email }}?subject={{ mail_subject|urlencode }}&body={{ mail_body|urlencode }}" title="{% if data.partner_email %}Kirim ke {{ data.partner_email }}{% else %}Email pelanggan belum diisi di Kontak{% endif %}">Kirim</a>
-                <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.invoice_print', seq=inv.seq, print=1) }}" target="_blank" rel="noopener">Cetak</a>
+                {%- set mail_subject = data.doc.label ~ " " ~ inv.number ~ " — " ~ data.site_name -%}
+                {%- set mail_body = "Yth. " ~ inv.partner_name ~ ",\n\nBerikut kami sampaikan " ~ data.doc.label|lower ~ " " ~ inv.number ~ " sebesar " ~ inv.total_fmt ~ " tanggal " ~ inv.invoice_date ~ ".\n\nLihat / unduh dokumen: " ~ data.invoice_link ~ "\n\nTerima kasih,\n" ~ data.site_name -%}
+                <a class="app-btn-primary" href="mailto:{{ data.partner_email }}?subject={{ mail_subject|urlencode }}&body={{ mail_body|urlencode }}" title="{% if data.partner_email %}Kirim ke {{ data.partner_email }}{% else %}Email {{ data.doc.partner_label|lower }} belum diisi di Kontak{% endif %}">Kirim</a>
+                <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_print', seq=inv.seq, print=1) }}" target="_blank" rel="noopener">Cetak</a>
                 {% if can_update and inv.residual > 0 %}
                 <button type="button" class="app-btn-primary" data-pay-open>Bayar</button>
                 {% endif %}
-                <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.invoice_print', seq=inv.seq) }}" target="_blank" rel="noopener">Pratinjau</a>
-                <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.page', slug='credit-notes') }}">Nota Kredit</a>
+                <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_print', seq=inv.seq) }}" target="_blank" rel="noopener">Pratinjau</a>
+                {% if data.doc.reverse and data.current_user.can('accounting', 'create') %}
+                <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.' ~ data.doc.reverse_ep ~ '_new', invoice=inv.seq) }}" title="Buat {{ data.doc.reverse_label|lower }} untuk {{ data.doc.label|lower }} ini">{{ data.doc.reverse_label }}</a>
+                {% endif %}
                 {% if can_update and not has_payments %}
                 <button type="submit" form="invResetForm" class="app-btn-secondary">Reset ke Draft</button>
                 {% endif %}
@@ -90,7 +114,7 @@
                 <button type="submit" form="invResetForm" class="app-btn-secondary">Reset ke Draft</button>
             {% endif %}
         </div>
-        <div class="inv-pills" aria-label="Status faktur">
+        <div class="inv-pills" aria-label="Status {{ data.doc.label|lower }}">
             <span class="inv-pill {% if state == 'DRAFT' %}inv-pill-active{% endif %}">Draft</span>
             {% if state == 'CANCEL' %}
             <span class="inv-pill inv-pill-active inv-pill-cancel">Batal</span>
@@ -100,19 +124,26 @@
         </div>
     </div>
 
-<form id="invoiceForm" class="app-form-sheet {% if editable %}inv-editable{% endif %}" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.invoice_update', seq=inv.seq) }}{% else %}{{ url_for('accounting_blueprint.invoice_create') }}{% endif %}" autocomplete="off">
+<form id="invoiceForm" class="app-form-sheet {% if editable %}inv-editable{% endif %}" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_update', seq=inv.seq) }}{% else %}{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_create') }}{% endif %}" autocomplete="off">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
     <fieldset class="app-fieldset" {% if not editable %}disabled{% endif %}>
 
     {% if state == 'POSTED' and inv.payment_state in ['paid', 'partial'] %}
     <div class="inv-ribbon inv-ribbon-{{ inv.payment_state }}">{% if inv.payment_state == 'paid' %}LUNAS{% else %}DIBAYAR SEBAGIAN{% endif %}</div>
     {% endif %}
+    {% if is_refund and state == 'DRAFT' and data.open_invoices %}
+    <div class="inv-banner">Anda punya <strong>{{ data.doc.outstanding_label|lower }}</strong> untuk {{ data.doc.partner_label|lower }} ini. Setelah dikonfirmasi, {{ data.doc.label|lower }} ini bisa langsung dipakai untuk melunasinya.</div>
+    {% endif %}
+    {% if not is_edit and origin.reversed_entry_id %}
+    <input type="hidden" name="reversed_entry_id" value="{{ origin.reversed_entry_id }}">
+    <div class="inv-banner inv-banner-info">{{ data.doc.label }} untuk {{ data.doc.origin_label|lower }} <strong>{{ origin.reversed_entry_number }}</strong>.</div>
+    {% endif %}
     <div class="inv-title">
-        <span class="inv-title-label">Faktur Pelanggan</span>
+        <span class="inv-title-label">{{ data.doc.title }}</span>
         {% if is_edit and editable %}
         {#- Draft: only the trailing sequence (00004) can change; the prefix stays. -#}
         <h1 class="inv-number-edit">
-            <span class="inv-number-prefix">{{ inv.number_prefix }}</span><input class="inv-number-input" type="text" name="number_seq" value="{{ inv.number_digits }}" inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" size="{{ (inv.number_digits|length) + 1 }}" required aria-label="Nomor urut faktur" title="Hanya nomor urut yang bisa diubah" data-number-input data-original="{{ inv.number_digits }}" data-check-url="{{ url_for('accounting_blueprint.invoice_check_number', seq=inv.seq) }}">
+            <span class="inv-number-prefix">{{ inv.number_prefix }}</span><input class="inv-number-input" type="text" name="number_seq" value="{{ inv.number_digits }}" inputmode="numeric" pattern="[0-9]{1,10}" maxlength="10" size="{{ (inv.number_digits|length) + 1 }}" required aria-label="Nomor urut {{ data.doc.label|lower }}" title="Hanya nomor urut yang bisa diubah" data-number-input data-original="{{ inv.number_digits }}" data-check-url="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_check_number', seq=inv.seq) }}">
         </h1>
         <div class="inv-number-warn" data-number-warn hidden></div>
         {% elif is_edit %}
@@ -124,16 +155,33 @@
 
     <div class="app-sheet-grid">
         <div class="app-group">
-            <label class="app-label" for="partnerSearch">Pelanggan <span class="app-req">*</span></label>
-            <div class="inv-ac" data-partner-picker>
-                <input class="app-input" type="text" id="partnerSearch" value="{{ inv.partner_name or '' }}" placeholder="Cari klien ..." aria-autocomplete="list" aria-controls="partnerMenu" data-partner-input>
-                <input type="hidden" name="partner_id" value="{{ inv.partner_id or '' }}" data-partner-id>
+            <label class="app-label" for="partnerSearch">{{ data.doc.partner_label }} <span class="app-req">*</span></label>
+            <div class="inv-ac" data-partner-picker data-partner-category="{{ data.doc.partner_category }}">
+                <input class="app-input" type="text" id="partnerSearch" value="{{ inv.partner_name or origin.partner_name or '' }}" placeholder="{{ data.doc.partner_placeholder }}" aria-autocomplete="list" aria-controls="partnerMenu" data-partner-input>
+                <input type="hidden" name="partner_id" value="{{ inv.partner_id or origin.partner_id or '' }}" data-partner-id>
                 <div class="app-dropdown inv-ac-menu" id="partnerMenu" role="listbox" data-partner-menu></div>
             </div>
+
+            {% if is_purchase %}
+            {#- Tagihan: the vendor's reference sits in the header (Info tab on faktur). -#}
+            <label class="app-label" for="customerRef">{{ data.doc.ref_label }}</label>
+            <input class="app-input" type="text" id="customerRef" name="customer_ref" value="{{ inv.customer_ref or origin.customer_ref or '' }}" placeholder="{% if is_refund %}Alasan / referensi pengembalian{% else %}No. PO / surat jalan / invoice vendor{% endif %}">
+            {% endif %}
         </div>
         <div class="app-group">
-            <label class="app-label" for="invoiceDate">Tanggal Faktur</label>
+            <label class="app-label" for="invoiceDate">{{ data.doc.date_label }}</label>
             <input class="app-input" type="date" id="invoiceDate" name="invoice_date" value="{{ inv.invoice_date or data.today }}" data-invoice-date>
+
+            {% if is_purchase %}
+            <label class="app-label" for="accountingDate">Tanggal Akuntansi</label>
+            <input class="app-input" type="date" id="accountingDate" name="accounting_date" value="{{ inv.accounting_date or inv.invoice_date or data.today }}">
+
+            <label class="app-label" for="paymentRef">Referensi Pembayaran <span class="app-help" title="Berita transfer saat membayar tagihan ini">?</span></label>
+            <input class="app-input" type="text" id="paymentRef" name="payment_ref" value="{{ inv.payment_ref or '' }}" placeholder="Berita transfer ke vendor">
+
+            <label class="app-label" for="partnerBank">Bank Penerima <span class="app-help" title="Rekening vendor tujuan transfer">?</span></label>
+            <input class="app-input" type="text" id="partnerBank" name="partner_bank" value="{{ inv.partner_bank or origin.partner_bank or '' }}" maxlength="120" placeholder="contoh: BCA 123-456-789 a.n. vendor">
+            {% endif %}
 
             <label class="app-label" for="paymentTerm">Termin pembayaran</label>
             <select class="app-input app-select" id="paymentTerm" name="payment_term" data-payment-term>
@@ -176,13 +224,7 @@
                 {% for line in lines %}
                 <tr data-line>
                     <td><input class="app-input" type="text" name="line_product" value="{{ line.product }}" placeholder="Produk / layanan" aria-label="Produk"></td>
-                    <td>
-                        <select class="app-input app-select" name="line_account" aria-label="Akun">
-                            {% for acc in data.accounts %}
-                            <option value="{{ acc.key }}" {% if line.account == acc.key %}selected{% endif %}>{{ acc.label }}</option>
-                            {% endfor %}
-                        </select>
-                    </td>
+                    <td>{{ combobox("line_account", line.account, line.account_label or line.account, "accountOptions", placeholder="Cari akun ...", aria_label="Akun") }}</td>
                     <td><input class="app-input app-num" type="number" name="line_quantity" value="{{ '%g'|format(line.quantity) }}" min="0" step="any" aria-label="Kuantitas" data-qty></td>
                     <td><input class="app-input app-num" type="number" name="line_price" value="{{ '%.2f'|format(line.price_unit) }}" min="0" step="0.01" aria-label="Harga" data-price></td>
                     <td>
@@ -215,13 +257,30 @@
                 <div class="inv-totals-row inv-totals-grand"><span>Total:</span><span data-total-grand>{{ inv.total_fmt or 'Rp 0,00' }}</span></div>
                 {% for pay in inv.payments or [] %}
                 <div class="inv-totals-row inv-totals-paid" title="{{ pay.memo }}">
-                    <span>Dibayar {{ pay.date_short }} ({{ pay.method }})</span><span>− {{ pay.amount_fmt }}</span>
+                    <span>Dibayar {{ pay.date_short }} ({% if pay.payment_seq %}<a class="app-link" href="{{ url_for('accounting_blueprint.' ~ (pay.payment_ep or 'customer_payment') ~ '_edit', seq=pay.payment_seq) }}">{{ pay.payment_number }}</a>, {% endif %}{{ pay.method }})</span><span>− {{ pay.amount_fmt }}</span>
                 </div>
                 {% endfor %}
                 <div class="inv-totals-row inv-totals-due"><span>Jumlah Belum Dibayar:</span><strong>{{ inv.residual_fmt or 'Rp 0,00' }}</strong></div>
             </div>
         </div>
         </fieldset>
+
+        {% if is_refund and state == 'POSTED' and inv.residual > 0 and data.open_invoices %}
+        {#- Outside the disabled fieldset: the Tambah buttons submit #cnApplyForm. -#}
+        <div class="inv-outstanding">
+            <div class="inv-outstanding-title">{{ data.doc.outstanding_label }}</div>
+            {% for o in data.open_invoices %}
+            <div class="inv-outstanding-row">
+                <span class="app-muted">{{ o.date_short }}</span>
+                <a class="app-link" href="{{ url_for('accounting_blueprint.' ~ data.doc.origin_ep ~ '_edit', seq=o.seq) }}">{{ o.number }}</a>
+                {% if can_update %}
+                <button type="submit" form="cnApplyForm" name="invoice_id" value="{{ o.id }}" class="app-btn-secondary app-btn-xs" title="Pakai {{ data.doc.label|lower }} ini untuk melunasi {{ o.number }}">Tambah</button>
+                {% endif %}
+                <span class="app-num">{{ o.residual_fmt }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
 
     <!-- Item Jurnal -->
@@ -245,9 +304,9 @@
                 <tr class="app-list-foot"><td></td><td></td><td class="app-num">{{ data.journal.debit_fmt }}</td><td class="app-num">{{ data.journal.credit_fmt }}</td></tr>
             </tfoot>
         </table>
-        <p class="app-tab-hint">Item jurnal dihitung dari baris faktur yang sudah disimpan.</p>
+        <p class="app-tab-hint">Item jurnal dihitung dari baris {{ data.doc.label|lower }} yang sudah disimpan.</p>
         {% else %}
-        <p class="app-tab-hint">Simpan faktur dengan minimal satu baris untuk melihat item jurnalnya.</p>
+        <p class="app-tab-hint">Simpan {{ data.doc.label|lower }} dengan minimal satu baris untuk melihat item jurnalnya.</p>
         {% endif %}
     </div>
 
@@ -255,17 +314,51 @@
     <div class="app-tab-panel" role="tabpanel" data-panel="info" hidden>
         <fieldset class="app-fieldset" {% if not editable %}disabled{% endif %}>
         <div class="app-sheet-grid">
+            {%- set origin_number = inv.reversed_entry_number or origin.reversed_entry_number -%}
+            {%- set origin_seq = inv.reversed_entry_seq or origin.reversed_entry_seq -%}
+            {% if is_purchase %}
+            {#- Tagihan / Pengembalian vendor: references and bank sit in the header. -#}
             <section>
-                <h3 class="app-section-title">Faktur</h3>
+                <h3 class="app-section-title">Akuntansi</h3>
                 <div class="app-group">
-                    <label class="app-label" for="customerRef">Referensi Pelanggan</label>
-                    <input class="app-input" type="text" id="customerRef" name="customer_ref" value="{{ inv.customer_ref or '' }}" placeholder="No. PO / DO pelanggan">
+                    {% if is_refund and origin_number %}
+                    <span class="app-label">{{ data.doc.origin_label }} asal</span>
+                    <span class="inv-static">
+                        {% if origin_seq %}<a class="app-link" href="{{ url_for('accounting_blueprint.' ~ data.doc.origin_ep ~ '_edit', seq=origin_seq) }}">{{ origin_number }}</a>{% else %}{{ origin_number }}{% endif %}
+                    </span>
+                    {% endif %}
+
+                    <label class="app-label" for="fiscal">Posisi Fiskal</label>
+                    <select class="app-input app-select" id="fiscal" name="fiscal_position">
+                        <option value=""></option>
+                        {% for opt in data.fiscal_positions %}
+                        <option value="{{ opt }}" {% if (inv.fiscal_position or origin.fiscal_position) == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <span class="app-label">{{ data.doc.counterpart_label }}</span>
+                    <span class="inv-static">{{ data.counterpart_account }}</span>
+                </div>
+            </section>
+            {% else %}
+            <section>
+                <h3 class="app-section-title">{{ data.doc.label }}</h3>
+                <div class="app-group">
+                    <label class="app-label" for="customerRef">{{ data.doc.ref_label }}</label>
+                    <input class="app-input" type="text" id="customerRef" name="customer_ref" value="{{ inv.customer_ref or origin.customer_ref or '' }}" placeholder="{% if is_refund %}Alasan / referensi klaim{% else %}No. PO / DO pelanggan{% endif %}">
+
+                    {% if is_refund and origin_number %}
+                    <span class="app-label">{{ data.doc.origin_label }} asal</span>
+                    <span class="inv-static">
+                        {% if origin_seq %}<a class="app-link" href="{{ url_for('accounting_blueprint.' ~ data.doc.origin_ep ~ '_edit', seq=origin_seq) }}">{{ origin_number }}</a>{% else %}{{ origin_number }}{% endif %}
+                    </span>
+                    {% endif %}
 
                     <label class="app-label" for="salesperson">Penjual</label>
                     <select class="app-input app-select" id="salesperson" name="salesperson_id">
                         <option value=""></option>
                         {% for u in data.salespeople %}
-                        <option value="{{ u.id }}" {% if (inv.salesperson_id if is_edit else data.current_user.id) == u.id %}selected{% endif %}>{{ u.label }}</option>
+                        <option value="{{ u.id }}" {% if (inv.salesperson_id if is_edit else (origin.salesperson_id or data.current_user.id)) == u.id %}selected{% endif %}>{{ u.label }}</option>
                         {% endfor %}
                     </select>
 
@@ -295,26 +388,27 @@
                     <select class="app-input app-select" id="fiscal" name="fiscal_position">
                         <option value=""></option>
                         {% for opt in data.fiscal_positions %}
-                        <option value="{{ opt }}" {% if inv.fiscal_position == opt %}selected{% endif %}>{{ opt }}</option>
+                        <option value="{{ opt }}" {% if (inv.fiscal_position or origin.fiscal_position) == opt %}selected{% endif %}>{{ opt }}</option>
                         {% endfor %}
                     </select>
 
-                    <span class="app-label">Akun Piutang</span>
-                    <span class="inv-static">11210010 Piutang Dagang</span>
+                    <span class="app-label">{{ data.doc.counterpart_label }}</span>
+                    <span class="inv-static">{{ data.counterpart_account }}</span>
                 </div>
             </section>
+            {% endif %}
         </div>
         </fieldset>
     </div>
 </form>
 </div>
 
-{{ record_log("invoice", inv.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
+{{ record_log(data.doc.log_model, inv.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
 </div>
 
 {% if is_edit and state == 'POSTED' and can_update and inv.residual > 0 %}
 <dialog class="inv-dialog" data-pay-dialog aria-labelledby="payTitle">
-    <form method="post" action="{{ url_for('accounting_blueprint.invoice_pay', seq=inv.seq) }}" class="inv-dialog-body">
+    <form method="post" action="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_pay', seq=inv.seq) }}" class="inv-dialog-body">
         <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
         <h2 id="payTitle" class="inv-dialog-title">Catat Pembayaran</h2>
         <p class="inv-dialog-sub">{{ inv.number }} — {{ inv.partner_name }} · Sisa {{ inv.residual_fmt }}</p>
@@ -343,16 +437,11 @@
 </dialog>
 {% endif %}
 
+{{ combobox_source("accountOptions", data.account_options) }}
 <template id="invLineTemplate">
     <tr data-line>
         <td><input class="app-input" type="text" name="line_product" placeholder="Produk / layanan" aria-label="Produk"></td>
-        <td>
-            <select class="app-input app-select" name="line_account" aria-label="Akun">
-                {% for acc in data.accounts %}
-                <option value="{{ acc.key }}">{{ acc.label }}</option>
-                {% endfor %}
-            </select>
-        </td>
+        <td>{{ combobox("line_account", data.default_account.value, data.default_account.label, "accountOptions", placeholder="Cari akun ...", aria_label="Akun") }}</td>
         <td><input class="app-input app-num" type="number" name="line_quantity" value="1" min="0" step="any" aria-label="Kuantitas" data-qty></td>
         <td><input class="app-input app-num" type="number" name="line_price" value="0.00" min="0" step="0.01" aria-label="Harga" data-price></td>
         <td>
@@ -477,8 +566,8 @@ document.addEventListener("DOMContentLoaded", function () {
                         return;
                     }
                     if (payload.exists) {
-                        var link = payload.url ? ' <a href="' + payload.url + '" target="_blank" rel="noopener">Lihat faktur itu</a>' : "";
-                        showWarn("⚠ Nomor <strong>" + payload.number + "</strong> sudah dipakai faktur lain." + link + " Simpan akan ditolak.", "error");
+                        var link = payload.url ? ' <a href="' + payload.url + '" target="_blank" rel="noopener">Lihat dokumen itu</a>' : "";
+                        showWarn("⚠ Nomor <strong>" + payload.number + "</strong> sudah dipakai dokumen lain." + link + " Simpan akan ditolak.", "error");
                     } else {
                         showWarn("Nomor akan menjadi <strong>" + payload.number + "</strong>.", "info");
                     }
@@ -492,6 +581,17 @@ document.addEventListener("DOMContentLoaded", function () {
             numTimer = setTimeout(checkNumber, 250);
         });
     }
+
+    // ——— "Item Jurnal" button in the control panel: open that tab ———
+    document.querySelectorAll("[data-open-tab]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            var tab = document.querySelector('.app-tab[data-tab="' + btn.getAttribute("data-open-tab") + '"]');
+            if (tab) {
+                tab.click();
+                tab.scrollIntoView({ block: "nearest" });
+            }
+        });
+    });
 
     // ——— Bayar dialog ———
     var payDialog = document.querySelector("[data-pay-dialog]");
@@ -555,7 +655,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         function search() {
             var q = input.value.trim();
-            fetch("{{ url_for('contacts_blueprint.api_search') }}?category=CLIENT&q=" + encodeURIComponent(q), { credentials: "same-origin" })
+            fetch("{{ url_for('contacts_blueprint.api_search') }}?category=" + encodeURIComponent(picker.getAttribute("data-partner-category") || "CLIENT") + "&q=" + encodeURIComponent(q), { credentials: "same-origin" })
                 .then(function (res) { return res.json(); })
                 .then(function (payload) {
                     menu.innerHTML = "";
@@ -563,7 +663,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (results.length === 0) {
                         var empty = document.createElement("div");
                         empty.className = "inv-ac-empty";
-                        empty.textContent = "Tidak ada klien yang cocok";
+                        empty.textContent = "Tidak ada {{ data.doc.partner_label|lower }} yang cocok";
                         menu.appendChild(empty);
                     }
                     results.forEach(function (item) {

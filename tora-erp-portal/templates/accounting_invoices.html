@@ -2,47 +2,47 @@
 {% from "_icons.html" import search, sliders, chevron_down, funnel, close %}
 {% from "_ui.html" import empty_state %}
 {% from "_pagination.html" import pager_compact, pager_bar %}
-{% block title %}Faktur — {{ data.site_name }}{% endblock %}
+{% block title %}{{ data.doc.label }} — {{ data.site_name }}{% endblock %}
 
 {% block app_control %}
 {%- set pager = data.pager -%}
 <div class="app-cp">
     <div class="app-cp-left">
         {% if data.current_user.can('accounting', 'create') %}
-        <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.invoice_new') }}">Baru</a>
+        <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_new') }}">Baru</a>
         {% endif %}
-        <span class="app-cp-title">Faktur</span>
+        <span class="app-cp-title">{{ data.doc.label }}</span>
         {% if data.current_user.can('accounting', 'delete') %}
         <div class="app-cp-selection" id="invoicesSelection" hidden>
             <span><strong data-select-count>0</strong> dipilih</span>
-            <button type="submit" form="invoicesBulkForm" class="app-btn-secondary" onclick="return confirm('Hapus faktur Draft yang dipilih? Faktur yang pernah dikonfirmasi tidak akan dihapus.');">Hapus</button>
+            <button type="submit" form="invoicesBulkForm" class="app-btn-secondary" onclick="return confirm('Hapus {{ data.doc.label|lower }} Draft yang dipilih? Yang pernah dikonfirmasi tidak akan dihapus.');">Hapus</button>
         </div>
         {% endif %}
     </div>
 
-    <form class="app-cp-middle" method="get" action="{{ url_for('accounting_blueprint.invoices') }}" role="search">
+    <form class="app-cp-middle" method="get" action="{{ url_for('accounting_blueprint.' ~ data.doc.list_ep) }}" role="search">
         <div class="app-search">
             <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
             {% if data.state %}
             <span class="app-search-facet">
                 {{ funnel("w-3.5 h-3.5") }} {{ data.state_labels[data.state] }}
-                <a href="{{ url_for('accounting_blueprint.invoices', q=data.q) }}" title="Hapus filter" aria-label="Hapus filter status">{{ close("w-3 h-3") }}</a>
+                <a href="{{ url_for('accounting_blueprint.' ~ data.doc.list_ep, q=data.q) }}" title="Hapus filter" aria-label="Hapus filter status">{{ close("w-3 h-3") }}</a>
             </span>
             <input type="hidden" name="state" value="{{ data.state }}">
             {% endif %}
             {% if pager.per_page != pager.default_per_page %}
             <input type="hidden" name="per_page" value="{{ pager.per_page }}">
             {% endif %}
-            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari nomor, pelanggan, atau referensi ..." aria-label="Cari faktur">
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari nomor, {{ data.doc.partner_label|lower }}, atau referensi ..." aria-label="Cari {{ data.doc.label|lower }}">
             <div class="app-search-filter">
                 <button type="button" class="app-search-toggle" data-dropdown="invoicesFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
                     {{ chevron_down("w-4 h-4") }}
                 </button>
                 <div class="app-dropdown app-filter-menu" id="invoicesFilterMenu">
                     <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Status</div>
-                    <a class="app-dropdown-item {% if not data.state %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.invoices', q=data.q) }}">Semua</a>
+                    <a class="app-dropdown-item {% if not data.state %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.' ~ data.doc.list_ep, q=data.q) }}">Semua</a>
                     {% for key, label in data.state_labels.items() %}
-                    <a class="app-dropdown-item {% if data.state == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.invoices', state=key, q=data.q) }}">{{ label }}</a>
+                    <a class="app-dropdown-item {% if data.state == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.' ~ data.doc.list_ep, state=key, q=data.q) }}">{{ label }}</a>
                     {% endfor %}
                 </div>
             </div>
@@ -50,7 +50,7 @@
     </form>
 
     <div class="app-cp-right">
-        {{ pager_compact(pager, "accounting_blueprint.invoices", data.page_args) }}
+        {{ pager_compact(pager, 'accounting_blueprint.' ~ data.doc.list_ep, data.page_args) }}
     </div>
 </div>
 {% endblock %}
@@ -59,7 +59,7 @@
 {%- set pager = data.pager -%}
 {%- set can_delete = data.current_user.can('accounting', 'delete') -%}
 {%- set columns = [
-    {"key": "date", "label": "Tanggal Faktur", "default": true},
+    {"key": "date", "label": data.doc.date_label, "default": true},
     {"key": "due", "label": "Batas Waktu", "default": true},
     {"key": "ref", "label": "Referensi", "default": false},
     {"key": "untaxed", "label": "Tidak Termasuk Pajak", "default": true},
@@ -72,14 +72,14 @@
 {% if pager.total == 0 %}
     <div class="app-empty">
     {% if data.q or data.state %}
-        {{ empty_state("Tidak ada faktur yang cocok", "Ubah kata kunci atau hapus filter.", url_for('accounting_blueprint.invoices'), "Hapus pencarian") }}
+        {{ empty_state("Tidak ada " ~ data.doc.label|lower ~ " yang cocok", "Ubah kata kunci atau hapus filter.", url_for('accounting_blueprint.' ~ data.doc.list_ep), "Hapus pencarian") }}
     {% else %}
-        {{ empty_state("Belum ada faktur", "Buat faktur pelanggan pertama untuk order Anda.", url_for('accounting_blueprint.invoice_new'), "Baru") }}
+        {{ empty_state(data.doc.empty_title, data.doc.empty_desc, url_for('accounting_blueprint.' ~ data.doc.ep ~ '_new'), "Baru") }}
     {% endif %}
     </div>
 {% else %}
 {% if can_delete %}
-<form id="invoicesBulkForm" method="post" action="{{ url_for('accounting_blueprint.invoice_bulk_delete') }}">
+<form id="invoicesBulkForm" method="post" action="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_bulk_delete') }}">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
     <input type="hidden" name="state" value="{{ data.state }}">
     <input type="hidden" name="q" value="{{ data.q }}">
@@ -88,15 +88,15 @@
 
 <div class="app-list-area">
     <div class="app-list-wrap">
-        <table class="app-list" id="invoicesList" data-table-key="invoices" {% if can_delete %}data-select-bar="invoicesSelection"{% endif %}>
+        <table class="app-list" id="invoicesList" data-table-key="{{ data.doc.list_ep }}" {% if can_delete %}data-select-bar="invoicesSelection"{% endif %}>
             <thead>
                 <tr>
                     {% if can_delete %}
                     <th class="app-list-check"><input type="checkbox" class="app-check" data-check-all aria-label="Pilih semua"></th>
                     {% endif %}
                     <th data-key="number" data-width="150">Nomor</th>
-                    <th data-key="partner" data-width="240">Pelanggan</th>
-                    <th data-col="date" data-width="110" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>Tanggal Faktur</th>
+                    <th data-key="partner" data-width="240">{{ data.doc.partner_label }}</th>
+                    <th data-col="date" data-width="110" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ data.doc.date_label }}</th>
                     <th data-col="due" data-width="130" {% if 'due' in hidden_cols %}class="app-col-hidden"{% endif %}>Batas Waktu</th>
                     <th data-col="ref" data-width="200" {% if 'ref' in hidden_cols %}class="app-col-hidden"{% endif %}>Referensi</th>
                     <th data-col="untaxed" data-width="170" class="app-num{% if 'untaxed' in hidden_cols %} app-col-hidden{% endif %}">Tidak Termasuk Pajak</th>
@@ -113,11 +113,11 @@
             </thead>
             <tbody>
                 {% for inv in data.invoices %}
-                {%- set inv_url = url_for('accounting_blueprint.invoice_edit', seq=inv.seq) if inv.seq else url_for('accounting_blueprint.invoice_legacy', ref=inv.id) -%}
+                {%- set inv_url = url_for('accounting_blueprint.' ~ data.doc.ep ~ '_edit', seq=inv.seq) if inv.seq else url_for('accounting_blueprint.' ~ data.doc.ep ~ '_legacy', ref=inv.id) -%}
                 <tr data-href="{{ inv_url }}">
                     {% if can_delete %}
                     <td class="app-list-check">
-                        <input type="checkbox" class="app-check" name="ids" value="{{ inv.id }}" form="invoicesBulkForm" aria-label="Pilih faktur {{ inv.number_display }}" {% if inv.posted_at %}disabled title="Faktur yang pernah dikonfirmasi tidak bisa dihapus"{% endif %}>
+                        <input type="checkbox" class="app-check" name="ids" value="{{ inv.id }}" form="invoicesBulkForm" aria-label="Pilih {{ inv.number_display }}" {% if inv.posted_at %}disabled title="Yang pernah dikonfirmasi tidak bisa dihapus"{% endif %}>
                     </td>
                     {% endif %}
                     <td><a class="app-list-name" href="{{ inv_url }}"><span class="app-list-name-text {% if inv.state == 'DRAFT' %}app-muted{% endif %}">{{ inv.number_display }}</span></a></td>
@@ -167,6 +167,6 @@
     </div>
 </div>
 
-{{ pager_bar(pager, "accounting_blueprint.invoices", data.page_args) }}
+{{ pager_bar(pager, 'accounting_blueprint.' ~ data.doc.list_ep, data.page_args) }}
 {% endif %}
 {% endblock %}

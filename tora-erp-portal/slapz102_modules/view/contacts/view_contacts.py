@@ -23,26 +23,59 @@ from view.record_log.view_record_log import actor_from_user
 
 # ---------------------------------------------------------------------------
 # CONTACTS MODULE — view / render layer.
+#
+# The same list + form also run inside other apps (Akuntansi > Pelanggan /
+# Vendor at /accounting/contact.CLIENT). `ct` ("contact shell") tells the
+# templates which base template, title and endpoints to use; every link and
+# redirect goes through _url(ct, ...) so the user stays in that app.
 # ---------------------------------------------------------------------------
 
-def _base_data():
-    return {
+KONTAK_SHELL = {
+    "shell": "contacts",
+    "base": "app_base.html",
+    "title": "Kontak",
+    "category": "",
+    "args": {},
+    "list_ep": "contacts_blueprint.index",
+    "new_ep": "contacts_blueprint.new_contact",
+    "edit_ep": "contacts_blueprint.edit_contact",
+    "update_ep": "contacts_blueprint.update_contact",
+    "create_ep": "contacts_blueprint.create",
+    "bulk_ep": "contacts_blueprint.bulk_delete",
+    "data": {}
+}
+
+
+def _url(ct, name, **kwargs):
+    # url_for(ct["<name>_ep"]) plus the shell's fixed args (e.g. category).
+    args = dict(ct["args"])
+    args.update(kwargs)
+    return url_for(ct[name + "_ep"], **args)
+# end def
+
+def _base_data(ct=None):
+    ct = ct or KONTAK_SHELL
+    data = {
         "site_name": config.G_SITE_NAME,
         "csrf_token": csrf.get_token(),
         "og_image": config.G_PUBLIC_SITE_URL + config.G_OG_IMAGE_PATH,
         "og_url": config.G_PUBLIC_SITE_URL + "/",
-        "sidebar_counts": shipments_proc().sidebar_counts()
+        "sidebar_counts": shipments_proc().sidebar_counts(),
+        "ct": ct
     }
+    data.update(ct["data"])
+    return data
 # end def
 
 @access_required("contacts", "read")
-def html_index():
+def html_index(ct=None):
+    ct = ct or KONTAK_SHELL
     params = sanitize.clean_html_dic(request.args.to_dict())
-    data = _base_data()
+    data = _base_data(ct)
     data["current_user"] = current_user
     data["form_error"] = (params.get("error") or "").strip()
     data["form_success"] = (params.get("success") or "").strip()
-    data["category"] = (params.get("category") or "").strip().upper()
+    data["category"] = ct["category"] or (params.get("category") or "").strip().upper()
     data["q"] = (params.get("q") or "").strip()
     data["categories"] = CATEGORIES
     page, per_page = paginate.read_params(params)
@@ -54,12 +87,13 @@ def html_index():
 # end def
 
 @access_required("contacts", "delete")
-def html_bulk_delete():
+def html_bulk_delete(ct=None):
+    ct = ct or KONTAK_SHELL
     params = sanitize.clean_html_dic(request.form.to_dict())
-    category = (params.get("category") or "").strip().upper()
+    category = ct["category"] or (params.get("category") or "").strip().upper()
     q = (params.get("q") or "").strip()
     if not csrf.validate():
-        return redirect(url_for("contacts_blueprint.index", category=category, q=q, error="Sesi tidak valid, coba lagi"))
+        return redirect(_url(ct, "list", category=category, q=q, error="Sesi tidak valid, coba lagi"))
     # end if
     ids = []
     for value in request.form.getlist("ids"):
@@ -67,13 +101,13 @@ def html_bulk_delete():
     # end for
     result = contacts_proc().delete_contacts(ids)
     if result.get("status") != "SUCCESS":
-        return redirect(url_for("contacts_blueprint.index", category=category, q=q, error=result.get("desc", "")))
+        return redirect(_url(ct, "list", category=category, q=q, error=result.get("desc", "")))
     # end if
-    return redirect(url_for("contacts_blueprint.index", category=category, q=q, success=result.get("desc", "")))
+    return redirect(_url(ct, "list", category=category, q=q, success=result.get("desc", "")))
 # end def
 
-def _form_data(contact, params):
-    data = _base_data()
+def _form_data(contact, params, ct=None):
+    data = _base_data(ct)
     data["current_user"] = current_user
     data["form_error"] = (params.get("error") or "").strip()
     data["categories"] = CATEGORIES
@@ -89,23 +123,24 @@ def _form_data(contact, params):
 # end def
 
 @access_required("contacts", "create")
-def html_new():
+def html_new(ct=None):
     params = sanitize.clean_html_dic(request.args.to_dict())
-    data = _form_data(None, params)
+    data = _form_data(None, params, ct)
     # "Tambah kontak terkait" opens the form with the company prefilled.
     data["prefill_company"] = (params.get("company") or "").strip()
     return render_template("contact_form.html", data=data)
 # end def
 
 @access_required("contacts", "read")
-def html_edit(contact_id):
+def html_edit(contact_id, ct=None):
+    ct = ct or KONTAK_SHELL
     proc = contacts_proc()
     contact = proc.get_contact(contact_id)
     if contact == None:
-        return redirect(url_for("contacts_blueprint.index", error="Kontak tidak ditemukan"))
+        return redirect(_url(ct, "list", error="Kontak tidak ditemukan"))
     # end if
     params = sanitize.clean_html_dic(request.args.to_dict())
-    data = _form_data(contact, params)
+    data = _form_data(contact, params, ct)
     data["prefill_company"] = ""
     data["form_success"] = (params.get("success") or "").strip()
     data["related"] = proc.related_contacts(contact)
@@ -114,16 +149,17 @@ def html_edit(contact_id):
 # end def
 
 @access_required("contacts", "update")
-def html_update(contact_id):
+def html_update(contact_id, ct=None):
+    ct = ct or KONTAK_SHELL
     if not csrf.validate():
-        return redirect(url_for("contacts_blueprint.edit_contact", contact_id=contact_id, error="Sesi tidak valid, coba lagi"))
+        return redirect(_url(ct, "edit", contact_id=contact_id, error="Sesi tidak valid, coba lagi"))
     # end if
     params = sanitize.clean_html_dic(request.form.to_dict())
     result = contacts_proc().update_contact(contact_id, params, actor_from_user(current_user))
     if result.get("status") != "SUCCESS":
-        return redirect(url_for("contacts_blueprint.edit_contact", contact_id=contact_id, error=result.get("desc", "")))
+        return redirect(_url(ct, "edit", contact_id=contact_id, error=result.get("desc", "")))
     # end if
-    return redirect(url_for("contacts_blueprint.edit_contact", contact_id=contact_id, success=result.get("desc", "")))
+    return redirect(_url(ct, "edit", contact_id=contact_id, success=result.get("desc", "")))
 # end def
 
 @access_required("contacts", "delete")
@@ -139,9 +175,10 @@ def html_delete(contact_id):
 # end def
 
 @access_required("contacts", "create")
-def html_create():
+def html_create(ct=None):
+    ct = ct or KONTAK_SHELL
     if not csrf.validate():
-        return redirect(url_for("contacts_blueprint.index", error="Sesi tidak valid, coba lagi"))
+        return redirect(_url(ct, "list", error="Sesi tidak valid, coba lagi"))
     # end if
     params = sanitize.clean_html_dic(request.form.to_dict())
     proc = contacts_proc()
@@ -152,16 +189,16 @@ def html_create():
     # activity log) instead.
     next_url = (params.get("next") or "").strip()
     if next_url == "" and result.get("status") == "SUCCESS":
-        return redirect(url_for("contacts_blueprint.edit_contact", contact_id=result.get("id", ""), success=result.get("desc", "")))
+        return redirect(_url(ct, "edit", contact_id=result.get("id", ""), success=result.get("desc", "")))
     # end if
     if next_url == "" or not next_url.startswith("/") or next_url.startswith("//"):
-        next_url = url_for("contacts_blueprint.index")
+        next_url = _url(ct, "list")
     # end if
     joiner = "&" if "?" in next_url else "?"
     if result.get("status") != "SUCCESS":
-        if next_url == url_for("contacts_blueprint.index"):
-            next_url = url_for("contacts_blueprint.new_contact")
-            joiner = "?"
+        if next_url == _url(ct, "list"):
+            next_url = _url(ct, "new")
+            joiner = "&" if "?" in next_url else "?"
         # end if
         return redirect(next_url + joiner + "error=" + result.get("desc", "").replace(" ", "+"))
     # end if

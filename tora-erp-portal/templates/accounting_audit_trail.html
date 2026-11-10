@@ -1,0 +1,137 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import search, sliders, chevron_down, funnel, close %}
+{% from "_ui.html" import empty_state %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
+{#- Kontrol > Log Catatan: every log entry (create, changes, events, notes)
+    of every accounting record, newest first. -#}
+{% block title %}Log Catatan — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        <span class="app-cp-title">Log Catatan</span>
+    </div>
+
+    <form class="app-cp-middle" method="get" action="{{ url_for('accounting_blueprint.audit_trail') }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            {% if data.model %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ data.audit_models[data.model] }}
+                <a href="{{ url_for('accounting_blueprint.audit_trail', q=data.q) }}" title="Hapus filter" aria-label="Hapus filter jenis">{{ close("w-3 h-3") }}</a>
+            </span>
+            <input type="hidden" name="model" value="{{ data.model }}">
+            {% endif %}
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari ..." aria-label="Cari log">
+            <div class="app-search-filter">
+                <button type="button" class="app-search-toggle" data-dropdown="auditFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
+                    {{ chevron_down("w-4 h-4") }}
+                </button>
+                <div class="app-dropdown app-filter-menu" id="auditFilterMenu">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Jenis</div>
+                    <a class="app-dropdown-item {% if not data.model %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.audit_trail', q=data.q) }}">Semua</a>
+                    {% for key, label in data.audit_models.items() %}
+                    <a class="app-dropdown-item {% if data.model == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.audit_trail', model=key, q=data.q) }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, 'accounting_blueprint.audit_trail', data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{%- set columns = [
+    {"key": "date", "label": "Tanggal", "default": true},
+    {"key": "author", "label": "Penulis", "default": true},
+    {"key": "type", "label": "Jenis", "default": false},
+    {"key": "desc", "label": "Deskripsi", "default": true}
+] -%}
+{%- set hidden_cols = columns|rejectattr("default")|map(attribute="key")|list -%}
+{% if pager.total == 0 %}
+    <div class="app-empty">
+    {% if data.q or data.model %}
+        {{ empty_state("Tidak ada log yang cocok", "Ubah kata kunci atau hapus filter.", url_for('accounting_blueprint.audit_trail'), "Hapus pencarian") }}
+    {% else %}
+        {{ empty_state("Belum ada log", "Setiap perubahan dokumen akuntansi tercatat di sini.", url_for('accounting_blueprint.index'), "Ke Dasbor") }}
+    {% endif %}
+    </div>
+{% else %}
+<div class="app-list-area">
+    <div class="app-list-wrap">
+        <table class="app-list" id="auditList" data-table-key="audit_trail">
+            <thead>
+                <tr>
+                    <th data-col="date" data-width="120" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>Tanggal</th>
+                    <th data-col="author" data-width="150" {% if 'author' in hidden_cols %}class="app-col-hidden"{% endif %}>Penulis</th>
+                    <th data-key="name" data-width="320">Nama</th>
+                    <th data-col="type" data-width="110" {% if 'type' in hidden_cols %}class="app-col-hidden"{% endif %}>Jenis</th>
+                    <th data-col="desc" data-width="420" {% if 'desc' in hidden_cols %}class="app-col-hidden"{% endif %}>Deskripsi</th>
+                    <th class="app-list-optional">
+                        <button type="button" class="app-col-toggle" data-dropdown="auditColMenu" title="Pilih kolom" aria-haspopup="true" aria-expanded="false">
+                            {{ sliders("w-4 h-4") }}
+                        </button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in data.entries %}
+                <tr {% if e.url %}data-href="{{ e.url }}"{% endif %}>
+                    <td data-col="date" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ e.stamp }}</td>
+                    <td data-col="author" {% if 'author' in hidden_cols %}class="app-col-hidden"{% endif %}>
+                        <span class="audit-author">
+                            <span class="app-avatar app-avatar-{{ e.author_name|length % 6 }}">{{ (e.author_name or "?")[:1]|upper }}</span>
+                            <span title="{{ e.author_name }}">{{ e.author_name }}</span>
+                        </span>
+                    </td>
+                    <td title="{{ e.record.name if e.record else '' }}">
+                        {% if e.url %}<a class="app-list-name" href="{{ e.url }}"><span class="app-list-name-text">{{ e.record.name }}</span></a>
+                        {% elif e.record %}{{ e.record.name }}
+                        {% else %}<span class="app-muted">{{ e.model_label }} (dihapus)</span>{% endif %}
+                    </td>
+                    <td data-col="type" {% if 'type' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ e.model_label }}</td>
+                    <td data-col="desc" class="audit-desc{% if 'desc' in hidden_cols %} app-col-hidden{% endif %}">
+                        {% if e.kind == 'CHANGE' %}
+                            {% for ch in e.changes %}
+                            <div class="audit-change">
+                                <span class="app-muted">{{ ch.old or "—" }}</span> → <strong class="audit-new">{{ ch.new or "—" }}</strong>
+                                <em class="app-muted">({{ ch.label }})</em>
+                            </div>
+                            {% endfor %}
+                        {% elif e.kind == 'NOTE' %}
+                            <span class="audit-note">{{ e.body }}</span>
+                        {% else %}
+                            {{ e.body }}
+                        {% endif %}
+                    </td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="app-dropdown app-col-menu" id="auditColMenu" data-col-menu-for="auditList">
+        {% for col in columns %}
+        <label class="app-dropdown-check">
+            <input type="checkbox" class="app-check" value="{{ col.key }}" {% if col.default %}checked{% endif %}>
+            <span>{{ col.label }}</span>
+        </label>
+        {% endfor %}
+        <hr class="launcher-menu-sep">
+        <button type="button" class="app-dropdown-action" data-col-reset>Reset lebar kolom</button>
+    </div>
+</div>
+
+{{ pager_bar(pager, 'accounting_blueprint.audit_trail', data.page_args) }}
+{% endif %}
+{% endblock %}

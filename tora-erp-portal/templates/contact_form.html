@@ -1,27 +1,34 @@
-{% extends "app_base.html" %}
+{% extends data.ct.base %}
 {% from "_icons.html" import users, building, mail, phone, plus, close, cloud_upload %}
 {% from "_ui.html" import category_label %}
 {% from "_record_log.html" import record_log %}
+{#- Same shell switch as contacts.html: data.ct decides the app around the
+    form (Kontak, or Akuntansi > Pelanggan / Vendor) and every link. -#}
 {% block app_shell_class %}app-shell-fixed{% endblock %}
-{% block title %}{% if data.contact %}{{ data.contact.name }}{% else %}Kontak Baru{% endif %} — {{ data.site_name }}{% endblock %}
-{% block app_name %}Kontak{% endblock %}
-{% block app_home %}{{ url_for('contacts_blueprint.index') }}{% endblock %}
-{% block app_icon_class %}app-icon-contacts{% endblock %}
-{% block app_icon %}{{ users("w-4 h-4") }}{% endblock %}
+{% block title %}{% if data.contact %}{{ data.contact.name }}{% else %}{{ data.ct.title }} Baru{% endif %} — {{ data.site_name }}{% endblock %}
+{% block app_name %}{% if data.ct.shell == 'contacts' %}Kontak{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block app_home %}{% if data.ct.shell == 'contacts' %}{{ url_for('contacts_blueprint.index') }}{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block app_icon_class %}{% if data.ct.shell == 'contacts' %}app-icon-contacts{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block app_icon %}{% if data.ct.shell == 'contacts' %}{{ users("w-4 h-4") }}{% else %}{{ super() }}{% endif %}{% endblock %}
 
 {% block app_menu %}
+{% if data.ct.shell == 'contacts' %}
 <a class="app-nav-link app-nav-link-active" href="{{ url_for('contacts_blueprint.index') }}">Kontak</a>
+{% else %}
+{{ super() }}
+{% endif %}
 {% endblock %}
 
 {% block app_control %}
+{%- set ct = data.ct -%}
 {%- set can_edit = data.current_user.can('contacts', 'update' if data.contact else 'create') -%}
 <div class="app-cp">
     <div class="app-cp-left">
         {% if data.current_user.can('contacts', 'create') %}
-        <a class="app-btn-secondary" href="{{ url_for('contacts_blueprint.new_contact') }}">Baru</a>
+        <a class="app-btn-secondary" href="{{ url_for(ct.new_ep, **ct.args) }}">Baru</a>
         {% endif %}
         <div class="app-crumb">
-            <a class="app-crumb-link" href="{{ url_for('contacts_blueprint.index') }}">Kontak</a>
+            <a class="app-crumb-link" href="{{ url_for(ct.list_ep, **ct.args) }}">{{ ct.title }}</a>
             <span class="app-crumb-sep">/</span>
             <span class="app-crumb-current">{% if data.contact %}{{ data.contact.name }}{% else %}Baru{% endif %}</span>
             <span class="app-crumb-actions">
@@ -30,7 +37,7 @@
                     {{ cloud_upload("w-4 h-4") }}
                 </button>
                 {% endif %}
-                <a class="app-icon-action" href="{{ url_for('contacts_blueprint.index') }}" title="Buang perubahan" aria-label="Buang perubahan">
+                <a class="app-icon-action" href="{{ url_for(ct.list_ep, **ct.args) }}" title="Buang perubahan" aria-label="Buang perubahan">
                     {{ close("w-4 h-4") }}
                 </a>
             </span>
@@ -40,13 +47,14 @@
 {% endblock %}
 
 {% block app_content %}
+{%- set ct = data.ct -%}
 {%- set c = data.contact or {} -%}
 {%- set is_edit = data.contact != None -%}
 {%- set selected_seller = c.salesperson_id if is_edit else (data.current_user.id|string) -%}
 {%- set can_edit = data.current_user.can('contacts', 'update' if is_edit else 'create') -%}
 <div class="app-split">
 <div class="app-form-pane">
-<form id="contactForm" class="app-form-sheet" method="post" action="{% if is_edit %}{{ url_for('contacts_blueprint.update_contact', contact_id=c.id) }}{% else %}{{ url_for('contacts_blueprint.create') }}{% endif %}">
+<form id="contactForm" class="app-form-sheet" method="post" action="{% if is_edit %}{{ url_for(ct.update_ep, contact_id=c.id, **ct.args) }}{% else %}{{ url_for(ct.create_ep, **ct.args) }}{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
     <fieldset class="app-fieldset" {% if not can_edit %}disabled{% endif %}>
 
@@ -100,7 +108,7 @@
             <div class="app-radio-row">
                 {% for cat in data.categories %}
                 <label class="app-radio">
-                    <input type="radio" name="category" value="{{ cat }}" {% if (c.category or 'CLIENT') == cat %}checked{% endif %} required>
+                    <input type="radio" name="category" value="{{ cat }}" {% if (c.category or ct.category or 'CLIENT') == cat %}checked{% endif %} required>
                     {{ category_label(cat) }}
                 </label>
                 {% endfor %}
@@ -129,7 +137,7 @@
         {% if is_edit %}
         <div class="app-related">
             {% for r in data.related %}
-            <a class="app-related-card" href="{{ url_for('contacts_blueprint.edit_contact', contact_id=r.id) }}">
+            <a class="app-related-card" href="{{ url_for(ct.edit_ep, contact_id=r.id, **ct.args) }}">
                 <span class="app-avatar app-avatar-md app-avatar-{{ r.name|length % 6 }}">{{ r.name[:1]|upper }}</span>
                 <span class="app-related-text">
                     <strong>{{ r.name }}</strong>
@@ -139,7 +147,7 @@
             </a>
             {% endfor %}
             {% if data.current_user.can('contacts', 'create') %}
-            <a class="app-related-add" href="{{ url_for('contacts_blueprint.new_contact', company=(c.company_name or c.name)) }}">
+            <a class="app-related-add" href="{{ url_for(ct.new_ep, company=(c.company_name or c.name), **ct.args) }}">
                 {{ plus("w-4 h-4") }} Tambah kontak terkait
             </a>
             {% endif %}

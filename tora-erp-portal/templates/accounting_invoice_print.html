@@ -13,7 +13,7 @@
 <body class="print-body">
 <div class="print-toolbar">
     <button type="button" class="app-btn-primary" onclick="window.print()">Cetak</button>
-    <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.invoice_edit', seq=inv.seq) }}">Kembali ke faktur</a>
+    <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.' ~ data.doc.ep ~ '_edit', seq=inv.seq) }}">Kembali ke {{ data.doc.label|lower }}</a>
 </div>
 
 <article class="print-sheet">
@@ -23,7 +23,8 @@
             <div class="print-muted">Indonesia</div>
         </div>
         <div class="print-doc">
-            <div class="print-doc-type">{% if inv.state == 'DRAFT' %}Draft Faktur{% else %}Faktur{% endif %}</div>
+            <div class="print-doc-type">{% if inv.state == 'DRAFT' %}Draft {% endif %}{{ data.doc.label }}</div>
+            {% if inv.reversed_entry_number %}<div class="print-muted">Koreksi atas {{ inv.reversed_entry_number }}</div>{% endif %}
             <div class="print-doc-number">{{ inv.number }}</div>
             {% if inv.state == 'POSTED' and inv.payment_state == 'paid' %}<div class="print-paid">LUNAS</div>{% endif %}
             {% if inv.state == 'CANCEL' %}<div class="print-cancel">BATAL</div>{% endif %}
@@ -32,7 +33,7 @@
 
     <section class="print-meta">
         <div>
-            <div class="print-label">Kepada</div>
+            <div class="print-label">{% if data.doc.is_purchase %}Dari {{ data.doc.partner_label|lower }}{% else %}Kepada{% endif %}</div>
             <div class="print-strong">{{ inv.partner_name or "—" }}</div>
             {% if p.company_name %}<div>{{ p.company_name }}</div>{% endif %}
             {% if p.address %}<div>{{ p.address }}</div>{% endif %}
@@ -41,7 +42,7 @@
             {% if p.tax_id %}<div>NPWP/NIK: {{ p.tax_id }}</div>{% endif %}
         </div>
         <div class="print-dates">
-            <div><span class="print-label">Tanggal Faktur</span> {{ inv.date_short }}</div>
+            <div><span class="print-label">{{ data.doc.date_label }}</span> {{ inv.date_short }}</div>
             <div><span class="print-label">Jatuh Tempo</span> {{ inv.due_date }}</div>
             {% if inv.payment_term %}<div><span class="print-label">Termin</span> {{ inv.payment_term }}</div>{% endif %}
             {% if inv.customer_ref %}<div><span class="print-label">Referensi</span> {{ inv.customer_ref }}</div>{% endif %}

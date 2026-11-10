@@ -1,0 +1,31 @@
+{# ---------------------------------------------------------------------------
+ # Relation picker for detail pages (akun, pajak, produk, kontak, ...).
+ #
+ # Usage:
+ #   {% from "_combobox.html" import combobox, combobox_source %}
+ #   {{ combobox_source("accountOptions", data.account_options) }}   once per page
+ #   {{ combobox("line_account", line.account, line.account_label, "accountOptions",
+ #               placeholder="Cari akun ...", aria_label="Akun") }}
+ #
+ #   options     [{value, label, description}] built in the view
+ #   value       submitted value (hidden input <name>)
+ #   label       text shown for the current value
+ #   url         search endpoint instead of a source, for big collections:
+ #               {{ combobox("partner_id", id, name, url=url_for('contacts_blueprint.api_search', category='CLIENT')) }}
+ #   attrs       extra attributes on the wrapper, e.g. 'data-partner-combo'
+ #   JS: window.appCombo.set(box, value, label) sets a picker from page code.
+ #
+ # Script: static/v2/combobox.js (loaded by app_base.html).
+ # --------------------------------------------------------------------------- #}
+
+{% macro combobox_source(source_id, options) %}
+<script type="application/json" id="{{ source_id }}">{{ options|tojson }}</script>
+{% endmacro %}
+
+{% macro combobox(name, value, label, source_id="", placeholder="", aria_label="", url="", attrs="") %}
+<div class="app-combo" data-combo {% if url %}data-combo-url="{{ url }}"{% else %}data-combo-source="{{ source_id }}"{% endif %} {{ attrs }}>
+    <input class="app-input app-combo-input" type="text" value="{{ label or '' }}" placeholder="{{ placeholder }}" aria-label="{{ aria_label }}" title="{{ label or '' }}" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" data-combo-input>
+    <span class="app-combo-caret" aria-hidden="true"></span>
+    <input type="hidden" name="{{ name }}" value="{{ value or '' }}" data-combo-value>
+</div>
+{% endmacro %}

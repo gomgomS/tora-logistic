@@ -1,0 +1,42 @@
+{# ---------------------------------------------------------------------------
+ # Account-code tree for the left side of a list (Bagan Akun, Item Jurnal):
+ #   Semua / 1 > 11, 12, 19 / 2 > 21, 22 ... — a click filters by that code
+ #   prefix (?prefix=11). Nodes start closed (the one holding the current
+ #   filter opens) and fold open / closed; the panel can be hidden
+ #   (remembered per browser, static/v2/app-list.js).
+ #
+ # Usage:
+ #   {% from "_code_tree.html" import code_tree %}
+ #   <div class="app-side-layout" data-side-layout="accounts">
+ #       {{ code_tree(data.tree, data.prefix, "accounting_blueprint.accounts", data.page_args) }}
+ #       <div class="app-side-main"> ...list... </div>
+ #   </div>
+ #
+ #   tree    accounting_proc.code_tree(): [{key, count, children: [{key, count}]}]
+ #   active  current prefix ("" = Semua)
+ #   args    current filters; "prefix" and the page are replaced
+ # --------------------------------------------------------------------------- #}
+
+{% macro code_tree(tree, active, endpoint, args) %}
+{%- set keep = {} -%}
+{%- for key, value in args.items() if value and key != "prefix" -%}{%- set _ = keep.update({key: value}) -%}{%- endfor -%}
+<nav class="code-tree" aria-label="Grup akun">
+    <button type="button" class="code-tree-toggle" data-side-toggle title="Sembunyikan / tampilkan panel" aria-label="Sembunyikan / tampilkan panel grup akun">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="9" y1="4" x2="9" y2="20"></line></svg>
+    </button>
+    <div class="code-tree-body">
+        <a class="code-tree-item code-tree-all {% if not active %}code-tree-item-active{% endif %}" href="{{ url_for(endpoint, **keep) }}">Semua</a>
+        {% for node in tree %}
+        {#- Closed by default; only the node holding the current filter opens. -#}
+        <details class="code-tree-node" {% if active and active[:1] == node.key %}open{% endif %}>
+            <summary class="code-tree-summary">
+                <a class="code-tree-item code-tree-top {% if active == node.key %}code-tree-item-active{% endif %}" href="{{ url_for(endpoint, prefix=node.key, **keep) }}" title="{{ node.count }} baris">{{ node.key }}</a>
+            </summary>
+            {% for child in node.children %}
+            <a class="code-tree-item code-tree-child {% if active == child.key %}code-tree-item-active{% endif %}" href="{{ url_for(endpoint, prefix=child.key, **keep) }}" title="{{ child.count }} baris">{{ child.key }}</a>
+            {% endfor %}
+        </details>
+        {% endfor %}
+    </div>
+</nav>
+{% endmacro %}

@@ -1,0 +1,1202 @@
+[
+    {
+      "kode": "11110001",
+      "nama_akun": "Kas",
+      "jenis": "Bank dan Tunai",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11110010",
+      "nama_akun": "Kas Kecil",
+      "jenis": "Bank dan Tunai",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11120001",
+      "nama_akun": "Rekening Perantara Bank",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11120002",
+      "nama_akun": "Penerimaan Dalam Proses",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11120003",
+      "nama_akun": "Pembayaran Dalam Proses",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11120004",
+      "nama_akun": "Bank",
+      "jenis": "Bank dan Tunai",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11210010",
+      "nama_akun": "Piutang Dagang",
+      "jenis": "Piutang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11210011",
+      "nama_akun": "Piutang Dagang (PoS)",
+      "jenis": "Piutang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11210012",
+      "nama_akun": "Piutang PPN",
+      "jenis": "Piutang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11210013",
+      "nama_akun": "Piutang PPN Barang Mewah",
+      "jenis": "Piutang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11210014",
+      "nama_akun": "PPh 28A",
+      "jenis": "Piutang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "11210030",
+      "nama_akun": "PPN Masukan",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11210040",
+      "nama_akun": "Biaya Dibayar Dimuka",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11210050",
+      "nama_akun": "Pendapatan yang Masih Harus Diterima",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11300180",
+      "nama_akun": "Persediaan",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11410010",
+      "nama_akun": "Sewa Gedung",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11410020",
+      "nama_akun": "Asuransi Dibayar Dimuka",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11410030",
+      "nama_akun": "Iklan Dibayar Dimuka",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11510010",
+      "nama_akun": "Pajak PPh 21 Dibayar Dimuka",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11510020",
+      "nama_akun": "Pajak PPh 22 Dibayar Dimuka",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11510030",
+      "nama_akun": "Pajak PPh 23 Dibayar Dimuka",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11510040",
+      "nama_akun": "Pajak PPh 25 Dibayar Dimuka",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "11800000",
+      "nama_akun": "Uang Muka",
+      "jenis": "Prabayar",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210100",
+      "nama_akun": "Tanah",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210200",
+      "nama_akun": "Bangunan Permanen",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210210",
+      "nama_akun": "Bangunan Non-Permanen",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210300",
+      "nama_akun": "Sepeda Motor",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210310",
+      "nama_akun": "Kendaraan Operasional",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210320",
+      "nama_akun": "Kendaraan Berat",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210400",
+      "nama_akun": "Perlengkapan IT",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210410",
+      "nama_akun": "Alat Komunikasi",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210420",
+      "nama_akun": "Elektronik Kantor",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210430",
+      "nama_akun": "Peralatan Pantry",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210500",
+      "nama_akun": "Perabot (Kayu/Rotan)",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210510",
+      "nama_akun": "Perabot (Logam/Campuran)",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210600",
+      "nama_akun": "Instalasi Gedung",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210610",
+      "nama_akun": "Mesin Ringan",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210620",
+      "nama_akun": "Mesin Berat",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210630",
+      "nama_akun": "Alat Berat Konstruksi",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12210700",
+      "nama_akun": "Lisensi Software",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281200",
+      "nama_akun": "Akum. Peny. Bangunan Permanen",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281210",
+      "nama_akun": "Akum. Peny. Bangunan Non-Permanen",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281300",
+      "nama_akun": "Akum. Peny. Sepeda Motor",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281310",
+      "nama_akun": "Akum. Peny. Kendaraan Operasional",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281320",
+      "nama_akun": "Akum. Peny. Kendaraan Berat",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281400",
+      "nama_akun": "Akum. Peny. Perlengkapan IT",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281410",
+      "nama_akun": "Akum. Peny. Alat Komunikasi",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281420",
+      "nama_akun": "Akum. Peny. Elektronik Kantor",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281430",
+      "nama_akun": "Akum. Peny. Peralatan Pantry",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281500",
+      "nama_akun": "Akum. Peny. Perabot (Kayu/Rotan)",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281510",
+      "nama_akun": "Akum. Peny. Perabot (Logam/Campuran)",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281600",
+      "nama_akun": "Akum. Peny. Instalasi Gedung",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281610",
+      "nama_akun": "Akum. Peny. Mesin Ringan",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281620",
+      "nama_akun": "Akum. Peny. Mesin Berat",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281630",
+      "nama_akun": "Akum. Peny. Alat Berat Konstruksi",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "12281700",
+      "nama_akun": "Akum. Amortisasi Lisensi Software",
+      "jenis": "Aktiva Tetap",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "19999991",
+      "nama_akun": "Dana Dalam Perjalanan",
+      "jenis": "Aktiva Lancar",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21100010",
+      "nama_akun": "Hutang Usaha",
+      "jenis": "Utang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21100011",
+      "nama_akun": "Hutang PPN",
+      "jenis": "Utang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21100012",
+      "nama_akun": "Hutang PPN Barang Mewah",
+      "jenis": "Utang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21100013",
+      "nama_akun": "Kewajiban Karyawan",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21100014",
+      "nama_akun": "PPh 29",
+      "jenis": "Utang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21100020",
+      "nama_akun": "Setoran Pemegang Saham",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "21100030",
+      "nama_akun": "Setoran Pihak Ketiga",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "21100040",
+      "nama_akun": "Setoran Gaji",
+      "jenis": "Utang",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21210010",
+      "nama_akun": "Pajak Terutang PPh 21",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21210020",
+      "nama_akun": "Pajak Terutang PPh 22",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21210030",
+      "nama_akun": "Pajak Terutang PPh 23",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21210040",
+      "nama_akun": "Pajak Terutang PPh 25",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21210050",
+      "nama_akun": "Pajak Terutang 4(2)",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "21210060",
+      "nama_akun": "Pajak Terutang PPh 26",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "21221010",
+      "nama_akun": "PPN Keluaran",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "22110010",
+      "nama_akun": "Pinjaman Bank",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "22110020",
+      "nama_akun": "Uang Muka Leasing",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110010",
+      "nama_akun": "Hutang Listrik Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110020",
+      "nama_akun": "Hutang BPJS Ketenagakerjaan Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110030",
+      "nama_akun": "Hutang Air Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110040",
+      "nama_akun": "Hutang Telp & Internet Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110050",
+      "nama_akun": "Hutang Keamanan Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110060",
+      "nama_akun": "Hutang Bank Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110070",
+      "nama_akun": "Hutang PBB Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110080",
+      "nama_akun": "Hutang Lisensi Usaha Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110090",
+      "nama_akun": "Hutang Asuransi Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110100",
+      "nama_akun": "Hutang Pendidikan Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110110",
+      "nama_akun": "Hutang BPJS Kesehatan Terakru",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "25110120",
+      "nama_akun": "Beban yang Masih Harus Dibayar",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "28110010",
+      "nama_akun": "Penjualan Dimuka",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "28110020",
+      "nama_akun": "Deposit Pelanggan",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "28110030",
+      "nama_akun": "Pendapatan Diterima Dimuka",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "29000000",
+      "nama_akun": "Stok Sementara",
+      "jenis": "Pasiva Terkini",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "31100010",
+      "nama_akun": "Modal Disahkan",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "31100020",
+      "nama_akun": "Modal Disetor",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "31100030",
+      "nama_akun": "Modal Belum Disetor",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "31100040",
+      "nama_akun": "Prive (Pengambilan Pribadi)",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "31210010",
+      "nama_akun": "Cadangan Modal",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "31510010",
+      "nama_akun": "Laba & Rugi Tahun Lalu",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "31510020",
+      "nama_akun": "Laba & Rugi Berjalan",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "39000000",
+      "nama_akun": "Saldo Historis",
+      "jenis": "Ekuitas",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "41000010",
+      "nama_akun": "Penjualan",
+      "jenis": "Penghasilan",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "42000060",
+      "nama_akun": "Pengembalian Penjualan",
+      "jenis": "Penghasilan",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "42000070",
+      "nama_akun": "Diskon Penjualan",
+      "jenis": "Penghasilan",
+      "rekonsiliasi_pembayaran": true
+    },
+    {
+      "kode": "51000010",
+      "nama_akun": "Harga Pokok Penjualan",
+      "jenis": "Biaya Pendapatan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100000",
+      "nama_akun": "Beban",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100010",
+      "nama_akun": "Gaji Karyawan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100020",
+      "nama_akun": "Bonus / Tunjangan Karyawan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100030",
+      "nama_akun": "Lembur Karyawan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100040",
+      "nama_akun": "Kompensasi Karyawan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100050",
+      "nama_akun": "Beban Tunjangan Pajak",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100060",
+      "nama_akun": "Beban BPJS",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100100",
+      "nama_akun": "Manfaat PPh 21",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100110",
+      "nama_akun": "PPh 22 Final",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "61100120",
+      "nama_akun": "PPh 4(2) Final",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "63110010",
+      "nama_akun": "Telepon & Internet",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "63110020",
+      "nama_akun": "Air, Listrik, Gas",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "63110030",
+      "nama_akun": "Riset & Pengembangan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "63110040",
+      "nama_akun": "Peralatan Kantor",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "63110041",
+      "nama_akun": "Keperluan Lain",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "64110050",
+      "nama_akun": "Keperluan Pos",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110000",
+      "nama_akun": "Biaya",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110010",
+      "nama_akun": "Biaya Lisensi",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110020",
+      "nama_akun": "Biaya Administrasi Bank",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110030",
+      "nama_akun": "Biaya Konsultan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110040",
+      "nama_akun": "Biaya Sewa",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110041",
+      "nama_akun": "Sewa Kendaraan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110042",
+      "nama_akun": "Sewa Kantor",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110050",
+      "nama_akun": "Biaya Asuransi",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110051",
+      "nama_akun": "Asuransi Kendaraan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110052",
+      "nama_akun": "Asuransi Kebakaran",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110053",
+      "nama_akun": "Asuransi Profesional",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110054",
+      "nama_akun": "Asuransi Perlindungan Hukum",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110055",
+      "nama_akun": "Asuransi Tanggung Jawab Profesional",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110070",
+      "nama_akun": "Income Tax Expenses (CIT)",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110071",
+      "nama_akun": "Pajak Properti",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110072",
+      "nama_akun": "Pajak Kendaraan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110090",
+      "nama_akun": "Biaya Pengiriman",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110150",
+      "nama_akun": "Biaya Pemeliharaan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110151",
+      "nama_akun": "Jasa Pemeliharaan Kantor",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110152",
+      "nama_akun": "Biaya Pemeliharaan Aset",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110153",
+      "nama_akun": "Biaya Pemeliharaan Gedung",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "65110154",
+      "nama_akun": "Pemeliharaan Kendaraan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110000",
+      "nama_akun": "Alat Tulis Kantor",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110010",
+      "nama_akun": "Bahan Bakar Kendaraan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110020",
+      "nama_akun": "Layanan Kantor",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110030",
+      "nama_akun": "Servis Kendaraan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110040",
+      "nama_akun": "Biaya Parkir & Tol Kendaraan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110100",
+      "nama_akun": "Bahan Baku",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110110",
+      "nama_akun": "Akuntansi",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110120",
+      "nama_akun": "Barang Habis Pakai",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110130",
+      "nama_akun": "Perubahan Persediaan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110140",
+      "nama_akun": "Beban Hukum",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110150",
+      "nama_akun": "Studi & Pekerjaan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110160",
+      "nama_akun": "Perangkat Lunak",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110170",
+      "nama_akun": "Subkontrak Umum",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110180",
+      "nama_akun": "Biaya Administrasi",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110190",
+      "nama_akun": "Barang untuk Dijual Kembali",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110200",
+      "nama_akun": "Iuran Keanggotaan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110210",
+      "nama_akun": "Tiket Pesawat",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110220",
+      "nama_akun": "Hotel",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110230",
+      "nama_akun": "Transportasi Umum",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110240",
+      "nama_akun": "Beban Perjalanan Lainnya",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110250",
+      "nama_akun": "Iklan",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110260",
+      "nama_akun": "Hadiah Bisnis",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110270",
+      "nama_akun": "Beban Personil Lainnya",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110280",
+      "nama_akun": "Bar & Restoran",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110290",
+      "nama_akun": "Makanan: Resepsi & Pengiriman",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110300",
+      "nama_akun": "Pelatihan & Dokumentasi",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110310",
+      "nama_akun": "Jaminan Sosial",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110320",
+      "nama_akun": "Pajak Properti",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110330",
+      "nama_akun": "Biaya Impor",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "66110340",
+      "nama_akun": "Biaya Bank",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100010",
+      "nama_akun": "Beban Penyusutan - Bangunan Permanen",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100020",
+      "nama_akun": "Beban Penyusutan - Bangunan Tidak Permanen",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100030",
+      "nama_akun": "Beban Penyusutan - Sepeda Motor",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100040",
+      "nama_akun": "Beban Penyusutan - Kendaraan Operasional",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100050",
+      "nama_akun": "Beban Penyusutan - Kendaraan Berat",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100060",
+      "nama_akun": "Beban Penyusutan - Peralatan TI",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100070",
+      "nama_akun": "Beban Penyusutan - Perangkat Komunikasi",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100080",
+      "nama_akun": "Beban Penyusutan - Elektronik Kantor",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100090",
+      "nama_akun": "Beban Penyusutan - Peralatan Rumah Tangga",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100100",
+      "nama_akun": "Beban Penyusutan - Furnitur (Kayu/Rotan)",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100110",
+      "nama_akun": "Beban Penyusutan - Furnitur (Logam/Campuran)",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100120",
+      "nama_akun": "Beban Penyusutan - Instalasi Bangunan",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100130",
+      "nama_akun": "Beban Penyusutan - Mesin Ringan",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100140",
+      "nama_akun": "Beban Penyusutan - Mesin Berat",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100150",
+      "nama_akun": "Beban Penyusutan - Peralatan Konstruksi Berat",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "67100160",
+      "nama_akun": "Beban Amortisasi - Lisensi Perangkat Lunak",
+      "jenis": "Penyusutan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "69000000",
+      "nama_akun": "Beban Lainnya",
+      "jenis": "Pengeluaran Lainnya",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "81100010",
+      "nama_akun": "Pendapatan Bunga",
+      "jenis": "Penghasilan Lainnya",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "81100020",
+      "nama_akun": "Pendapatan Deposit",
+      "jenis": "Penghasilan Lainnya",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "81100030",
+      "nama_akun": "Keuntungan Valuta Asing",
+      "jenis": "Penghasilan Lainnya",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "81100040",
+      "nama_akun": "Pendapatan Lainnya",
+      "jenis": "Penghasilan Lainnya",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "81100050",
+      "nama_akun": "Keuntungan Penjualan Aset Tetap",
+      "jenis": "Penghasilan Lainnya",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "91100010",
+      "nama_akun": "Beban Bunga",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "91100020",
+      "nama_akun": "Kerugian Valuta Asing",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "91100030",
+      "nama_akun": "Kerugian Penjualan Aset Tetap",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "99900001",
+      "nama_akun": "Kerugian Selisih Kas",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "99900002",
+      "nama_akun": "Keuntungan Selisih Kas",
+      "jenis": "Penghasilan",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "99900003",
+      "nama_akun": "Kerugian Diskon Kas",
+      "jenis": "Pengeluaran",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "99900004",
+      "nama_akun": "Keuntungan Diskon Kas",
+      "jenis": "Penghasilan Lainnya",
+      "rekonsiliasi_pembayaran": false
+    },
+    {
+      "kode": "99999900",
+      "nama_akun": "Laba/Rugi Tidak Didistribusikan",
+      "jenis": "Penghasilan Tahun Terkini",
+      "rekonsiliasi_pembayaran": false
+    }
+  ]

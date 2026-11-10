@@ -1,0 +1,228 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import close, cloud_upload %}
+{% from "_record_log.html" import record_log %}
+{% from "_combobox.html" import combobox, combobox_source %}
+{% block app_shell_class %}app-shell-fixed{% endblock %}
+{% block title %}{% if data.payment %}{{ data.payment.number }}{% else %}Pembayaran Baru{% endif %} — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set pay = data.payment or {} -%}
+{%- set is_edit = data.payment != None -%}
+{%- set editable = data.current_user.can('accounting', 'create') and (not is_edit or pay.state == 'DRAFT') -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-secondary" href="{{ url_for('accounting_blueprint.' ~ data.pt.ep ~ '_new') }}">Baru</a>
+        {% endif %}
+        <div class="app-crumb">
+            <a class="app-crumb-link" href="{{ url_for('accounting_blueprint.' ~ data.pt.list_ep) }}">{{ data.pt.title }}</a>
+            <span class="app-crumb-sep">/</span>
+            <span class="app-crumb-current">{% if is_edit %}{{ pay.number }}{% else %}Baru{% endif %}</span>
+            <span class="app-crumb-actions">
+                {% if editable %}
+                <button type="submit" form="paymentForm" class="app-icon-action app-icon-action-save" title="Simpan" aria-label="Simpan">{{ cloud_upload("w-4 h-4") }}</button>
+                {% endif %}
+                <a class="app-icon-action" href="{{ url_for('accounting_blueprint.' ~ data.pt.list_ep) }}" title="Buang perubahan" aria-label="Buang perubahan">{{ close("w-4 h-4") }}</a>
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pay = data.payment or {} -%}
+{%- set is_edit = data.payment != None -%}
+{%- set pre = data.prefill or {} -%}
+{%- set state = pay.state or 'DRAFT' -%}
+{%- set can_update = data.current_user.can('accounting', 'update') -%}
+{#- A Draft is editable with "tambah"; Konfirmasi and later actions need "ubah". -#}
+{%- set editable = data.current_user.can('accounting', 'create') and (not is_edit or state == 'DRAFT') -%}
+{%- set payment_type = pay.payment_type or pre.payment_type or data.pt.default_type -%}
+{%- set doc = data.document -%}
+
+{% if is_edit %}
+{% for action in ['reset', 'cancel', 'sent'] %}
+<form id="payState{{ action|capitalize }}" method="post" action="{{ url_for('accounting_blueprint.' ~ data.pt.ep ~ '_state', seq=pay.seq) }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="action" value="{{ action }}">
+</form>
+{% endfor %}
+{% endif %}
+
+<div class="app-split">
+<div class="app-form-pane">
+
+    <!-- ——— Status bar ——— -->
+    <div class="inv-statusbar">
+        <div class="inv-statusbar-buttons">
+            {% if state == 'DRAFT' %}
+                {% if editable and can_update %}
+                <button type="submit" form="paymentForm" name="action" value="confirm" class="app-btn-primary">Konfirmasi</button>
+                {% endif %}
+                {% if editable %}
+                <button type="submit" form="paymentForm" class="app-btn-secondary">Simpan</button>
+                {% endif %}
+                {% if is_edit and can_update %}
+                <button type="submit" form="payStateCancel" class="app-btn-secondary" onclick="return confirm('Batalkan pembayaran ini?');">Batal</button>
+                {% endif %}
+                <span class="inv-dirty" data-dirty-flag hidden>● Perubahan belum disimpan</span>
+            {% elif state == 'PAID' and can_update %}
+                <button type="submit" form="payStateReset" class="app-btn-secondary" onclick="return confirm('Kembalikan pembayaran ke Draft? Pelunasan di dokumennya ikut dibatalkan.');">Reset ke Draft</button>
+                {% if not pay.is_sent %}
+                <button type="submit" form="payStateSent" class="app-btn-secondary">Tandai sebagai Terkirim</button>
+                {% endif %}
+            {% elif state == 'CANCEL' and can_update %}
+                <button type="submit" form="payStateReset" class="app-btn-secondary">Reset ke Draft</button>
+            {% endif %}
+        </div>
+        <div class="inv-pills" aria-label="Status pembayaran">
+            <span class="inv-pill {% if state == 'DRAFT' %}inv-pill-active{% endif %}">Draft</span>
+            {% if state == 'CANCEL' %}
+            <span class="inv-pill inv-pill-active inv-pill-cancel">Batal</span>
+            {% else %}
+            <span class="inv-pill {% if state == 'PAID' %}inv-pill-active{% endif %}">Lunas</span>
+            <span class="inv-pill" title="Dicocokkan dengan mutasi bank (segera hadir)">Direkonsiliasi</span>
+            {% endif %}
+        </div>
+    </div>
+
+<form id="paymentForm" class="app-form-sheet {% if editable %}inv-editable{% endif %}" method="post" action="{% if is_edit %}{{ url_for('accounting_blueprint.' ~ data.pt.ep ~ '_update', seq=pay.seq) }}{% else %}{{ url_for('accounting_blueprint.' ~ data.pt.ep ~ '_create') }}{% endif %}" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <fieldset class="app-fieldset" {% if not editable %}disabled{% endif %}>
+
+    <div class="inv-title">
+        <span class="inv-title-label">{{ data.pt.title }}</span>
+        {% if is_edit %}
+        <h1>{{ pay.number }}{% if pay.is_sent %} <span class="inv-title-hint">Terkirim</span>{% endif %}</h1>
+        {% else %}
+        <h1>{{ data.next_number }} <span class="inv-title-hint" title="Nomor final diberikan saat disimpan">nomor berikutnya</span></h1>
+        {% endif %}
+    </div>
+
+    <div class="app-sheet-grid">
+        <div class="app-group">
+            <span class="app-label">Tipe Pembayaran</span>
+            <div class="app-radio-row">
+                {% for key, label in data.payment_types.items() %}
+                <label class="app-radio"><input type="radio" name="payment_type" value="{{ key }}" {% if payment_type == key %}checked{% endif %} data-payment-type> {{ label }}</label>
+                {% endfor %}
+            </div>
+
+            <label class="app-label" for="payPartner">{{ data.pt.partner_label }} <span class="app-req">*</span></label>
+            {% if not editable and pay.partner_id %}
+            <a class="app-link inv-static" href="{{ url_for('accounting_blueprint.contact_edit', category=data.pt.partner_category, contact_id=pay.partner_id) }}">{{ pay.partner_name }}</a>
+            {% else %}
+            {{ combobox("partner_id", pay.partner_id or pre.partner_id, pay.partner_name or pre.partner_name, url=url_for('contacts_blueprint.api_search', category=data.pt.partner_category), placeholder=data.pt.partner_placeholder, aria_label=data.pt.partner_label, attrs="data-pay-partner") }}
+            {% endif %}
+
+            <label class="app-label" for="payAmount">Jumlah</label>
+            <input class="app-input app-num" type="number" id="payAmount" name="amount" value="{{ '%.2f'|format(pay.amount if is_edit else (pre.amount or 0)) }}" min="0" step="0.01" data-pay-amount>
+
+            <label class="app-label" for="payDate">Tanggal</label>
+            <input class="app-input" type="date" id="payDate" name="date" value="{{ pay.date or data.today }}">
+
+            <label class="app-label app-label-strong" for="payMemo">Memo</label>
+            <input class="app-input" type="text" id="payMemo" name="memo" value="{{ pay.memo or '' }}" maxlength="200" placeholder="{{ data.pt.memo_placeholder }}">
+        </div>
+
+        <div class="app-group">
+            <label class="app-label">Jurnal</label>
+            {%- set journal = pay.journal or 'BNK1' -%}
+            {{ combobox("journal", journal, pay.journal_label or 'Bank', "journalOptions", placeholder="Pilih jurnal ...", aria_label="Jurnal") }}
+
+            <label class="app-label" for="payMethod">Metode Pembayaran <span class="app-help" title="Cara uang diterima atau dikirim">?</span></label>
+            <select class="app-input app-select" id="payMethod" name="method">
+                {% for m in data.payment_methods %}
+                <option value="{{ m }}" {% if pay.method == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+
+            <label class="app-label app-label-strong" for="payBank">Akun Bank Perusahaan</label>
+            <input class="app-input" type="text" id="payBank" name="bank_account" value="{{ pay.bank_account or '' }}" maxlength="80" placeholder="contoh: BCA 123-456-789">
+
+            <label class="app-label" title="Faktur (Terima) atau nota kredit (Kirim) yang dilunasi saat Konfirmasi">Dokumen</label>
+            {% if not editable and doc %}
+            <a class="app-link inv-static" href="{{ doc.url }}">{{ doc.number }}</a>
+            {% else %}
+            {{ combobox("invoice_id", pay.invoice_id or pre.invoice_id, pay.invoice_number or pre.invoice_number, "documentOptions", placeholder="Faktur / nota kredit (opsional)", aria_label="Dokumen", attrs="data-pay-document") }}
+            {% endif %}
+        </div>
+    </div>
+    </fieldset>
+
+    {% if state == 'PAID' and doc and pay.applied %}
+    <div class="inv-banner inv-banner-info">
+        {{ pay.applied_fmt }} dipakai untuk {{ doc.label|lower }} <a class="app-link" href="{{ doc.url }}">{{ doc.number }}</a> · sisa dokumen {{ doc.residual_fmt }}
+        {% if pay.unapplied > 0 %} · {{ pay.unapplied_fmt }} belum terpakai{% endif %}
+    </div>
+    {% endif %}
+</form>
+</div>
+
+{{ record_log("payment", pay.id if is_edit else "", data.log_groups, data.csrf_token, request.full_path, data.current_user.username) }}
+</div>
+
+{{ combobox_source("journalOptions", data.journal_options) }}
+{{ combobox_source("documentOptions", data.document_options) }}
+{% endblock %}
+
+{% block app_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Picking a Dokumen fills the partner, Jumlah (what is still open) and Tipe.
+    var docBox = document.querySelector("[data-pay-document]");
+    var partnerBox = document.querySelector("[data-pay-partner]");
+    var amount = document.querySelector("[data-pay-amount]");
+    if (docBox && window.appCombo) {
+        docBox.querySelector("[data-combo-value]").addEventListener("change", function (e) {
+            var picked = null;
+            window.appCombo.options(docBox).forEach(function (o) {
+                if (o.value === e.target.value) {
+                    picked = o;
+                }
+            });
+            if (!picked) {
+                return;
+            }
+            if (partnerBox) {
+                window.appCombo.set(partnerBox, picked.partner_id, picked.partner_name);
+            }
+            if (amount && (parseFloat(amount.value) || 0) === 0) {
+                amount.value = Number(picked.residual).toFixed(2);
+            }
+            document.querySelectorAll("[data-payment-type]").forEach(function (radio) {
+                radio.checked = radio.value === picked.payment_type;
+            });
+        });
+    }
+
+    // ——— Unsaved changes marker (Draft) ———
+    var form = document.getElementById("paymentForm");
+    var dirtyFlag = document.querySelector("[data-dirty-flag]");
+    var dirty = false;
+    function markDirty() {
+        if (dirty || !dirtyFlag) {
+            return;
+        }
+        dirty = true;
+        dirtyFlag.hidden = false;
+        document.querySelectorAll(".app-icon-action-save").forEach(function (btn) {
+            btn.classList.add("app-icon-action-dirty");
+        });
+    }
+    if (form && dirtyFlag) {
+        form.addEventListener("input", markDirty);
+        form.addEventListener("change", markDirty);
+        form.addEventListener("submit", function () {
+            dirty = false;
+        });
+        window.addEventListener("beforeunload", function (e) {
+            if (dirty) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import search, sliders, chevron_down, funnel, close %}
+{% from "_ui.html" import empty_state %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
+{% block title %}{{ data.pt.title }} — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.' ~ data.pt.ep ~ '_new') }}">Baru</a>
+        {% endif %}
+        <span class="app-cp-title">{{ data.pt.title }}</span>
+        {% if data.current_user.can('accounting', 'delete') %}
+        <div class="app-cp-selection" id="paymentsSelection" hidden>
+            <span><strong data-select-count>0</strong> dipilih</span>
+            <button type="submit" form="paymentsBulkForm" class="app-btn-secondary" onclick="return confirm('Hapus pembayaran Draft yang dipilih? Yang pernah dikonfirmasi tidak akan dihapus.');">Hapus</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <form class="app-cp-middle" method="get" action="{{ url_for('accounting_blueprint.' ~ data.pt.list_ep) }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            <span class="app-search-facet">{{ funnel("w-3.5 h-3.5") }} {{ data.pt.title }}</span>
+            {% if data.state %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ data.state_labels[data.state] }}
+                <a href="{{ url_for('accounting_blueprint.' ~ data.pt.list_ep, q=data.q) }}" title="Hapus filter" aria-label="Hapus filter status">{{ close("w-3 h-3") }}</a>
+            </span>
+            <input type="hidden" name="state" value="{{ data.state }}">
+            {% endif %}
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari ..." aria-label="Cari pembayaran">
+            <div class="app-search-filter">
+                <button type="button" class="app-search-toggle" data-dropdown="paymentsFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
+                    {{ chevron_down("w-4 h-4") }}
+                </button>
+                <div class="app-dropdown app-filter-menu" id="paymentsFilterMenu">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Status</div>
+                    <a class="app-dropdown-item {% if not data.state %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.' ~ data.pt.list_ep, q=data.q) }}">Semua</a>
+                    {% for key, label in data.state_labels.items() %}
+                    <a class="app-dropdown-item {% if data.state == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.' ~ data.pt.list_ep, state=key, q=data.q) }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, 'accounting_blueprint.' ~ data.pt.list_ep, data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{%- set can_delete = data.current_user.can('accounting', 'delete') -%}
+{%- set columns = [
+    {"key": "date", "label": "Tanggal", "default": true},
+    {"key": "journal", "label": "Jurnal", "default": true},
+    {"key": "memo", "label": "Memo", "default": false},
+    {"key": "amount", "label": "Jumlah", "default": true},
+    {"key": "state", "label": "Status", "default": true}
+] -%}
+{%- set hidden_cols = columns|rejectattr("default")|map(attribute="key")|list -%}
+{% if pager.total == 0 %}
+    <div class="app-empty">
+    {% if data.q or data.state %}
+        {{ empty_state("Tidak ada pembayaran yang cocok", "Ubah kata kunci atau hapus filter.", url_for('accounting_blueprint.' ~ data.pt.list_ep), "Hapus pencarian") }}
+    {% else %}
+        {{ empty_state("Belum ada pembayaran", data.pt.empty_desc, url_for('accounting_blueprint.' ~ data.pt.ep ~ '_new'), "Baru") }}
+    {% endif %}
+    </div>
+{% else %}
+{% if can_delete %}
+<form id="paymentsBulkForm" method="post" action="{{ url_for('accounting_blueprint.' ~ data.pt.ep ~ '_bulk_delete') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="state" value="{{ data.state }}">
+    <input type="hidden" name="q" value="{{ data.q }}">
+</form>
+{% endif %}
+
+<div class="app-list-area">
+    <div class="app-list-wrap">
+        <table class="app-list" id="paymentsList" data-table-key="{{ data.pt.list_ep }}" {% if can_delete %}data-select-bar="paymentsSelection"{% endif %}>
+            <thead>
+                <tr>
+                    {% if can_delete %}
+                    <th class="app-list-check"><input type="checkbox" class="app-check" data-check-all aria-label="Pilih semua"></th>
+                    {% endif %}
+                    <th data-col="date" data-width="100" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>Tanggal</th>
+                    <th data-key="number" data-width="140">Nomor</th>
+                    <th data-col="journal" data-width="110" {% if 'journal' in hidden_cols %}class="app-col-hidden"{% endif %}>Jurnal</th>
+                    <th data-key="partner" data-width="260">{{ data.pt.partner_label }}</th>
+                    <th data-col="memo" data-width="260" {% if 'memo' in hidden_cols %}class="app-col-hidden"{% endif %}>Memo</th>
+                    <th data-col="amount" data-width="170" class="app-num{% if 'amount' in hidden_cols %} app-col-hidden{% endif %}">Jumlah</th>
+                    <th data-col="state" data-width="100" {% if 'state' in hidden_cols %}class="app-col-hidden"{% endif %}>Status</th>
+                    <th class="app-list-optional">
+                        <button type="button" class="app-col-toggle" data-dropdown="paymentsColMenu" title="Pilih kolom" aria-haspopup="true" aria-expanded="false">
+                            {{ sliders("w-4 h-4") }}
+                        </button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pay in data.payments %}
+                {%- set pay_url = url_for('accounting_blueprint.' ~ data.pt.ep ~ '_edit', seq=pay.seq) -%}
+                <tr data-href="{{ pay_url }}">
+                    {% if can_delete %}
+                    <td class="app-list-check">
+                        <input type="checkbox" class="app-check" name="ids" value="{{ pay.id }}" form="paymentsBulkForm" aria-label="Pilih {{ pay.number_display }}" {% if pay.posted_at %}disabled title="Yang pernah dikonfirmasi tidak bisa dihapus"{% endif %}>
+                    </td>
+                    {% endif %}
+                    <td data-col="date" class="app-link{% if 'date' in hidden_cols %} app-col-hidden{% endif %}">{{ pay.date_short }}</td>
+                    <td><a class="app-list-name" href="{{ pay_url }}"><span class="app-list-name-text {% if pay.state == 'DRAFT' %}app-muted{% endif %}">{{ pay.number_display }}</span></a></td>
+                    <td data-col="journal" {% if 'journal' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ pay.journal_label }}</td>
+                    <td class="app-link" title="{{ pay.partner_name }}">{{ pay.partner_name or "—" }}</td>
+                    <td data-col="memo" title="{{ pay.memo }}" {% if 'memo' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ pay.memo }}</td>
+                    <td data-col="amount" class="app-num{% if 'amount' in hidden_cols %} app-col-hidden{% endif %}">{{ pay.amount_signed_fmt }}</td>
+                    <td data-col="state" {% if 'state' in hidden_cols %}class="app-col-hidden"{% endif %}>
+                        <span class="app-badge app-badge-state-{{ pay.state_class }}">{{ pay.state_label }}</span>
+                    </td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="app-list-foot">
+                    {% if can_delete %}<td></td>{% endif %}
+                    <td data-col="date" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td></td>
+                    <td data-col="journal" {% if 'journal' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td></td>
+                    <td data-col="memo" {% if 'memo' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td data-col="amount" class="app-num{% if 'amount' in hidden_cols %} app-col-hidden{% endif %}">{{ pager.sum_amount }}</td>
+                    <td data-col="state" {% if 'state' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="app-dropdown app-col-menu" id="paymentsColMenu" data-col-menu-for="paymentsList">
+        {% for col in columns %}
+        <label class="app-dropdown-check">
+            <input type="checkbox" class="app-check" value="{{ col.key }}" {% if col.default %}checked{% endif %}>
+            <span>{{ col.label }}</span>
+        </label>
+        {% endfor %}
+        <hr class="launcher-menu-sep">
+        <button type="button" class="app-dropdown-action" data-col-reset>Reset lebar kolom</button>
+    </div>
+</div>
+
+{{ pager_bar(pager, 'accounting_blueprint.' ~ data.pt.list_ep, data.page_args) }}
+{% endif %}
+{% endblock %}

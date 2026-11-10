@@ -124,9 +124,14 @@ class contacts_proc:
                 rec.get("company_name", ""),
                 rec.get("city", "")
             )
+            # value / label / description feed the _combobox.html picker.
+            description = " · ".join([part for part in [rec.get("company_name", ""), rec.get("city", "")] if part])
             results.append({
                 "id": str(rec["_id"]),
                 "text": text,
+                "value": str(rec["_id"]),
+                "label": rec.get("name", ""),
+                "description": description,
                 "name": rec.get("name", ""),
                 "company_name": rec.get("company_name", ""),
                 "city": rec.get("city", ""),

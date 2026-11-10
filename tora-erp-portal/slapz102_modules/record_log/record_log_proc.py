@@ -7,11 +7,13 @@ sys.path.append("slapz102_stdlib")
 sys.path.append("slapz102_storage")
 
 import datetime
+import re
 
 from bson.objectid import ObjectId
 
 from slapz102_core import database
 from slapz102_core import config
+from slapz102_stdlib import paginate
 
 # ---------------------------------------------------------------------------
 # RECORD LOG MODULE — business logic layer.
@@ -36,7 +38,14 @@ from slapz102_core import config
 LOG_MODELS = {
     "contact": {"collection": "db_contact", "area": "contacts"},
     "user": {"collection": "db_user", "area": "users"},
-    "invoice": {"collection": "db_invoice", "area": "accounting"}
+    "invoice": {"collection": "db_invoice", "area": "accounting"},
+    "credit_note": {"collection": "db_invoice", "area": "accounting"},
+    "bill": {"collection": "db_invoice", "area": "accounting"},
+    "vendor_refund": {"collection": "db_invoice", "area": "accounting"},
+    "payment": {"collection": "db_payment", "area": "accounting"},
+    "product": {"collection": "db_product", "area": "accounting"},
+    "account": {"collection": "db_account", "area": "accounting"},
+    "tax": {"collection": "db_tax", "area": "accounting"}
 }
 
 KIND_CREATE = "CREATE"
@@ -240,5 +249,47 @@ class record_log_proc:
             groups[-1]["entries"].append(entry)
         # end for
         return groups
+    # end def
+
+    def page_entries(self, models, q="", page=1, per_page=paginate.DEFAULT_PAGE_SIZE):
+        # Log Catatan (audit trail): entries of several models, newest first,
+        # paginated. Each entry carries model + record_id so the caller can
+        # name and link the record.
+        models = [m for m in models if m in LOG_MODELS]
+        query = {"is_deleted": False, "model": {"$in": models}}
+        q = (q or "").strip()
+        if q != "":
+            pattern = re.escape(q)
+            query["$or"] = [
+                {"body": {"$regex": pattern, "$options": "i"}},
+                {"author_name": {"$regex": pattern, "$options": "i"}},
+                {"changes.label": {"$regex": pattern, "$options": "i"}},
+                {"changes.new": {"$regex": pattern, "$options": "i"}},
+                {"changes.old": {"$regex": pattern, "$options": "i"}}
+            ]
+        # end if
+        projection = {"model": 1, "record_id": 1, "kind": 1, "body": 1, "changes": 1, "author_name": 1, "rec_timestamp_str": 1}
+        total = self.mgdDB.db_record_log.count_documents(query)
+        pager = paginate.build(total, page, per_page)
+        recs = self.mgdDB.db_record_log.find(query, projection).sort(
+            [("rec_timestamp", -1), ("_id", -1)]
+        ).skip(pager["offset"]).limit(pager["per_page"])
+        out = []
+        for rec in recs:
+            entry = self._entry_public(rec)
+            entry["model"] = rec.get("model", "")
+            entry["record_id"] = rec.get("record_id", "")
+            stamp = rec.get("rec_timestamp_str", "")
+            entry["stamp"] = ""
+            try:
+                when = datetime.datetime.strptime(stamp[:16], "%Y-%m-%d %H:%M")
+                entry["stamp"] = str(when.day) + " " + MONTHS[when.month - 1][:3] + ", " + when.strftime("%H.%M")
+            except Exception:
+                entry["stamp"] = stamp[:16]
+            # end try
+            out.append(entry)
+        # end for
+        pager["entries"] = out
+        return pager
     # end def
 # end class

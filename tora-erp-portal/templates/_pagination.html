@@ -41,7 +41,8 @@
 
 {% macro pager_bar(pager, endpoint, args) %}
 <nav class="app-pagebar" aria-label="Halaman">
-    <form class="app-pagebar-size" method="get" action="{{ url_for(endpoint) }}">
+    {#- action via page_url so routes with path args (/accounting/contact.<category>) still build -#}
+    <form class="app-pagebar-size" method="get" action="{{ page_url(pager, endpoint, args, 1) }}">
         {% for key, value in args.items() if value %}
         <input type="hidden" name="{{ key }}" value="{{ value }}">
         {% endfor %}

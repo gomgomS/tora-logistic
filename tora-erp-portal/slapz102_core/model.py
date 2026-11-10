@@ -241,9 +241,11 @@ db = {
         "seq": 0
     },
 
-    # Akuntansi — customer invoices (and later credit notes via move_type).
-    #   seq        running number 1, 2, 3 ... used in the URL
-    #              (/accounting/invoices/4), counter "SEQID:invoice"
+    # Akuntansi — invoice-like documents, see accounting_proc.MOVE_TYPES:
+    # Faktur ("out_invoice"), Nota Kredit ("out_refund"), Tagihan Vendor
+    # ("in_invoice"), Pengembalian Vendor ("in_refund").
+    #   seq        running number 1, 2, 3 ... per move_type, used in the URL
+    #              (/accounting/client-invoices/4, /accounting/vendor-bills/2)
     #   number     assigned on create from the sequence in Konfigurasi >
     #              Pengaturan (e.g. INV/2026/00004); shown to people
     #   state      DRAFT / POSTED (Terekam) / CANCEL (Batal)
@@ -259,10 +261,12 @@ db = {
         "partner_id": "",
         "partner_name": "",
         "invoice_date": "",
+        "accounting_date": "",
         "payment_term": "",
         "due_date": "",
         "customer_ref": "",
         "payment_ref": "",
+        "partner_bank": "",
         "salesperson_id": "",
         "delivery_date": "",
         "efaktur_code": "",
@@ -275,7 +279,35 @@ db = {
         "amount_residual": 0,
         "posted_at": "",
         "payments": [],
-        "payment_state": "not_paid"
+        "payment_state": "not_paid",
+        # Refunds (nota kredit / pengembalian): the document they correct
+        "reversed_entry_id": "",
+        "reversed_entry_number": "",
+        # True once its lines are in db_journal_item (Kontrol > Item Jurnal)
+        "items_posted": False
+    },
+
+    # Kontrol > Item Jurnal: ledger lines of Terekam documents, written by
+    # accounting_proc.post_journal_items on confirm, soft-deleted on reset.
+    #   move_*         the document (id, type, seq, number, URL slug)
+    #   account        db_account code; account_label "41000010 Penjualan"
+    #   account_group  first digit of the code (side panel 1, 2, 4, ...)
+    "db_journal_item": {
+        "move_id": "",
+        "move_type": "",
+        "move_seq": 0,
+        "move_number": "",
+        "move_slug": "",
+        "date": "",
+        "account": "",
+        "account_label": "",
+        "account_group": "",
+        "partner_id": "",
+        "partner_name": "",
+        "label": "",
+        "debit": 0,
+        "credit": 0,
+        "sequence": 0
     },
 
     # Akuntansi > Konfigurasi > Pajak. Lines reference a tax by its code.
@@ -293,6 +325,77 @@ db = {
         "invoice_label": "",
         "active": True,
         "sequence": 0
+    },
+
+    # Akuntansi > Pelanggan > Pembayaran (payments_proc).
+    #   seq           integer in the URL (/accounting/client-payments/1)
+    #   number        PAY00001 (prefix from Konfigurasi > Pengaturan)
+    #   state         DRAFT / PAID (Lunas) / CANCEL
+    #   payment_type  inbound (Terima) / outbound (Kirim)
+    #   journal       BNK1 (Bank) / CSH1 (Kas)
+    #   invoice_id    faktur (Terima) or nota kredit (Kirim) it settles;
+    #                 applied = amount actually settled on it
+    "db_payment": {
+        "seq": 0,
+        "number": "",
+        "state": "DRAFT",
+        "payment_type": "inbound",
+        "partner_type": "customer",
+        "partner_id": "",
+        "partner_name": "",
+        "amount": 0,
+        "date": "",
+        "memo": "",
+        "journal": "BNK1",
+        "method": "",
+        "bank_account": "",
+        "invoice_id": "",
+        "invoice_number": "",
+        "applied": 0,
+        "is_sent": False,
+        "posted_at": ""
+    },
+
+    # Akuntansi > Pelanggan / Vendor > Produk (products_proc). One catalogue:
+    # sale_ok shows it under Pelanggan, purchase_ok under Vendor.
+    #   seq           integer in the URL (/accounting/client-products/1)
+    #   product_type  goods (Barang) / service (Layanan) / combo (Kombo)
+    #   sale_tax / purchase_tax   db_tax code ("" = tanpa pajak)
+    "db_product": {
+        "seq": 0,
+        "name": "",
+        "active": True,
+        "is_favorite": False,
+        "sale_ok": True,
+        "purchase_ok": True,
+        "product_type": "service",
+        "is_storable": False,
+        "list_price": 0,
+        "sale_tax": "",
+        "standard_price": 0,
+        "purchase_tax": "",
+        "uom": "Unit",
+        "category": "",
+        "default_code": "",
+        "barcode": "",
+        "label": "",
+        "notes": "",
+        "weight": 0,
+        "volume": 0,
+        "sale_delay": 0,
+        "description_pickingin": "",
+        "description_pickingout": ""
+    },
+
+    # Akuntansi > Konfigurasi > Bagan Akun. Invoice lines and journal rows
+    # reference an account by its code (fixed once created).
+    #   account_type  accounting_proc.ACCOUNT_TYPES key, e.g. "income"
+    "db_account": {
+        "code": "",
+        "name": "",
+        "account_type": "",
+        "description": "",
+        "active": True
     },
 
     # Activity log shown beside any record form (contacts today, other

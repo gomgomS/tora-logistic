@@ -1,0 +1,19 @@
+---
+description: Skills are frozen — do not create, extend, or edit skills unless the user explicitly asks
+alwaysApply: true
+---
+
+# Skills are frozen
+
+The skill set in `.cursor/skills/` is final: `tora-erp-backend`,
+`tora-erp-ui`, `tora-erp-db-script`. Use them; do not write to them.
+
+- Do NOT create new skills, skill folders, reference files, or examples.
+- Do NOT add sections, rules, or rows to existing `SKILL.md` /
+  `relationships.md` as part of normal feature work.
+- Do NOT create new `.cursor/rules/*.mdc`, `AGENTS.md`, or `CLAUDE.md` files.
+- Only touch these files when the user explicitly asks to change a skill
+  or rule (e.g. "update the skill", "tambahkan ke skill").
+- If a code change makes a skill statement wrong (renamed file, path, or
+  rule), do not edit the skill — add one line at the end of your reply:
+  "Skill `<name>` is now outdated: <what changed>."

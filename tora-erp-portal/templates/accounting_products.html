@@ -1,0 +1,80 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import search, chevron_down, funnel, close %}
+{% from "_ui.html" import empty_state %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
+{#- Pelanggan > Produk and Vendor > Produk: the same catalogue as cards;
+    data.ps = view_products.PRODUCT_SHELLS entry (route + default filter). -#}
+{% block title %}Produk — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+{%- set list_ep = 'accounting_blueprint.' ~ data.ps.list_ep -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <a class="app-btn-primary" href="{{ url_for('accounting_blueprint.' ~ data.ps.ep ~ '_new') }}">Baru</a>
+        {% endif %}
+        <span class="app-cp-title">Produk</span>
+    </div>
+
+    <form class="app-cp-middle" method="get" action="{{ url_for(list_ep) }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            {% if data.filter != data.filter_all %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ data.filters[data.filter] }}
+                <a href="{{ url_for(list_ep, filter=data.filter_all, q=data.q) }}" title="Hapus filter" aria-label="Hapus filter">{{ close("w-3 h-3") }}</a>
+            </span>
+            {% endif %}
+            <input type="hidden" name="filter" value="{{ data.filter }}">
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari ..." aria-label="Cari produk">
+            <div class="app-search-filter">
+                <button type="button" class="app-search-toggle" data-dropdown="productsFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
+                    {{ chevron_down("w-4 h-4") }}
+                </button>
+                <div class="app-dropdown app-filter-menu" id="productsFilterMenu">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Filter</div>
+                    <a class="app-dropdown-item {% if data.filter == data.filter_all %}app-dropdown-item-active{% endif %}" href="{{ url_for(list_ep, filter=data.filter_all, q=data.q) }}">Semua produk</a>
+                    {% for key, label in data.filters.items() %}
+                    <a class="app-dropdown-item {% if data.filter == key %}app-dropdown-item-active{% endif %}" href="{{ url_for(list_ep, filter=key, q=data.q) }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, list_ep, data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{% if pager.total == 0 %}
+    <div class="app-empty">
+    {% if data.q or data.filter == data.filter_all %}
+        {{ empty_state("Tidak ada produk yang cocok", "Ubah kata kunci atau filter.", url_for('accounting_blueprint.' ~ data.ps.list_ep), "Hapus pencarian") }}
+    {% else %}
+        {{ empty_state("Belum ada produk", "Buat layanan dan barang yang dijual atau dibeli: tarif trucking, pallet, sparepart, BBM.", url_for('accounting_blueprint.' ~ data.ps.ep ~ '_new'), "Baru") }}
+    {% endif %}
+    </div>
+{% else %}
+<div class="prod-cards">
+    {% for p in data.products %}
+    <a class="prod-card" href="{{ url_for('accounting_blueprint.' ~ data.ps.ep ~ '_edit', seq=p.seq) }}">
+        <span class="prod-card-name">{% if p.is_favorite %}<span class="prod-card-star" title="Favorit">★</span> {% endif %}{{ p.name }}</span>
+        <span class="prod-card-meta">
+            <strong>{{ p.price_fmt }}</strong>
+            {% if p.default_code %}<span class="app-muted">{{ p.default_code }}</span>{% endif %}
+        </span>
+    </a>
+    {% endfor %}
+</div>
+
+{{ pager_bar(pager, 'accounting_blueprint.' ~ data.ps.list_ep, data.page_args) }}
+{% endif %}
+{% endblock %}

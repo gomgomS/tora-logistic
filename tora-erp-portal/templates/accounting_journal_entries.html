@@ -1,0 +1,189 @@
+{% extends "accounting_base.html" %}
+{% from "_icons.html" import search, sliders, chevron_down, funnel, close %}
+{% from "_ui.html" import empty_state %}
+{% from "_pagination.html" import pager_compact, pager_bar %}
+{#- Akuntansi > Entri Jurnal: faktur, nota kredit, tagihan and pengembalian
+    vendor in one list (same list design as every other table). A row opens
+    the document page under the "Entri Jurnal" breadcrumb. -#}
+{% block title %}Entri Jurnal — {{ data.site_name }}{% endblock %}
+
+{% block app_control %}
+{%- set pager = data.pager -%}
+<div class="app-cp">
+    <div class="app-cp-left">
+        {% if data.current_user.can('accounting', 'create') %}
+        <div class="app-cp-new">
+            <button type="button" class="app-btn-primary" data-dropdown="entryNewMenu" aria-haspopup="true" aria-expanded="false">Baru</button>
+            <div class="app-dropdown app-cp-new-menu" id="entryNewMenu" role="menu">
+                {% for doc in data.new_documents %}
+                <a class="app-dropdown-item" href="{{ url_for('accounting_blueprint.' ~ doc.ep ~ '_new') }}" role="menuitem">{{ doc.title }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        <span class="app-cp-title">Entri Jurnal</span>
+        {% if data.current_user.can('accounting', 'delete') %}
+        <div class="app-cp-selection" id="entriesSelection" hidden>
+            <span><strong data-select-count>0</strong> dipilih</span>
+            <button type="submit" form="entriesBulkForm" class="app-btn-secondary" onclick="return confirm('Hapus entri Draft yang dipilih? Yang pernah dikonfirmasi tidak akan dihapus.');">Hapus</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <form class="app-cp-middle" method="get" action="{{ url_for('accounting_blueprint.journal_entries') }}" role="search">
+        <div class="app-search">
+            <span class="app-search-icon">{{ search("w-4 h-4") }}</span>
+            {% if data.state != data.state_all %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ data.state_labels[data.state] }}
+                <a href="{{ url_for('accounting_blueprint.journal_entries', state=data.state_all, journal=data.journal, q=data.q) }}" title="Hapus filter" aria-label="Hapus filter status">{{ close("w-3 h-3") }}</a>
+            </span>
+            {% endif %}
+            {% if data.journal %}
+            <span class="app-search-facet">
+                {{ funnel("w-3.5 h-3.5") }} {{ data.journal_filters[data.journal] }}
+                <a href="{{ url_for('accounting_blueprint.journal_entries', state=data.state, q=data.q) }}" title="Hapus filter" aria-label="Hapus filter jurnal">{{ close("w-3 h-3") }}</a>
+            </span>
+            <input type="hidden" name="journal" value="{{ data.journal }}">
+            {% endif %}
+            <input type="hidden" name="state" value="{{ data.state }}">
+            {% if pager.per_page != pager.default_per_page %}
+            <input type="hidden" name="per_page" value="{{ pager.per_page }}">
+            {% endif %}
+            <input class="app-search-input" type="search" name="q" value="{{ data.q }}" placeholder="Cari nomor, rekanan, atau referensi ..." aria-label="Cari entri jurnal">
+            <div class="app-search-filter">
+                <button type="button" class="app-search-toggle" data-dropdown="entriesFilterMenu" title="Filter" aria-haspopup="true" aria-expanded="false">
+                    {{ chevron_down("w-4 h-4") }}
+                </button>
+                <div class="app-dropdown app-filter-menu" id="entriesFilterMenu">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Status</div>
+                    <a class="app-dropdown-item {% if data.state == data.state_all %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.journal_entries', state=data.state_all, journal=data.journal, q=data.q) }}">Semua</a>
+                    {% for key, label in data.state_labels.items() %}
+                    <a class="app-dropdown-item {% if data.state == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.journal_entries', state=key, journal=data.journal, q=data.q) }}">{{ label }}</a>
+                    {% endfor %}
+                    <hr class="launcher-menu-sep">
+                    <div class="app-dropdown-head">{{ funnel("w-3.5 h-3.5") }} Jurnal</div>
+                    <a class="app-dropdown-item {% if not data.journal %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.journal_entries', state=data.state, q=data.q) }}">Semua jurnal</a>
+                    {% for key, label in data.journal_filters.items() %}
+                    <a class="app-dropdown-item {% if data.journal == key %}app-dropdown-item-active{% endif %}" href="{{ url_for('accounting_blueprint.journal_entries', state=data.state, journal=key, q=data.q) }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="app-cp-right">
+        {{ pager_compact(pager, 'accounting_blueprint.journal_entries', data.page_args) }}
+    </div>
+</div>
+{% endblock %}
+
+{% block app_content %}
+{%- set pager = data.pager -%}
+{%- set can_delete = data.current_user.can('accounting', 'delete') -%}
+{%- set columns = [
+    {"key": "date", "label": "Tanggal", "default": true},
+    {"key": "partner", "label": "Rekanan", "default": true},
+    {"key": "ref", "label": "Referensi", "default": true},
+    {"key": "journal", "label": "Jurnal", "default": true},
+    {"key": "type", "label": "Jenis", "default": false},
+    {"key": "total", "label": "Total", "default": true},
+    {"key": "state", "label": "Status", "default": true}
+] -%}
+{%- set hidden_cols = columns|rejectattr("default")|map(attribute="key")|list -%}
+{% if pager.total == 0 %}
+    <div class="app-empty">
+    {% if data.q or data.journal or data.state != data.state_all %}
+        {{ empty_state("Tidak ada entri jurnal yang cocok", "Ubah kata kunci atau hapus filter.", url_for('accounting_blueprint.journal_entries', state=data.state_all), "Tampilkan semua") }}
+    {% else %}
+        {{ empty_state("Belum ada entri jurnal", "Entri jurnal terbentuk dari faktur, nota kredit, tagihan, dan pengembalian vendor.", url_for('accounting_blueprint.invoice_new'), "Faktur Baru") }}
+    {% endif %}
+    </div>
+{% else %}
+{% if can_delete %}
+<form id="entriesBulkForm" method="post" action="{{ url_for('accounting_blueprint.journal_entry_bulk_delete') }}">
+    <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
+    <input type="hidden" name="state" value="{{ data.state }}">
+    <input type="hidden" name="journal" value="{{ data.journal }}">
+    <input type="hidden" name="q" value="{{ data.q }}">
+</form>
+{% endif %}
+
+<div class="app-list-area">
+    <div class="app-list-wrap">
+        <table class="app-list" id="entriesList" data-table-key="journal_entries" {% if can_delete %}data-select-bar="entriesSelection"{% endif %}>
+            <thead>
+                <tr>
+                    {% if can_delete %}
+                    <th class="app-list-check"><input type="checkbox" class="app-check" data-check-all aria-label="Pilih semua"></th>
+                    {% endif %}
+                    <th data-col="date" data-width="100" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}>Tanggal</th>
+                    <th data-key="number" data-width="160">Nomor</th>
+                    <th data-col="partner" data-width="240" {% if 'partner' in hidden_cols %}class="app-col-hidden"{% endif %}>Rekanan</th>
+                    <th data-col="ref" data-width="300" {% if 'ref' in hidden_cols %}class="app-col-hidden"{% endif %}>Referensi</th>
+                    <th data-col="journal" data-width="110" {% if 'journal' in hidden_cols %}class="app-col-hidden"{% endif %}>Jurnal</th>
+                    <th data-col="type" data-width="130" {% if 'type' in hidden_cols %}class="app-col-hidden"{% endif %}>Jenis</th>
+                    <th data-col="total" data-width="160" class="app-num{% if 'total' in hidden_cols %} app-col-hidden{% endif %}">Total</th>
+                    <th data-col="state" data-width="100" {% if 'state' in hidden_cols %}class="app-col-hidden"{% endif %}>Status</th>
+                    <th class="app-list-optional">
+                        <button type="button" class="app-col-toggle" data-dropdown="entriesColMenu" title="Pilih kolom" aria-haspopup="true" aria-expanded="false">
+                            {{ sliders("w-4 h-4") }}
+                        </button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in data.entries %}
+                {%- set entry_url = url_for('accounting_blueprint.journal_entry', slug=e.doc.slug, seq=e.seq) -%}
+                <tr data-href="{{ entry_url }}">
+                    {% if can_delete %}
+                    <td class="app-list-check">
+                        <input type="checkbox" class="app-check" name="ids" value="{{ e.id }}" form="entriesBulkForm" aria-label="Pilih {{ e.number_display }}" {% if e.posted_at %}disabled title="Yang pernah dikonfirmasi tidak bisa dihapus"{% endif %}>
+                    </td>
+                    {% endif %}
+                    <td data-col="date" class="app-link{% if 'date' in hidden_cols %} app-col-hidden{% endif %}">{{ e.date_short }}</td>
+                    <td><a class="app-list-name" href="{{ entry_url }}"><span class="app-list-name-text {% if e.state == 'DRAFT' %}app-muted{% endif %}">{{ e.number_display }}</span></a></td>
+                    <td data-col="partner" class="app-link{% if 'partner' in hidden_cols %} app-col-hidden{% endif %}" title="{{ e.partner_name }}">{{ e.partner_name or "—" }}</td>
+                    <td data-col="ref" title="{{ e.customer_ref }}" {% if 'ref' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ e.customer_ref }}</td>
+                    <td data-col="journal" {% if 'journal' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ e.doc.journal_label }}</td>
+                    <td data-col="type" {% if 'type' in hidden_cols %}class="app-col-hidden"{% endif %}>{{ e.doc.title }}</td>
+                    <td data-col="total" class="app-num{% if 'total' in hidden_cols %} app-col-hidden{% endif %}">{{ e.total_signed_fmt }}</td>
+                    <td data-col="state" {% if 'state' in hidden_cols %}class="app-col-hidden"{% endif %}>
+                        <span class="app-badge app-badge-state-{{ e.state_class }}">{{ e.state_label }}</span>
+                    </td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="app-list-foot">
+                    {% if can_delete %}<td></td>{% endif %}
+                    <td data-col="date" {% if 'date' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td></td>
+                    <td data-col="partner" {% if 'partner' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td data-col="ref" {% if 'ref' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td data-col="journal" {% if 'journal' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td data-col="type" {% if 'type' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td data-col="total" class="app-num{% if 'total' in hidden_cols %} app-col-hidden{% endif %}">{{ pager.sum_total }}</td>
+                    <td data-col="state" {% if 'state' in hidden_cols %}class="app-col-hidden"{% endif %}></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="app-dropdown app-col-menu" id="entriesColMenu" data-col-menu-for="entriesList">
+        {% for col in columns %}
+        <label class="app-dropdown-check">
+            <input type="checkbox" class="app-check" value="{{ col.key }}" {% if col.default %}checked{% endif %}>
+            <span>{{ col.label }}</span>
+        </label>
+        {% endfor %}
+        <hr class="launcher-menu-sep">
+        <button type="button" class="app-dropdown-action" data-col-reset>Reset lebar kolom</button>
+    </div>
+</div>
+
+{{ pager_bar(pager, 'accounting_blueprint.journal_entries', data.page_args) }}
+{% endif %}
+{% endblock %}
