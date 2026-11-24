@@ -33,6 +33,7 @@
         {% endif %}
 
         <div class="launcher-grid">
+            {# — Operasional disembunyikan sementara
             <a class="launcher-app" href="{{ url_for('auth_blueprint.operations') }}">
                 <span class="launcher-app-icon launcher-app-ops">
                     {{ truck("w-10 h-10") }}
@@ -42,6 +43,7 @@
                 </span>
                 <span class="launcher-app-name">Operasional</span>
             </a>
+            — #}
 
             {% if data.current_user.can('contacts', 'read') %}
             <a class="launcher-app" href="{{ url_for('contacts_blueprint.index') }}">
