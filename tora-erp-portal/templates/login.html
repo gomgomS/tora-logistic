@@ -2,33 +2,146 @@
 {% from "_icons.html" import arrow_right %}
 {% block title %}Masuk — {{ data.site_name }}{% endblock %}
 {% block shell %}
-<div class="auth-min">
-    <div class="auth-min-card">
+<style>
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        box-sizing: border-box;
+        font-family: 'Archivo', -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background:
+            radial-gradient(900px 420px at 85% -10%, rgba(234, 88, 12, .07), transparent 60%),
+            radial-gradient(700px 500px at -10% 110%, rgba(59, 130, 246, .06), transparent 55%),
+            linear-gradient(180deg, #f6f8fb, #eef2f7);
+        color: #17233a;
+    }
 
-        <a class="brand auth-min-brand" href="{{ url_for('auth_blueprint.login') }}">
-            <span class="brand-mark">T</span>
-            <span class="brand-name">{{ data.site_name }}</span>
+    .login-card {
+        width: 100%;
+        max-width: 360px;
+        background: #fff;
+        border: 1px solid #e6e9ee;
+        border-radius: 16px;
+        padding: 40px 30px 32px 30px;
+        box-shadow: 0 24px 60px -32px rgba(18, 44, 74, .35);
+    }
+
+    .login-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 30px;
+        text-decoration: none;
+    }
+
+    .login-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #ea580c, #f68a45);
+        color: #fff;
+        font-weight: 800;
+        font-size: 16px;
+    }
+
+    .login-site {
+        font-family: 'IBM Plex Mono', ui-monospace, monospace;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #0b1b2e;
+    }
+
+    .login-alert {
+        font-size: 13px;
+        line-height: 1.5;
+        padding: 11px 14px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+    }
+
+    .login-alert-info  { background: #e8efff; color: #1e40af; }
+    .login-alert-error { background: #fdeeee; color: #a51c1c; }
+
+    .login-form { display: flex; flex-direction: column; gap: 14px; }
+
+    .login-input {
+        width: 100%;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: 14.5px;
+        color: #17233a;
+        padding: 11px 14px;
+        border: 1px solid #c5ced8;
+        border-radius: 10px;
+        background: #fff;
+        outline: none;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .login-input::placeholder { color: #9aa7b8; }
+    .login-input:hover { border-color: #8b98ab; }
+    .login-input:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, .12); }
+
+    .login-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 12px 24px;
+        margin-top: 4px;
+        border: none;
+        border-radius: 10px;
+        background: #ea580c;
+        color: #fff;
+        cursor: pointer;
+        transition: background .15s ease, transform .1s ease;
+    }
+
+    .login-btn:hover { background: #d24e06; }
+    .login-btn:active { transform: translateY(1px); }
+
+    .login-btn svg { width: 16px; height: 16px; }
+</style>
+
+<div class="login-page">
+    <div class="login-card">
+
+        <a class="login-brand" href="{{ url_for('auth_blueprint.login') }}">
+            <span class="login-mark">T</span>
+            <span class="login-site">{{ data.site_name }}</span>
         </a>
 
         {% if data.bootstrapped %}
-        <div class="alert-info">
+        <div class="login-alert login-alert-info">
             Akun awal: <strong>{{ data.default_username }}</strong> — atur
-            <span class="font-mono">SUPERADMIN_PASSWORD</span> sebelum produksi.
+            <span style="font-family: 'IBM Plex Mono', monospace;">SUPERADMIN_PASSWORD</span> sebelum produksi.
         </div>
         {% endif %}
         {% if data.form_error %}
-        <div class="alert-error">{{ data.form_error }}</div>
+        <div class="login-alert login-alert-error">{{ data.form_error }}</div>
         {% endif %}
 
-        <form method="post" action="{{ url_for('auth_blueprint.login') }}">
+        <form class="login-form" method="post" action="{{ url_for('auth_blueprint.login') }}">
             <input type="hidden" name="csrf_token" value="{{ data.csrf_token }}">
             <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
-            <input class="fld" type="text" name="username" placeholder="Nama pengguna" aria-label="Nama pengguna" required autofocus autocomplete="username">
-            <input class="fld" type="password" name="password" placeholder="Kata sandi" aria-label="Kata sandi" required autocomplete="current-password">
-            <button type="submit" class="btn-accent btn-block btn-lg">Masuk {{ arrow_right("w-4 h-4") }}</button>
+            <input class="login-input" type="text" name="username" placeholder="Nama pengguna" aria-label="Nama pengguna" required autofocus autocomplete="username">
+            <input class="login-input" type="password" name="password" placeholder="Kata sandi" aria-label="Kata sandi" required autocomplete="current-password">
+            <button type="submit" class="login-btn">Masuk {{ arrow_right("") }}</button>
         </form>
 
-        <a class="auth-min-track" href="{{ url_for('tracking_blueprint.track_page') }}">Lacak kiriman {{ arrow_right("w-3.5 h-3.5") }}</a>
     </div>
 </div>
 {% endblock %}

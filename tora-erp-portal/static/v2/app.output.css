@@ -347,6 +347,9 @@
   .max-w-3xl {
     max-width: var(--container-3xl);
   }
+  .transform {
+    transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
+  }
   .resize {
     resize: both;
   }
@@ -455,6 +458,10 @@
   .antialiased {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  .outline {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
   }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
@@ -2393,58 +2400,6 @@ textarea.fld {
   font-size: 9.5px;
   letter-spacing: 0.18em;
   color: var(--color-mute);
-}
-.auth-min {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: radial-gradient(900px 420px at 85% -10%, rgba(234, 88, 12, .07), transparent 60%), radial-gradient(700px 500px at -10% 110%, rgba(59, 130, 246, .06), transparent 55%), #f4f7fa;
-}
-.auth-min-card {
-  width: 100%;
-  max-width: 360px;
-  background: #fff;
-  border: 1px solid var(--color-line);
-  border-radius: 16px;
-  padding: 36px 28px 28px 28px;
-  box-shadow: 0 24px 60px -32px rgba(18, 44, 74, .3);
-}
-.auth-min-brand {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 28px;
-}
-.auth-min-card form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.auth-min-card .fld {
-  padding: 11px 14px;
-  border: 1px solid #c5ced8;
-  border-radius: 10px;
-  background: #fff;
-}
-.auth-min-card .fld:hover {
-  border-color: #8b98ab;
-}
-.auth-min-card .fld:focus {
-  border-color: var(--color-accent);
-}
-.auth-min-track {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--color-mute);
-  text-decoration: none;
-}
-.auth-min-track:hover {
-  color: var(--color-accent);
 }
 .erp-layout {
   display: grid;
@@ -6423,6 +6378,26 @@ button.j-leg:hover .j-go {
     transform: translateX(6px);
   }
 }
+@property --tw-rotate-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-z {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-y {
+  syntax: "*";
+  inherits: false;
+}
 @property --tw-space-y-reverse {
   syntax: "*";
   inherits: false;
@@ -6444,6 +6419,11 @@ button.j-leg:hover .j-go {
 @property --tw-tracking {
   syntax: "*";
   inherits: false;
+}
+@property --tw-outline-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
 }
 @property --tw-blur {
   syntax: "*";
@@ -6501,11 +6481,17 @@ button.j-leg:hover .j-go {
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
+      --tw-rotate-x: initial;
+      --tw-rotate-y: initial;
+      --tw-rotate-z: initial;
+      --tw-skew-x: initial;
+      --tw-skew-y: initial;
       --tw-space-y-reverse: 0;
       --tw-border-style: solid;
       --tw-leading: initial;
       --tw-font-weight: initial;
       --tw-tracking: initial;
+      --tw-outline-style: solid;
       --tw-blur: initial;
       --tw-brightness: initial;
       --tw-contrast: initial;

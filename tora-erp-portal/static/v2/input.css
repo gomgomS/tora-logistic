@@ -1695,65 +1695,8 @@ textarea.fld { resize: vertical; }
     color: var(--color-mute);
 }
 
-/* ——— Minimal centered auth ——— */
-
-.auth-min {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background:
-        radial-gradient(900px 420px at 85% -10%, rgba(234, 88, 12, .07), transparent 60%),
-        radial-gradient(700px 500px at -10% 110%, rgba(59, 130, 246, .06), transparent 55%),
-        #f4f7fa;
-}
-
-.auth-min-card {
-    width: 100%;
-    max-width: 360px;
-    background: #fff;
-    border: 1px solid var(--color-line);
-    border-radius: 16px;
-    padding: 36px 28px 28px 28px;
-    box-shadow: 0 24px 60px -32px rgba(18, 44, 74, .3);
-}
-
-.auth-min-brand {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 28px;
-}
-
-.auth-min-card form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.auth-min-card .fld {
-    padding: 11px 14px;
-    border: 1px solid #c5ced8;
-    border-radius: 10px;
-    background: #fff;
-}
-
-.auth-min-card .fld:hover { border-color: #8b98ab; }
-
-.auth-min-card .fld:focus { border-color: var(--color-accent); }
-
-.auth-min-track {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 20px;
-    font-size: 13px;
-    color: var(--color-mute);
-    text-decoration: none;
-}
-
-.auth-min-track:hover { color: var(--color-accent); }
+/* NOTE: the login page carries its own inline styles (templates/login.html)
+ * so it renders correctly even if this bundle is stale on a server. */
 
 /* =========================================================================
  * ERP SHELL — sidebar + topbar + content
